@@ -1,48 +1,405 @@
 <!DOCTYPE html>
-<html lang="en-US">
-  <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Близко — знакомства</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 
-<!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>Znakomstva</title>
-<meta name="generator" content="Jekyll v3.10.0" />
-<meta property="og:title" content="Znakomstva" />
-<meta property="og:locale" content="en_US" />
-<link rel="canonical" href="https://marfor13365-maker.github.io/Znakomstva/" />
-<meta property="og:url" content="https://marfor13365-maker.github.io/Znakomstva/" />
-<meta property="og:site_name" content="Znakomstva" />
-<meta property="og:type" content="website" />
-<meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="Znakomstva" />
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","headline":"Znakomstva","name":"Znakomstva","url":"https://marfor13365-maker.github.io/Znakomstva/"}</script>
-<!-- End Jekyll SEO tag -->
+  :root {
+    --bg: #0d0d0d;
+    --card: #161616;
+    --border: #2a2a2a;
+    --accent: #ff4d6d;
+    --accent2: #ff8fa3;
+    --text: #f0f0f0;
+    --muted: #888;
+    --input-bg: #1e1e1e;
+    --radius: 16px;
+  }
 
-    <link rel="stylesheet" href="/Znakomstva/assets/css/style.css?v=dbe61a76d8b8b7358a9d91e71467958b6852b915">
-    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-<!-- Setup Google Analytics -->
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-x: hidden;
+    position: relative;
+  }
 
+  /* Плавающие сердечки */
+  .hearts-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
 
+  .heart {
+    position: absolute;
+    bottom: -60px;
+    opacity: 0;
+    animation: floatUp linear infinite;
+    user-select: none;
+  }
 
-<!-- You can set your favicon here -->
-<!-- link rel="shortcut icon" type="image/x-icon" href="/Znakomstva/favicon.ico" -->
+  @keyframes floatUp {
+    0%   { transform: translateY(0) rotate(-15deg) scale(0.8); opacity: 0; }
+    10%  { opacity: 0.6; }
+    90%  { opacity: 0.3; }
+    100% { transform: translateY(-110vh) rotate(15deg) scale(1.1); opacity: 0; }
+  }
 
-<!-- end custom head snippets -->
+  /* Переключатель языка */
+  .lang-switch {
+    position: fixed;
+    top: 16px; right: 16px;
+    z-index: 10;
+    display: flex;
+    gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px;
+  }
 
-  </head>
-  <body>
-    <div class="container-lg px-3 my-5 markdown-body">
-      
+  .lang-btn {
+    padding: 5px 11px;
+    border: none;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
 
-      <h1 id="znakomstva">Znakomstva</h1>
+  .lang-btn.active { background: var(--accent); color: white; }
 
+  .hero {
+    text-align: center;
+    margin-bottom: 36px;
+    position: relative;
+    z-index: 1;
+  }
 
-      
+  .logo {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 32px;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
+
+  .tagline { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+  .pulse-wrap { display: flex; justify-content: center; margin-bottom: 24px; }
+
+  .pulse {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ff4d6d55 0%, transparent 70%);
+    display: flex; align-items: center; justify-content: center;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  .pulse-inner { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%       { transform: scale(1.18); opacity: 0.7; }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    width: 100%; max-width: 400px;
+    position: relative; z-index: 1;
+  }
+
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--input-bg);
+    border-radius: 10px; padding: 4px;
+    margin-bottom: 24px;
+  }
+
+  .tab {
+    flex: 1; padding: 10px;
+    border: none; border-radius: 8px;
+    background: transparent; color: var(--muted);
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+  }
+
+  .tab.active { background: var(--accent); color: white; }
+
+  .form-group { margin-bottom: 16px; }
+
+  label {
+    display: block; font-size: 12px; color: var(--muted);
+    margin-bottom: 6px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  input[type="email"], input[type="password"], input[type="text"] {
+    width: 100%; padding: 14px 16px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 15px;
+    outline: none; transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input:focus { border-color: var(--accent); }
+
+  .consent-block {
+    background: #1a1014;
+    border: 1px solid #3a1c24;
+    border-radius: 10px; padding: 16px; margin-bottom: 16px;
+  }
+
+  .consent-title { font-size: 13px; font-weight: 500; color: var(--accent2); margin-bottom: 8px; }
+  .consent-text  { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+
+  .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+
+  .checkbox-row input[type="checkbox"] {
+    width: 18px; height: 18px; min-width: 18px;
+    accent-color: var(--accent); cursor: pointer; margin-top: 1px;
+  }
+
+  .checkbox-row span { font-size: 12px; color: var(--text); line-height: 1.5; }
+
+  .btn {
+    width: 100%; padding: 15px;
+    background: var(--accent); border: none; border-radius: 12px;
+    color: white; font-family: 'Unbounded', sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    letter-spacing: 0.5px; transition: opacity 0.2s, transform 0.1s;
+    margin-top: 8px;
+  }
+
+  .btn:active   { transform: scale(0.98); opacity: 0.9; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .msg { text-align: center; font-size: 13px; margin-top: 12px; min-height: 20px; color: var(--muted); }
+  .msg.error   { color: #ff6b6b; }
+  .msg.success { color: #6bffb8; }
+</style>
+</head>
+<body>
+
+<div class="hearts-canvas" id="hearts"></div>
+
+<div class="lang-switch">
+  <button class="lang-btn active" onclick="setLang('ru')">RU</button>
+  <button class="lang-btn" onclick="setLang('en')">EN</button>
+</div>
+
+<div class="hero">
+  <div class="pulse-wrap">
+    <div class="pulse"><div class="pulse-inner"></div></div>
+  </div>
+  <div class="logo">Близко</div>
+  <div class="tagline" data-key="tagline">Настоящие знакомства рядом</div>
+</div>
+
+<div class="card">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('login')" data-key="tab_login">Войти</button>
+    <button class="tab" onclick="switchTab('register')" data-key="tab_reg">Регистрация</button>
+  </div>
+
+  <div id="login-form">
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
-    <script>anchors.add();</script>
-  </body>
+    <div class="form-group">
+      <label data-key="lbl_pass">Пароль</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn" onclick="doLogin()" data-key="btn_login">Войти</button>
+    <div class="msg" id="login-msg"></div>
+  </div>
+
+  <div id="register-form" style="display:none">
+    <div class="form-group">
+      <label data-key="lbl_name">Имя</label>
+      <input type="text" id="reg-name" placeholder="Как тебя зовут?" maxlength="40">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label data-key="lbl_pass">Пароль</label>
+      <input type="password" id="reg-pass" placeholder="••••••••" autocomplete="new-password">
+    </div>
+
+    <div class="consent-block">
+      <div class="consent-title" data-key="consent_title">📋 Согласие на обработку данных</div>
+      <div class="consent-text" data-key="consent_text">Регистрируясь, вы соглашаетесь на обработку персональных данных в соответствии с ФЗ №152. Данные используются только для работы сервиса.</div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="consent1" onchange="checkConsent()">
+        <span data-key="c1">Я согласен(а) на обработку персональных данных</span>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="consent2" onchange="checkConsent()">
+        <span data-key="c2">Мне исполнилось 18 лет</span>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="consent3" onchange="checkConsent()">
+        <span data-key="c3">Я ознакомился(ась) с <a href="#" style="color:var(--accent2)" data-key="rules">правилами сервиса</a></span>
+      </div>
+    </div>
+
+    <button class="btn" id="reg-btn" onclick="doRegister()" disabled data-key="btn_reg">Создать аккаунт</button>
+    <div class="msg" id="reg-msg"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const T = {
+  ru: {
+    tagline:'Настоящие знакомства рядом', tab_login:'Войти', tab_reg:'Регистрация',
+    lbl_name:'Имя', lbl_pass:'Пароль', btn_login:'Войти', btn_reg:'Создать аккаунт',
+    consent_title:'📋 Согласие на обработку данных',
+    consent_text:'Регистрируясь, вы соглашаетесь на обработку персональных данных в соответствии с ФЗ №152. Данные используются только для работы сервиса.',
+    c1:'Я согласен(а) на обработку персональных данных',
+    c2:'Мне исполнилось 18 лет',
+    c3:'Я ознакомился(ась) с ', rules:'правилами сервиса',
+    name_ph:'Как тебя зовут?',
+    err_fill:'Заполни все поля', err_pass:'Пароль минимум 6 символов',
+    err_login:'Неверный email или пароль', ok_welcome:'Добро пожаловать!',
+    ok_created:'✅ Аккаунт создан!', loading_in:'⏳ Входим...', loading_reg:'⏳ Создаём аккаунт...'
+  },
+  en: {
+    tagline:'Real connections near you', tab_login:'Sign in', tab_reg:'Register',
+    lbl_name:'Name', lbl_pass:'Password', btn_login:'Sign in', btn_reg:'Create account',
+    consent_title:'📋 Data processing consent',
+    consent_text:'By registering you agree to the processing of your personal data for the purpose of operating this service. Data is not shared with third parties.',
+    c1:'I agree to the processing of my personal data',
+    c2:'I am 18 years of age or older',
+    c3:'I have read the ', rules:'terms of service',
+    name_ph:'What is your name?',
+    err_fill:'Please fill in all fields', err_pass:'Password must be at least 6 characters',
+    err_login:'Invalid email or password', ok_welcome:'Welcome!',
+    ok_created:'✅ Account created!', loading_in:'⏳ Signing in...', loading_reg:'⏳ Creating account...'
+  }
+}
+
+let lang = localStorage.getItem('lang') || 'ru'
+
+function setLang(l) {
+  lang = l
+  localStorage.setItem('lang', l)
+  document.querySelectorAll('.lang-btn').forEach((b,i) =>
+    b.classList.toggle('active', (i===0&&l==='ru')||(i===1&&l==='en')))
+  applyLang()
+}
+
+function applyLang() {
+  const t = T[lang]
+  document.querySelectorAll('[data-key]').forEach(el => {
+    const k = el.getAttribute('data-key')
+    if (!t[k]) return
+    if (el.tagName==='INPUT') el.placeholder = t[k]
+    else if (k==='c3') el.innerHTML = t.c3 + `<a href="#" style="color:var(--accent2)">${t.rules}</a>`
+    else el.textContent = t[k]
+  })
+  const ni = document.getElementById('reg-name')
+  if (ni) ni.placeholder = t.name_ph
+}
+
+function spawnHearts() {
+  const c = document.getElementById('hearts')
+  const emojis = ['❤️','🧡','💕','💖','💗','💓','💝']
+  for (let i = 0; i < 14; i++) {
+    const h = document.createElement('div')
+    h.className = 'heart'
+    h.textContent = emojis[Math.floor(Math.random()*emojis.length)]
+    h.style.left = Math.random()*100+'vw'
+    h.style.fontSize = (13+Math.random()*16)+'px'
+    h.style.animationDuration = (8+Math.random()*10)+'s'
+    h.style.animationDelay = (Math.random()*14)+'s'
+    c.appendChild(h)
+  }
+}
+
+const SUPABASE_URL = 'https://zxzhnmwksygozwtdymmt.supabase.co'
+const SUPABASE_KEY = 'ВАШ_ANON_KEY_СЮДА'
+const { createClient } = supabase
+const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+db.auth.getSession().then(({data}) => { if (data.session) window.location.href='feed.html' })
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) =>
+    t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register')))
+  document.getElementById('login-form').style.display    = tab==='login'?'block':'none'
+  document.getElementById('register-form').style.display = tab==='register'?'block':'none'
+}
+
+function checkConsent() {
+  document.getElementById('reg-btn').disabled =
+    !['consent1','consent2','consent3'].every(id=>document.getElementById(id).checked)
+}
+
+function setMsg(id,text,type='') {
+  const el=document.getElementById(id); el.textContent=text; el.className='msg '+type
+}
+
+async function doLogin() {
+  const t=T[lang]
+  const email=document.getElementById('login-email').value.trim()
+  const pass=document.getElementById('login-pass').value
+  if (!email||!pass){setMsg('login-msg',t.err_fill,'error');return}
+  setMsg('login-msg',t.loading_in)
+  const {error}=await db.auth.signInWithPassword({email,password:pass})
+  if (error) setMsg('login-msg',t.err_login,'error')
+  else { setMsg('login-msg',t.ok_welcome,'success'); setTimeout(()=>window.location.href='feed.html',800) }
+}
+
+async function doRegister() {
+  const t=T[lang]
+  const name=document.getElementById('reg-name').value.trim()
+  const email=document.getElementById('reg-email').value.trim()
+  const pass=document.getElementById('reg-pass').value
+  if (!name||!email||!pass){setMsg('reg-msg',t.err_fill,'error');return}
+  if (pass.length<6){setMsg('reg-msg',t.err_pass,'error');return}
+  setMsg('reg-msg',t.loading_reg)
+  document.getElementById('reg-btn').disabled=true
+  const {data,error}=await db.auth.signUp({email,password:pass})
+  if (error){setMsg('reg-msg',error.message,'error');document.getElementById('reg-btn').disabled=false;return}
+  await db.from('profiles').insert({id:data.user.id,name,consent_given:true,consent_at:new Date().toISOString()})
+  setMsg('reg-msg',t.ok_created,'success')
+  setTimeout(()=>window.location.href='profile.html',1000)
+}
+
+spawnHearts()
+setLang(lang)
+</script>
+</body>
 </html>
