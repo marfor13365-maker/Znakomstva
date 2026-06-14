@@ -1,1 +1,107 @@
-
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Blizko - Feed</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-icons{display:flex;gap:16px}
+.icon-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px}
+.icon-btn:hover{color:var(--text)}
+.feed-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;position:relative}
+.card-stack{position:relative;width:100%;max-width:360px;height:480px}
+.profile-card{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:24px;overflow:hidden;cursor:grab;user-select:none;transition:transform 0.1s;box-shadow:0 8px 40px rgba(0,0,0,0.5)}
+.profile-card.dragging{transition:none;cursor:grabbing}
+.profile-card.fly-right{transition:transform 0.4s ease,opacity 0.4s;transform:translateX(150%) rotate(20deg)!important;opacity:0}
+.profile-card.fly-left{transition:transform 0.4s ease,opacity 0.4s;transform:translateX(-150%) rotate(-20deg)!important;opacity:0}
+.card-photo{width:100%;height:100%;object-fit:cover;background:var(--card)}
+.card-no-photo{width:100%;height:100%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:80px}
+.card-overlay{position:absolute;bottom:0;left:0;right:0;padding:24px;background:linear-gradient(transparent,rgba(0,0,0,0.85))}
+.card-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-bottom:4px}
+.card-info{font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:8px}
+.card-about{font-size:12px;color:rgba(255,255,255,0.6);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.like-label{position:absolute;top:30px;left:20px;border:3px solid var(--green);color:var(--green);font-family:'Unbounded',sans-serif;font-size:18px;padding:6px 14px;border-radius:8px;opacity:0;transform:rotate(-15deg);transition:opacity 0.1s}
+.nope-label{position:absolute;top:30px;right:20px;border:3px solid var(--accent);color:var(--accent);font-family:'Unbounded',sans-serif;font-size:18px;padding:6px 14px;border-radius:8px;opacity:0;transform:rotate(15deg);transition:opacity 0.1s}
+.ad-card{border-radius:24px;overflow:hidden;width:100%;max-width:360px;height:480px;position:relative;cursor:pointer}
+.ad-card img{width:100%;height:100%;object-fit:cover}
+.ad-badge{position:absolute;top:14px;right:14px;background:rgba(0,0,0,0.6);color:white;font-size:10px;padding:4px 8px;border-radius:6px}
+.empty-state{text-align:center;color:var(--muted);padding:40px 20px}
+.empty-state .icon{font-size:60px;margin-bottom:16px}
+.empty-state p{font-size:14px;line-height:1.6}
+.actions{display:flex;justify-content:center;gap:24px;padding:20px}
+.action-btn{width:60px;height:60px;border-radius:50%;border:2px solid var(--border);background:var(--card);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.action-btn:hover{transform:scale(1.1)}
+.action-btn.dislike:hover{border-color:var(--accent);background:#2a1016}
+.action-btn.like:hover{border-color:var(--green);background:#0a2a1a}
+.match-popup{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;display:none}
+.match-popup.show{display:flex}
+.match-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;text-align:center}
+.match-sub{color:var(--muted);font-size:14px;margin-bottom:32px;text-align:center}
+.match-photos{display:flex;gap:16px;margin-bottom:32px}
+.match-photo{width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--accent)}
+.match-photo-placeholder{width:100px;height:100px;border-radius:50%;background:var(--card);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:40px}
+.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin:6px}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.bottombar{display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border)}
+.bottom-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:8px 20px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px}
+.bottom-btn.active{color:var(--accent)}
+.bottom-btn .ico{font-size:22px}
+.loader{text-align:center;color:var(--muted);padding:40px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="topbar">
+<div class="logo">Blizko</div>
+<div class="topbar-icons">
+<button class="icon-btn" onclick="window.location.href='profile.html'" title="profile">&#128100;</button>
+</div>
+</div>
+<div class="feed-wrap" id="feed-wrap">
+<div class="loader" id="loader">&#8987;</div>
+</div>
+<div class="actions">
+<button class="action-btn dislike" onclick="swipe('left')" title="skip">&#10060;</button>
+<button class="action-btn like" onclick="swipe('right')" title="like">&#10084;&#65039;</button>
+</div>
+<div class="bottombar">
+<button class="bottom-btn active" onclick="window.location.href='feed.html'"><span class="ico">&#128525;</span><span id="nav_feed"></span></button>
+<button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">&#128172;</span><span id="nav_matches"></span></button>
+<button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">&#128100;</span><span id="nav_profile"></span></button>
+</div>
+<div class="match-popup" id="match-popup">
+<div class="match-title" id="match_title"></div>
+<div class="match-sub" id="match_sub"></div>
+<div class="match-photos" id="match-photos"></div>
+<button class="btn" id="btn_chat" onclick="goToChat()"></button>
+<button class="btn btn-outline" id="btn_continue" onclick="closeMatch()"></button>
+</div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var lang=localStorage.getItem('lang')||'ru';
+var T={ru:{nav_feed:'лента',nav_matches:'чаты',nav_profile:'профиль',match_title:'это взаимно!',match_sub:'вы понравились друг другу',btn_chat:'написать',btn_continue:'продолжить',empty:'больше анкет нет',empty_sub:'загляните позже'},en:{nav_feed:'feed',nav_matches:'chats',nav_profile:'profile',match_title:'its a match!',match_sub:'you liked each other',btn_chat:'send message',btn_continue:'keep swiping',empty:'no more profiles',empty_sub:'check back later'}};
+function applyLang(){var t=T[lang];['nav_feed','nav_matches','nav_profile','match_title','match_sub','btn_chat','btn_continue'].forEach(function(k){var el=document.getElementById(k);if(el)el.textContent=t[k]})}
+var db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+var currentUser=null,currentProfile=null,profiles=[],ads=[],currentIndex=0,currentMatchId=null;
+var startX=0,startY=0,isDragging=false,currentCard=null;
+async function init(){var r=await db.auth.getSession();if(!r.data.session){window.location.href='index.html';return}currentUser=r.data.session.user;var p=await db.from('profiles').select('*').eq('id',currentUser.id).single();currentProfile=p.data;await loadProfiles();applyLang()}
+async function loadProfiles(){var seen=await db.from('likes').select('to_user').eq('from_user',currentUser.id);var seenIds=seen.data?seen.data.map(function(l){return l.to_user}):[];seenIds.push(currentUser.id);var q=db.from('profiles').select('*').eq('is_active',true).not('id','in','('+seenIds.join(',')+')').limit(20);if(currentProfile&&currentProfile.looking_for&&currentProfile.looking_for!='any')q=q.eq('gender',currentProfile.looking_for);var r=await q;profiles=r.data||[];var adsR=await db.from('ads').select('*').eq('is_active',true);ads=adsR.data||[];renderFeed()}
+function renderFeed(){var wrap=document.getElementById('feed-wrap');wrap.innerHTML='';if(profiles.length===0){var t=T[lang];wrap.innerHTML='<div class="empty-state"><div class="icon">&#128149;</div><p>'+t.empty+'<br>'+t.empty_sub+'</p></div>';return}var showAd=ads.length>0&&currentIndex>0&&currentIndex%5===0;if(showAd){var ad=ads[currentIndex%ads.length];var adEl=document.createElement('div');adEl.className='ad-card';adEl.onclick=function(){window.open(ad.link,'_blank')};adEl.innerHTML='<img src="'+ad.image_url+'" onerror="this.style.display=\'none\'"><div class="ad-badge">AD</div>';wrap.appendChild(adEl);setTimeout(function(){currentIndex++;renderFeed()},3000);return}var profile=profiles[currentIndex];if(!profile){var t=T[lang];wrap.innerHTML='<div class="empty-state"><div class="icon">&#128149;</div><p>'+t.empty+'<br>'+t.empty_sub+'</p></div>';return}var card=document.createElement('div');card.className='card-stack';card.innerHTML='<div class="profile-card" id="current-card"><div class="like-label" id="like-label">LIKE</div><div class="nope-label" id="nope-label">NOPE</div>'+(profile.photo_url?'<img class="card-photo" src="'+profile.photo_url+'" onerror="this.outerHTML=\'<div class=card-no-photo>&#128100;</div>\'">'  :'<div class="card-no-photo">&#128100;</div>')+'<div class="card-overlay"><div class="card-name">'+profile.name+(profile.age?', '+profile.age:'')+'</div>'+(profile.city?'<div class="card-info">&#128205; '+profile.city+'</div>':'')+(profile.about?'<div class="card-about">'+profile.about+'</div>':'')+'</div></div>';wrap.appendChild(card);setupDrag()}
+function setupDrag(){var card=document.getElementById('current-card');if(!card)return;card.addEventListener('mousedown',dragStart);card.addEventListener('touchstart',dragStart,{passive:true});document.addEventListener('mousemove',dragMove);document.addEventListener('touchmove',dragMove,{passive:true});document.addEventListener('mouseup',dragEnd);document.addEventListener('touchend',dragEnd)}
+function dragStart(e){isDragging=true;card=document.getElementById('current-card');card.classList.add('dragging');var pt=e.touches?e.touches[0]:e;startX=pt.clientX;startY=pt.clientY}
+function dragMove(e){if(!isDragging)return;var card=document.getElementById('current-card');if(!card)return;var pt=e.touches?e.touches[0]:e;var dx=pt.clientX-startX;var dy=pt.clientY-startY;var rot=dx*0.1;card.style.transform='translate('+dx+'px,'+dy+'px) rotate('+rot+'deg)';document.getElementById('like-label').style.opacity=dx>20?Math.min((dx-20)/80,1):0;document.getElementById('nope-label').style.opacity=dx<-20?Math.min((-dx-20)/80,1):0}
+function dragEnd(e){if(!isDragging)return;isDragging=false;var card=document.getElementById('current-card');if(!card)return;card.classList.remove('dragging');var transform=card.style.transform;var match=transform.match(/translate\(([^,]+)px/);var dx=match?parseFloat(match[1]):0;if(dx>80)swipe('right');else if(dx<-80)swipe('left');else{card.style.transform='';document.getElementById('like-label').style.opacity=0;document.getElementById('nope-label').style.opacity=0}}
+async function swipe(dir){var card=document.getElementById('current-card');if(!card)return;var profile=profiles[currentIndex];if(!profile)return;card.classList.add(dir==='right'?'fly-right':'fly-left');await db.from('likes').insert({from_user:currentUser.id,to_user:profile.id,is_like:dir==='right'}).catch(function(){});if(dir==='right'){var match=await db.from('matches').select('*').or('and(user1.eq.'+currentUser.id+',user2.eq.'+profile.id+'),and(user1.eq.'+profile.id+',user2.eq.'+currentUser.id+')').single();if(match.data){currentMatchId=match.data.id;showMatch(profile)}}setTimeout(function(){currentIndex++;renderFeed()},400)}
+function showMatch(profile){document.getElementById('match-popup').classList.add('show');var ph=document.getElementById('match-photos');ph.innerHTML=(currentProfile&&currentProfile.photo_url?'<img class="match-photo" src="'+currentProfile.photo_url+'">'  :'<div class="match-photo-placeholder">&#128100;</div>')+(profile.photo_url?'<img class="match-photo" src="'+profile.photo_url+'">'  :'<div class="match-photo-placeholder">&#128100;</div>')}
+function closeMatch(){document.getElementById('match-popup').classList.remove('show')}
+function goToChat(){if(currentMatchId)window.location.href='chat.html?match='+currentMatchId;closeMatch()}
+applyLang();init();
+</script>
+</body>
+                                                                                        </html>
