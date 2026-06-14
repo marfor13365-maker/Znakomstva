@@ -1,2 +1,3 @@
 const SUPABASE_URL = "https://zxzhnmwksygozwtdymmt.supabase.co"
-const SUPABASE_KEY = "ВСТАВЬ_СКОПИРОВАННЫЙ_КЛЮЧ"
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4emhubXdrc3lnb3p3dGR5bW10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0MjM0OTgsImV4cCI6MjA5Njk5OTQ5OH0.Mi69CvtMzxQ5upkBoDtTa9FaVvtmiN9iUmlN6shDJaw
+"
