@@ -1,1 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Близко — Мой профиль</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 
+  :root {
+    --bg: #0d0d0d;
+    --card: #161616;
+    --border: #2a2a2a;
+    --accent: #ff4d6d;
+    --accent2: #ff8fa3;
+    --text: #f0f0f0;
+    --muted: #888;
+    --input-bg: #1e1e1e;
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 20px 40px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding-top: 8px;
+  }
+
+  .logo {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #ff4d6d, #ff8fa3);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  h2 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  /* Фото */
+  .photo-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 28px;
+  }
+
+  .photo-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--input-bg);
+    border: 2px dashed var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .photo-circle:hover { border-color: var(--accent); }
+
+  .photo-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .photo-placeholder {
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .photo-placeholder .icon { font-size: 32px; margin-bottom: 4px; }
+  .photo-placeholder .hint { font-size: 11px; }
+
+  .photo-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  input[type="file"] { display: none; }
+
+  /* Form */
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group:last-child { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 13px 14px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+
+  select option { background: #1e1e1e; }
+
+  textarea {
+    resize: none;
+    height: 90px;
+    line-height: 1.5;
+  }
+
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+
+  /* Row */
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Button */
+  .btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 8px;
+  }
+
+  .btn:active { transform: scale(0.98); opacity: 0.9; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  .msg {
+    text-align: center;
+    font-size: 13px;
+    margin-top: 12px;
+    min-height: 20px;
+  }
+  .msg.error { color: #ff6b6b; }
+  .msg.success { color: #6bffb8; }
+
+  .upload-progress {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .upload-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Близко</div>
+</div>
+
+<h2>Моя анкета</h2>
+
+<!-- Фото -->
+<div class="photo-block">
+  <div class="photo-circle" onclick="document.getElementById('photo-input').click()">
+    <img id="photo-preview" src="" alt="" style="display:none">
+    <div class="photo-placeholder" id="photo-placeholder">
+      <div class="icon">📷</div>
+      <div class="hint">Добавить фото</div>
+    </div>
+  </div>
+  <div class="photo-hint">Нажми чтобы выбрать фото</div>
+  <div class="upload-progress" id="upload-progress">
+    <div class="upload-bar" id="upload-bar"></div>
+  </div>
+  <input type="file" id="photo-input" accept="image/*" onchange="handlePhoto(this)">
+</div>
+
+<!-- Основное -->
+<div class="section">
+  <div class="section-title">О себе</div>
+
+  <div class="form-group">
+    <label>Имя</label>
+    <input type="text" id="name" placeholder="Как тебя зовут?" maxlength="40">
+  </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Возраст</label>
+      <input type="number" id="age" placeholder="25" min="18" max="99">
+    </div>
+    <div class="form-group">
+      <label>Город</label>
+      <input type="text" id="city" placeholder="Москва" maxlength="50">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>О себе</label>
+    <textarea id="about" placeholder="Расскажи немного о себе..."></textarea>
+  </div>
+</div>
+
+<!-- Предпочтения -->
+<div class="section">
+  <div class="section-title">Предпочтения</div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Я</label>
+      <select id="gender">
+        <option value="">Выбери...</option>
+        <option value="male">Мужчина</option>
+        <option value="female">Женщина</option>
+        <option value="other">Другое</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Ищу</label>
+      <select id="looking_for">
+        <option value="">Выбери...</option>
+        <option value="male">Мужчину</option>
+        <option value="female">Женщину</option>
+        <option value="any">Любого</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<button class="btn" onclick="saveProfile()">Сохранить анкету</button>
+<button class="btn btn-outline" onclick="window.location.href='feed.html'">Перейти в ленту →</button>
+<div class="msg" id="msg"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://zxzhnmwksygozwtdymmt.supabase.co'
+  const SUPABASE_KEY = 'ВАШ_ANON_KEY_СЮДА'
+  const { createClient } = supabase
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+  let currentUser = null
+  let uploadedPhotoUrl = null
+
+  async function init() {
+    const { data: { session } } = await db.auth.getSession()
+    if (!session) { window.location.href = 'index.html'; return }
+    currentUser = session.user
+
+    // Загружаем существующий профиль
+    const { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single()
+    if (profile) {
+      document.getElementById('name').value = profile.name || ''
+      document.getElementById('age').value = profile.age || ''
+      document.getElementById('city').value = profile.city || ''
+      document.getElementById('about').value = profile.about || ''
+      document.getElementById('gender').value = profile.gender || ''
+      document.getElementById('looking_for').value = profile.looking_for || ''
+
+      if (profile.photo_url) {
+        showPhoto(profile.photo_url)
+        uploadedPhotoUrl = profile.photo_url
+      }
+    }
+  }
+
+  function showPhoto(url) {
+    const img = document.getElementById('photo-preview')
+    img.src = url
+    img.style.display = 'block'
+    document.getElementById('photo-placeholder').style.display = 'none'
+  }
+
+  async function handlePhoto(input) {
+    const file = input.files[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { setMsg('Фото не должно превышать 5MB', 'error'); return }
+
+    // Показываем превью сразу
+    const reader = new FileReader()
+    reader.onload = e => showPhoto(e.target.result)
+    reader.readAsDataURL(file)
+
+    // Загружаем в Supabase Storage
+    document.getElementById('upload-progress').style.display = 'block'
+    document.getElementById('upload-bar').style.width = '40%'
+
+    const ext = file.name.split('.').pop()
+    const fileName = `${currentUser.id}_${Date.now()}.${ext}`
+
+    const { data, error } = await db.storage.from('photos').upload(fileName, file, { upsert: true })
+
+    document.getElementById('upload-bar').style.width = '100%'
+    setTimeout(() => document.getElementById('upload-progress').style.display = 'none', 500)
+
+    if (error) { setMsg('Ошибка загрузки фото: ' + error.message, 'error'); return }
+
+    const { data: urlData } = db.storage.from('photos').getPublicUrl(fileName)
+    uploadedPhotoUrl = urlData.publicUrl
+  }
+
+  async function saveProfile() {
+    const name = document.getElementById('name').value.trim()
+    const age = parseInt(document.getElementById('age').value)
+    const city = document.getElementById('city').value.trim()
+    const about = document.getElementById('about').value.trim()
+    const gender = document.getElementById('gender').value
+    const looking_for = document.getElementById('looking_for').value
+
+    if (!name) { setMsg('Введи имя', 'error'); return }
+    if (!age || age < 18) { setMsg('Укажи возраст (от 18 лет)', 'error'); return }
+    if (!gender) { setMsg('Укажи свой пол', 'error'); return }
+    if (!looking_for) { setMsg('Укажи кого ищешь', 'error'); return }
+
+    setMsg('Сохраняем...')
+
+    const { error } = await db.from('profiles').upsert({
+      id: currentUser.id,
+      name, age, city, about, gender, looking_for,
+      photo_url: uploadedPhotoUrl,
+      is_active: true
+    })
+
+    if (error) {
+      setMsg('Ошибка: ' + error.message, 'error')
+    } else {
+      setMsg('Анкета сохранена! ✅', 'success')
+      setTimeout(() => window.location.href = 'feed.html', 1000)
+    }
+  }
+
+  function setMsg(text, type = '') {
+    const el = document.getElementById('msg')
+    el.textContent = text
+    el.className = 'msg ' + type
+  }
+
+  init()
+</script>
+</body>
+  </html>
