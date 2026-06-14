@@ -1,1 +1,60 @@
-
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Blizko - Matches</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);gap:12px}
+.logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.page-title{font-size:14px;color:var(--muted);margin-left:auto}
+.list{flex:1;overflow-y:auto;padding:12px}
+.match-item{display:flex;align-items:center;gap:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;cursor:pointer;transition:border-color 0.2s}
+.match-item:hover{border-color:var(--accent)}
+.match-avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;background:var(--input-bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid var(--border)}
+.match-avatar img{width:56px;height:56px;border-radius:50%;object-fit:cover}
+.match-info{flex:1;min-width:0}
+.match-name{font-weight:500;font-size:15px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.match-preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.match-time{font-size:11px;color:var(--muted);flex-shrink:0}
+.unread{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.empty{text-align:center;color:var(--muted);padding:60px 20px}
+.empty .icon{font-size:60px;margin-bottom:16px}
+.empty p{font-size:14px;line-height:1.6}
+.btn{display:inline-block;padding:12px 24px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-top:16px;text-decoration:none}
+.bottombar{display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border)}
+.bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:8px 20px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px}
+.bottom-btn.active{color:var(--accent)}
+.bottom-btn .ico{font-size:22px}
+.loader{text-align:center;color:var(--muted);padding:40px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="topbar">
+<div class="logo">Blizko</div>
+<div class="page-title" id="page_title"></div>
+</div>
+<div class="list" id="list"><div class="loader">&#8987;</div></div>
+<div class="bottombar">
+<button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">&#128525;</span><span id="nav_feed"></span></button>
+<button class="bottom-btn active" onclick="window.location.href='matches.html'"><span class="ico">&#128172;</span><span id="nav_matches"></span></button>
+<button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">&#128100;</span><span id="nav_profile"></span></button>
+</div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var lang=localStorage.getItem('lang')||'ru';
+var T={ru:{page_title:'мои чаты',nav_feed:'лента',nav_matches:'чаты',nav_profile:'профиль',empty:'пока нет совпадений',empty_sub:'свайпайте анкеты чтобы найти пару',go_feed:'перейти в ленту',last_msg:'написать первым...'},en:{page_title:'my chats',nav_feed:'feed',nav_matches:'chats',nav_profile:'profile',empty:'no matches yet',empty_sub:'swipe profiles to find your match',go_feed:'go to feed',last_msg:'say hello...'}};
+function applyLang(){var t=T[lang];['page_title','nav_feed','nav_matches','nav_profile'].forEach(function(k){var el=document.getElementById(k);if(el)el.textContent=t[k]})}
+var db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+var currentUser=null;
+async function init(){var r=await db.auth.getSession();if(!r.data.session){window.location.href='index.html';return}currentUser=r.data.session.user;await loadMatches();applyLang()}
+async function loadMatches(){var r=await db.from('matches').select('*').or('user1.eq.'+currentUser.id+',user2.eq.'+currentUser.id).order('created_at',{ascending:false});var matches=r.data||[];var list=document.getElementById('list');if(matches.length===0){var t=T[lang];list.innerHTML='<div class="empty"><div class="icon">&#128149;</div><p>'+t.empty+'<br>'+t.empty_sub+'</p><a class="btn" href="feed.html">'+t.go_feed+'</a></div>';return}list.innerHTML='';for(var i=0;i<matches.length;i++){var m=matches[i];var otherId=m.user1===currentUser.id?m.user2:m.user1;var p=await db.from('profiles').select('*').eq('id',otherId).single();var profile=p.data;if(!profile)continue;var lastMsg=await db.from('messages').select('*').eq('match_id',m.id).order('created_at',{ascending:false}).limit(1);var msg=lastMsg.data&&lastMsg.data[0]?lastMsg.data[0].text:T[lang].last_msg;var item=document.createElement('div');item.className='match-item';item.onclick=function(matchId){return function(){window.location.href='chat.html?match='+matchId}}(m.id);item.innerHTML='<div class="match-avatar">'+(profile.photo_url?'<img src="'+profile.photo_url+'" onerror="this.outerHTML=\'&#128100;\'">'  :'&#128100;')+'</div><div class="match-info"><div class="match-name">'+profile.name+(profile.age?', '+profile.age:'')+'</div><div class="match-preview">'+msg+'</div></div>';list.appendChild(item)}}
+applyLang();init();
+</script>
+</body>
+  </html>
