@@ -11,10 +11,16 @@
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 .topbar{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;flex-shrink:0}
 .back-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px}
-.chat-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--input-bg);display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid var(--border)}
+.chat-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--input-bg);display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid var(--border);overflow:hidden;flex-shrink:0}
 .chat-avatar img{width:38px;height:38px;border-radius:50%;object-fit:cover}
 .chat-name{font-weight:500;font-size:15px;flex:1}
 .ai-badge{font-size:10px;background:#2a1f3a;color:#b794f4;padding:2px 8px;border-radius:10px;border:1px solid #6b46c1}
+.menu-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px}
+.dropdown{position:absolute;top:60px;right:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;z-index:50;display:none;min-width:180px}
+.dropdown.show{display:block}
+.dropdown-item{padding:12px 16px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.2s}
+.dropdown-item:hover{background:var(--input-bg)}
+.dropdown-item.danger{color:#ff6b6b}
 .messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
 .msg-wrap{display:flex;flex-direction:column}
 .msg-wrap.mine{align-items:flex-end}
@@ -29,47 +35,309 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
 .input-wrap{padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:flex-end;gap:10px;flex-shrink:0}
 .msg-input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:10px 16px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;max-height:100px;line-height:1.4}
 .msg-input:focus{border-color:var(--accent)}
+.msg-input:disabled{opacity:0.5}
 .send-btn{width:40px;height:40px;border-radius:50%;background:var(--accent);border:none;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.2s}
-.send-btn:active{opacity:0.7}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed}
 .photo-btn{width:40px;height:40px;border-radius:50%;background:var(--input-bg);border:1px solid var(--border);color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 input[type="file"]{display:none}
-.date-divider{text-align:center;font-size:11px;color:var(--muted);padding:4px 0}
-.support-note{text-align:center;font-size:11px;color:var(--muted);padding:8px;background:#1a1a2e;border-radius:8px;margin-bottom:8px}
+.blocked-bar{background:#2a0a0a;border-top:1px solid #3a1010;padding:14px 16px;text-align:center;font-size:13px;color:#ff6b6b;flex-shrink:0}
+.blocked-bar button{background:none;border:1px solid #ff6b6b;color:#ff6b6b;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;margin-left:10px}
+.confirm-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:100;display:none;padding:20px}
+.confirm-modal.show{display:flex}
+.confirm-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:320px}
+.confirm-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600;margin-bottom:8px}
+.confirm-text{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.confirm-btns{display:flex;gap:10px}
+.confirm-btns button{flex:1;padding:12px;border-radius:10px;border:none;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;font-weight:500}
+.btn-cancel{background:var(--input-bg);color:var(--text)}
+.btn-confirm{background:var(--accent);color:white}
 </style>
 </head>
 <body>
+
 <div class="topbar">
-<button class="back-btn" onclick="window.location.href='matches.html'">&#8592;</button>
-<div class="chat-avatar" id="chat-avatar">&#128100;</div>
-<div class="chat-name" id="chat-name"></div>
-<div class="ai-badge" id="ai-badge" style="display:none">AI</div>
+  <button class="back-btn" onclick="window.location.href='matches.html'">&#8592;</button>
+  <div class="chat-avatar" id="chat-avatar">&#128100;</div>
+  <div class="chat-name" id="chat-name"></div>
+  <div class="ai-badge" id="ai-badge" style="display:none">AI</div>
+  <button class="menu-btn" onclick="toggleMenu()">&#8942;</button>
 </div>
+
+<div class="dropdown" id="dropdown">
+  <div class="dropdown-item" onclick="reportUser()">&#9888;&#65039; Report</div>
+  <div class="dropdown-item danger" onclick="showBlockConfirm()">&#128683; Block user</div>
+</div>
+
 <div class="messages" id="messages"></div>
-<div class="input-wrap">
-<button class="photo-btn" onclick="document.getElementById('photo-file').click()">&#128247;</button>
-<input type="file" id="photo-file" accept="image/*" onchange="sendPhoto(this)">
-<textarea class="msg-input" id="msg-input" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-<button class="send-btn" onclick="sendMessage()">&#10148;</button>
+
+<div class="blocked-bar" id="blocked-bar" style="display:none">
+  <span id="blocked-text"></span>
+  <button onclick="showUnblockConfirm()">Unblock</button>
 </div>
+
+<div class="input-wrap" id="input-wrap">
+  <button class="photo-btn" onclick="document.getElementById('photo-file').click()">&#128247;</button>
+  <input type="file" id="photo-file" accept="image/*" onchange="sendPhoto(this)">
+  <textarea class="msg-input" id="msg-input" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+  <button class="send-btn" id="send-btn" onclick="sendMessage()">&#10148;</button>
+</div>
+
+<!-- Block confirm -->
+<div class="confirm-modal" id="block-modal">
+  <div class="confirm-card">
+    <div class="confirm-title">Block user?</div>
+    <div class="confirm-text" id="block-text"></div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn-confirm" onclick="blockUser()">Block</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unblock confirm -->
+<div class="confirm-modal" id="unblock-modal">
+  <div class="confirm-card">
+    <div class="confirm-title">Unblock user?</div>
+    <div class="confirm-text" id="unblock-text"></div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn-confirm" onclick="unblockUser()">Unblock</button>
+    </div>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-var currentUser=null,matchId=null,otherProfile=null,aiEnabled=false,aiPersona='',subscription=null;
-var params=new URLSearchParams(window.location.search);
-matchId=params.get('match');
-var isSupport=params.get('support')==='1';
-async function init(){var r=await db.auth.getSession();if(!r.data.session){window.location.href='index.html';return}currentUser=r.data.session.user;if(!matchId){window.location.href='matches.html';return}var match=await db.from('matches').select('*').eq('id',matchId).single();if(!match.data){window.location.href='matches.html';return}var otherId=match.data.user1===currentUser.id?match.data.user2:match.data.user1;var p=await db.from('profiles').select('*').eq('id',otherId).single();otherProfile=p.data;if(otherProfile){document.getElementById('chat-name').textContent=otherProfile.name+(otherProfile.age?', '+otherProfile.age:'');if(otherProfile.photo_url){document.getElementById('chat-avatar').innerHTML='<img src="'+otherProfile.photo_url+'" onerror="this.outerHTML=\'&#128100;\'">'}}var agent=await db.from('ai_agents').select('*').eq('profile_id',otherId).single();if(agent.data&&agent.data.is_enabled){aiEnabled=true;aiPersona=agent.data.persona;document.getElementById('ai-badge').style.display='block'}await loadMessages();subscribeToMessages()}
-async function loadMessages(){var r=await db.from('messages').select('*').eq('match_id',matchId).order('created_at',{ascending:true});renderMessages(r.data||[])}
-function renderMessages(msgs){var container=document.getElementById('messages');container.innerHTML='';if(isSupport){var note=document.createElement('div');note.className='support-note';note.textContent='support chat';container.appendChild(note)}msgs.forEach(function(m){addMessageEl(m)});container.scrollTop=container.scrollHeight}
-function addMessageEl(m){var container=document.getElementById('messages');var isMine=m.sender_id===currentUser.id;var wrap=document.createElement('div');wrap.className='msg-wrap '+(isMine?'mine':'theirs');var bubble=document.createElement('div');bubble.className='bubble '+(isMine?'mine':m.is_ai?'ai':'theirs');if(m.photo_url){var img=document.createElement('img');img.src=m.photo_url;img.className='bubble-photo';img.onclick=function(){window.open(m.photo_url,'_blank')};bubble.appendChild(img)}else{bubble.textContent=m.text||''}wrap.appendChild(bubble);if(m.is_ai){var ind=document.createElement('div');ind.className='ai-indicator';ind.textContent='AI';wrap.appendChild(ind)}var time=document.createElement('div');time.className='msg-time';time.textContent=new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});wrap.appendChild(time);container.appendChild(wrap);container.scrollTop=container.scrollHeight}
-function subscribeToMessages(){subscription=db.channel('messages:'+matchId).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'match_id=eq.'+matchId},function(payload){if(payload.new.sender_id!==currentUser.id){addMessageEl(payload.new)}}).subscribe()}
-async function sendMessage(){var input=document.getElementById('msg-input');var text=input.value.trim();if(!text)return;input.value='';autoResize(input);var r=await db.from('messages').insert({match_id:matchId,sender_id:currentUser.id,text:text,is_ai:false});if(!r.error){addMessageEl({match_id:matchId,sender_id:currentUser.id,text:text,is_ai:false,created_at:new Date().toISOString()});if(aiEnabled)await callAI(text)}}
-async function callAI(userMsg){var msgs=await db.from('messages').select('*').eq('match_id',matchId).order('created_at',{ascending:true}).limit(20);var history=msgs.data||[];var conversation=history.map(function(m){return{role:m.sender_id===currentUser.id?'user':'assistant',content:m.text||'[photo]'}});var resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+GROQ_KEY},body:JSON.stringify({model:'llama-3.1-8b-instant',messages:[{role:'system',content:aiPersona}].concat(conversation),max_tokens:200})});var data=await resp.json();var reply=data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:'';if(reply){await db.from('messages').insert({match_id:matchId,sender_id:otherProfile.id,text:reply,is_ai:true})}}
-async function sendPhoto(input){var file=input.files[0];if(!file)return;var ext=file.name.split('.').pop();var fileName='chat_'+matchId+'_'+Date.now()+'.'+ext;await db.storage.from('photos').upload(fileName,file,{upsert:true});var url=db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;await db.from('messages').insert({match_id:matchId,sender_id:currentUser.id,photo_url:url,is_ai:false});addMessageEl({match_id:matchId,sender_id:currentUser.id,photo_url:url,is_ai:false,created_at:new Date().toISOString()})}
-function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}}
-function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px'}
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var currentUser = null, matchId = null, otherProfile = null;
+var aiEnabled = false, aiPersona = '', subscription = null;
+var isBlockedByMe = false, isBlockedByThem = false;
+var RENDER_URL = 'https://vector-chat-api.onrender.com';
+
+var params = new URLSearchParams(window.location.search);
+matchId = params.get('match');
+
+async function init() {
+  var r = await db.auth.getSession();
+  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  currentUser = r.data.session.user;
+  if (!matchId) { window.location.href = 'matches.html'; return; }
+
+  var match = await db.from('matches').select('*').eq('id', matchId).single();
+  if (!match.data) { window.location.href = 'matches.html'; return; }
+
+  var otherId = match.data.user1 === currentUser.id ? match.data.user2 : match.data.user1;
+  var p = await db.from('profiles').select('*').eq('id', otherId).single();
+  otherProfile = p.data;
+
+  if (otherProfile) {
+    document.getElementById('chat-name').textContent = otherProfile.name + (otherProfile.age ? ', ' + otherProfile.age : '');
+    if (otherProfile.photo_url) {
+      document.getElementById('chat-avatar').innerHTML = '<img src="' + otherProfile.photo_url + '" onerror="this.outerHTML=\'&#128100;\'">';
+    }
+  }
+
+  // Check AI agent
+  var agent = await db.from('ai_agents').select('*').eq('profile_id', otherId).single();
+  if (agent.data && agent.data.is_enabled) {
+    aiEnabled = true;
+    aiPersona = agent.data.persona;
+    document.getElementById('ai-badge').style.display = 'block';
+  }
+
+  // Check blocks
+  await checkBlocked(otherId);
+  await loadMessages();
+  subscribeToMessages();
+}
+
+async function checkBlocked(otherId) {
+  var byMe = await db.from('blocked_users').select('id').eq('blocker_id', currentUser.id).eq('blocked_id', otherId).single();
+  var byThem = await db.from('blocked_users').select('id').eq('blocker_id', otherId).eq('blocked_id', currentUser.id).single();
+  isBlockedByMe = !!byMe.data;
+  isBlockedByThem = !!byThem.data;
+  updateBlockedUI();
+}
+
+function updateBlockedUI() {
+  var bar = document.getElementById('blocked-bar');
+  var inputWrap = document.getElementById('input-wrap');
+  var input = document.getElementById('msg-input');
+  var sendBtn = document.getElementById('send-btn');
+
+  if (isBlockedByMe) {
+    bar.style.display = 'block';
+    document.getElementById('blocked-text').textContent = 'You blocked ' + (otherProfile ? otherProfile.name : 'this user');
+    inputWrap.style.display = 'none';
+  } else if (isBlockedByThem) {
+    bar.style.display = 'block';
+    document.getElementById('blocked-text').textContent = 'You cannot send messages to this user';
+    input.disabled = true;
+    sendBtn.disabled = true;
+    document.getElementById('unblock-btn') && (document.getElementById('unblock-btn').style.display = 'none');
+  } else {
+    bar.style.display = 'none';
+    inputWrap.style.display = 'flex';
+    input.disabled = false;
+    sendBtn.disabled = false;
+  }
+}
+
+async function loadMessages() {
+  var r = await db.from('messages').select('*').eq('match_id', matchId).order('created_at', {ascending: true});
+  renderMessages(r.data || []);
+}
+
+function renderMessages(msgs) {
+  var container = document.getElementById('messages');
+  container.innerHTML = '';
+  msgs.forEach(function(m) { addMessageEl(m); });
+  container.scrollTop = container.scrollHeight;
+}
+
+function addMessageEl(m) {
+  var container = document.getElementById('messages');
+  var isMine = m.sender_id === currentUser.id;
+  var wrap = document.createElement('div');
+  wrap.className = 'msg-wrap ' + (isMine ? 'mine' : 'theirs');
+  var bubble = document.createElement('div');
+  bubble.className = 'bubble ' + (isMine ? 'mine' : m.is_ai ? 'ai' : 'theirs');
+  if (m.photo_url) {
+    var img = document.createElement('img');
+    img.src = m.photo_url;
+    img.className = 'bubble-photo';
+    img.onclick = function() { window.open(m.photo_url, '_blank'); };
+    bubble.appendChild(img);
+  } else {
+    bubble.textContent = m.text || '';
+  }
+  wrap.appendChild(bubble);
+  if (m.is_ai) {
+    var ind = document.createElement('div');
+    ind.className = 'ai-indicator';
+    ind.textContent = 'AI';
+    wrap.appendChild(ind);
+  }
+  var time = document.createElement('div');
+  time.className = 'msg-time';
+  time.textContent = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  wrap.appendChild(time);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
+function subscribeToMessages() {
+  subscription = db.channel('messages:' + matchId)
+    .on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'messages', filter: 'match_id=eq.' + matchId},
+    function(payload) {
+      if (payload.new.sender_id !== currentUser.id) addMessageEl(payload.new);
+    }).subscribe();
+}
+
+async function sendMessage() {
+  if (isBlockedByMe || isBlockedByThem) return;
+  var input = document.getElementById('msg-input');
+  var text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  autoResize(input);
+  var r = await db.from('messages').insert({match_id: matchId, sender_id: currentUser.id, text: text, is_ai: false});
+  if (!r.error) {
+    addMessageEl({match_id: matchId, sender_id: currentUser.id, text: text, is_ai: false, created_at: new Date().toISOString()});
+    if (aiEnabled) await callAI(text);
+  }
+}
+
+async function callAI(userMsg) {
+  var msgs = await db.from('messages').select('*').eq('match_id', matchId).order('created_at', {ascending: true}).limit(20);
+  var history = (msgs.data || []).map(function(m) {
+    return {role: m.sender_id === currentUser.id ? 'user' : 'assistant', content: m.text || '[photo]'};
+  });
+  try {
+    var resp = await fetch(RENDER_URL + '/blizko/groq', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({password: 'FROM_CONFIG', messages: history, persona: aiPersona})
+    });
+    var data = await resp.json();
+    var reply = data.choices && data.choices[0] ? data.choices[0].message.content : '';
+    if (reply && otherProfile) {
+      await db.from('messages').insert({match_id: matchId, sender_id: otherProfile.id, text: reply, is_ai: true});
+    }
+  } catch(e) { console.log('AI error:', e); }
+}
+
+async function sendPhoto(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var ext = file.name.split('.').pop();
+  var fileName = 'chat_' + matchId + '_' + Date.now() + '.' + ext;
+  await db.storage.from('photos').upload(fileName, file, {upsert: true});
+  var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+  await db.from('messages').insert({match_id: matchId, sender_id: currentUser.id, photo_url: url, is_ai: false});
+  addMessageEl({match_id: matchId, sender_id: currentUser.id, photo_url: url, is_ai: false, created_at: new Date().toISOString()});
+}
+
+function toggleMenu() {
+  document.getElementById('dropdown').classList.toggle('show');
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.menu-btn') && !e.target.closest('.dropdown')) {
+    document.getElementById('dropdown').classList.remove('show');
+  }
+});
+
+function showBlockConfirm() {
+  document.getElementById('dropdown').classList.remove('show');
+  document.getElementById('block-text').textContent = 'Block ' + (otherProfile ? otherProfile.name : 'this user') + '? They will not be able to send you messages.';
+  document.getElementById('block-modal').classList.add('show');
+}
+
+function showUnblockConfirm() {
+  document.getElementById('unblock-text').textContent = 'Unblock ' + (otherProfile ? otherProfile.name : 'this user') + '?';
+  document.getElementById('unblock-modal').classList.add('show');
+}
+
+function closeModals() {
+  document.getElementById('block-modal').classList.remove('show');
+  document.getElementById('unblock-modal').classList.remove('show');
+}
+
+async function blockUser() {
+  closeModals();
+  if (!otherProfile) return;
+  await db.from('blocked_users').insert({blocker_id: currentUser.id, blocked_id: otherProfile.id});
+  isBlockedByMe = true;
+  updateBlockedUI();
+}
+
+async function unblockUser() {
+  closeModals();
+  if (!otherProfile) return;
+  await db.from('blocked_users').delete().eq('blocker_id', currentUser.id).eq('blocked_id', otherProfile.id);
+  isBlockedByMe = false;
+  updateBlockedUI();
+}
+
+async function reportUser() {
+  document.getElementById('dropdown').classList.remove('show');
+  if (!otherProfile) return;
+  await db.from('support_messages').insert({user_id: currentUser.id, text: 'Report on user: ' + otherProfile.name + ' (id: ' + otherProfile.id + ')', is_from_admin: false});
+  alert('Report sent to admin');
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
 init();
 </script>
 </body>
-  </html>
+</html>
