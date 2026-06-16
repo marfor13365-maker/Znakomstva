@@ -3,14 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Blizko - Profile</title>
+<title>Blizko - Профиль</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;padding:20px 20px 40px}
-.header{display:flex;align-items:center;gap:12px;margin-bottom:28px;padding-top:8px}
-.logo{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-bottom:80px}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
+.back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center;transition:color 0.2s}
+.back-btn:active{color:var(--text)}
+.logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.content{padding:20px}
 h2{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;margin-bottom:20px}
 .photo-block{display:flex;flex-direction:column;align-items:center;margin-bottom:28px}
 .photo-circle{width:120px;height:120px;border-radius:50%;background:var(--input-bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative;transition:border-color 0.2s}
@@ -34,78 +37,175 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .btn{width:100%;padding:16px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:0.5px;transition:opacity 0.2s,transform 0.1s;margin-top:8px}
 .btn:active{transform:scale(0.98);opacity:0.9}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);margin-top:10px}
+.btn-danger{background:transparent;border:1px solid var(--accent);color:var(--accent);margin-top:10px}
 .msg{text-align:center;font-size:13px;margin-top:12px;min-height:20px}
 .msg.error{color:#ff6b6b}
 .msg.success{color:#6bffb8}
 .upload-progress{width:100%;height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
 .upload-bar{height:100%;background:var(--accent);width:0%;transition:width 0.3s}
+.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border);background:var(--bg);z-index:10}
+.bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:8px 20px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:color 0.2s}
+.bottom-btn.active{color:var(--accent)}
+.bottom-btn .ico{font-size:22px}
 </style>
 </head>
 <body>
-<div class="header"><div class="logo">Blizko</div></div>
-<h2 id="h_title"></h2>
-<div class="photo-block">
-<div class="photo-circle" onclick="document.getElementById('photo-input').click()">
-<img id="photo-preview" src="" alt="" style="display:none">
-<div class="photo-placeholder" id="photo-placeholder">
-<div class="icon">&#128247;</div>
-<div class="hint" id="h_addphoto"></div>
+
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">&#8592;</button>
+  <div class="logo">Blizko</div>
 </div>
+
+<div class="content">
+  <h2 id="h_title">Моя анкета</h2>
+
+  <div class="photo-block">
+    <div class="photo-circle" onclick="document.getElementById('photo-input').click()">
+      <img id="photo-preview" src="" alt="" style="display:none">
+      <div class="photo-placeholder" id="photo-placeholder">
+        <div class="icon">📷</div>
+        <div class="hint" id="h_addphoto">добавить фото</div>
+      </div>
+    </div>
+    <div class="photo-hint" id="h_clickphoto">нажми чтобы выбрать фото</div>
+    <div class="upload-progress" id="upload-progress"><div class="upload-bar" id="upload-bar"></div></div>
+    <input type="file" id="photo-input" accept="image/*" onchange="handlePhoto(this)">
+  </div>
+
+  <div class="section">
+    <div class="section-title" id="h_about">О себе</div>
+    <div class="form-group"><label id="h_name">Имя</label><input type="text" id="name" maxlength="40" placeholder="Как тебя зовут?"></div>
+    <div class="row">
+      <div class="form-group"><label id="h_age">Возраст</label><input type="number" id="age" min="18" max="99" placeholder="25"></div>
+      <div class="form-group"><label id="h_city">Город</label><input type="text" id="city" maxlength="50" placeholder="Москва"></div>
+    </div>
+    <div class="form-group"><label id="h_bio">О себе</label><textarea id="about" placeholder="Расскажи о себе..."></textarea></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title" id="h_prefs">Предпочтения</div>
+    <div class="row">
+      <div class="form-group">
+        <label id="h_iam">Я</label>
+        <select id="gender">
+          <option value="">Выбери...</option>
+          <option value="male">Мужчина</option>
+          <option value="female">Женщина</option>
+          <option value="other">Другое</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label id="h_seek">Ищу</label>
+        <select id="looking_for">
+          <option value="">Выбери...</option>
+          <option value="male">Мужчину</option>
+          <option value="female">Женщину</option>
+          <option value="any">Любого</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn" id="btn_save" onclick="saveProfile()">Сохранить анкету</button>
+  <button class="btn btn-danger" onclick="logout()">Выйти из аккаунта</button>
+  <div class="msg" id="msg"></div>
 </div>
-<div class="photo-hint" id="h_clickphoto"></div>
-<div class="upload-progress" id="upload-progress"><div class="upload-bar" id="upload-bar"></div></div>
-<input type="file" id="photo-input" accept="image/*" onchange="handlePhoto(this)">
+
+<div class="bottombar">
+  <button class="bottom-btn" onclick="window.location.href='feed.html'">
+    <span class="ico">😍</span><span>Лента</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='matches.html'">
+    <span class="ico">💬</span><span>Чаты</span>
+  </button>
+  <button class="bottom-btn active">
+    <span class="ico">👤</span><span>Профиль</span>
+  </button>
 </div>
-<div class="section">
-<div class="section-title" id="h_about"></div>
-<div class="form-group"><label id="h_name"></label><input type="text" id="name" maxlength="40"></div>
-<div class="row">
-<div class="form-group"><label id="h_age"></label><input type="number" id="age" min="18" max="99"></div>
-<div class="form-group"><label id="h_city"></label><input type="text" id="city" maxlength="50"></div>
-</div>
-<div class="form-group"><label id="h_bio"></label><textarea id="about"></textarea></div>
-</div>
-<div class="section">
-<div class="section-title" id="h_prefs"></div>
-<div class="row">
-<div class="form-group">
-<label id="h_iam"></label>
-<select id="gender">
-<option value="" id="o_choose"></option>
-<option value="male" id="o_male"></option>
-<option value="female" id="o_female"></option>
-<option value="other" id="o_other"></option>
-</select>
-</div>
-<div class="form-group">
-<label id="h_seek"></label>
-<select id="looking_for">
-<option value="" id="o_choose2"></option>
-<option value="male" id="o_sman"></option>
-<option value="female" id="o_swoman"></option>
-<option value="any" id="o_sany"></option>
-</select>
-</div>
-</div>
-</div>
-<button class="btn" id="btn_save" onclick="saveProfile()"></button>
-<button class="btn btn-outline" onclick="logout()" style="margin-top:10px;border-color:#ff4d6d;color:#ff4d6d">Выйти из аккаунта</button><button class="btn btn-outline" id="btn_feed" onclick="window.location.href='feed.html'"></button>
-<div class="msg" id="msg"></div>
+
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var lang=localStorage.getItem('lang')||'ru';
-var T={ru:{h_title:'моя анкета',h_addphoto:'добавить фото',h_clickphoto:'нажми чтобы выбрать фото',h_about:'о себе',h_name:'имя',h_age:'возраст',h_city:'город',h_bio:'о себе',h_prefs:'предпочтения',h_iam:'я',h_seek:'ищу',btn_save:'сохранить анкету',btn_feed:'перейти в ленту',o_choose:'выбери...',o_male:'мужчина',o_female:'женщина',o_other:'другое',o_sman:'мужчину',o_swoman:'женщину',o_sany:'любого',ph_name:'как тебя зовут?',ph_age:'25',ph_city:'москва',ph_bio:'расскажи о себе...',err_name:'введи имя',err_age:'укажи возраст от 18 лет',err_gender:'укажи свой пол',err_seek:'укажи кого ищешь',saving:'сохраняем...',saved:'анкета сохранена!',photo_big:'фото не должно превышать 5mb',photo_err:'ошибка загрузки фото'},en:{h_title:'my profile',h_addphoto:'add photo',h_clickphoto:'tap to choose photo',h_about:'about',h_name:'name',h_age:'age',h_city:'city',h_bio:'about me',h_prefs:'preferences',h_iam:'i am',h_seek:'looking for',btn_save:'save profile',btn_feed:'go to feed',o_choose:'choose...',o_male:'man',o_female:'woman',o_other:'other',o_sman:'a man',o_swoman:'a woman',o_sany:'anyone',ph_name:'what is your name?',ph_age:'25',ph_city:'london',ph_bio:'tell us about yourself...',err_name:'enter your name',err_age:'age must be 18 or older',err_gender:'choose your gender',err_seek:'choose who you are looking for',saving:'saving...',saved:'profile saved!',photo_big:'photo must be under 5mb',photo_err:'photo upload error'}};
-function applyLang(){var t=T[lang];['h_title','h_addphoto','h_clickphoto','h_about','h_name','h_age','h_city','h_bio','h_prefs','h_iam','h_seek','btn_save','btn_feed'].forEach(function(k){var el=document.getElementById(k);if(el)el.textContent=t[k]});['o_choose','o_male','o_female','o_other'].forEach(function(k){var el=document.getElementById(k);if(el)el.textContent=t[k]});document.getElementById('o_choose2').textContent=t.o_choose;document.getElementById('o_sman').textContent=t.o_sman;document.getElementById('o_swoman').textContent=t.o_swoman;document.getElementById('o_sany').textContent=t.o_sany;document.getElementById('name').placeholder=t.ph_name;document.getElementById('age').placeholder=t.ph_age;document.getElementById('city').placeholder=t.ph_city;document.getElementById('about').placeholder=t.ph_bio;document.getElementById('h2')}
-var db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-var currentUser=null,uploadedPhotoUrl=null;
-async function init(){var r=await db.auth.getSession();if(!r.data.session){window.location.href='index.html';return}currentUser=r.data.session.user;var p=await db.from('profiles').select('*').eq('id',currentUser.id).single();if(p.data){document.getElementById('name').value=p.data.name||'';document.getElementById('age').value=p.data.age||'';document.getElementById('city').value=p.data.city||'';document.getElementById('about').value=p.data.about||'';document.getElementById('gender').value=p.data.gender||'';document.getElementById('looking_for').value=p.data.looking_for||'';if(p.data.photo_url){showPhoto(p.data.photo_url);uploadedPhotoUrl=p.data.photo_url}}}
-function showPhoto(url){var img=document.getElementById('photo-preview');img.src=url;img.style.display='block';document.getElementById('photo-placeholder').style.display='none'}
-async function handlePhoto(input){var file=input.files[0];if(!file)return;var t=T[lang];if(file.size>5*1024*1024){setMsg(t.photo_big,'error');return}var reader=new FileReader();reader.onload=function(e){showPhoto(e.target.result)};reader.readAsDataURL(file);document.getElementById('upload-progress').style.display='block';document.getElementById('upload-bar').style.width='40%';var ext=file.name.split('.').pop();var fileName=currentUser.id+'_'+Date.now()+'.'+ext;var r=await db.storage.from('photos').upload(fileName,file,{upsert:true});document.getElementById('upload-bar').style.width='100%';setTimeout(function(){document.getElementById('upload-progress').style.display='none'},500);if(r.error){setMsg(t.photo_err,'error');return}uploadedPhotoUrl=db.storage.from('photos').getPublicUrl(fileName).data.publicUrl}
-async function saveProfile(){var t=T[lang];var name=document.getElementById('name').value.trim();var age=parseInt(document.getElementById('age').value);var city=document.getElementById('city').value.trim();var about=document.getElementById('about').value.trim();var gender=document.getElementById('gender').value;var looking_for=document.getElementById('looking_for').value;if(!name){setMsg(t.err_name,'error');return}if(!age||age<18){setMsg(t.err_age,'error');return}if(!gender){setMsg(t.err_gender,'error');return}if(!looking_for){setMsg(t.err_seek,'error');return}setMsg(t.saving,'');var r=await db.from('profiles').upsert({id:currentUser.id,name:name,age:age,city:city,about:about,gender:gender,looking_for:looking_for,photo_url:uploadedPhotoUrl,is_active:true});if(r.error){setMsg(r.error.message,'error')}else{setMsg(t.saved,'success');setTimeout(function(){window.location.href='feed.html'},1000)}}
-function setMsg(text,type){var el=document.getElementById('msg');el.textContent=text;el.className='msg '+(type||'')}
-applyLang();init();
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var currentUser = null;
+var uploadedPhotoUrl = null;
+
+async function init() {
+  var r = await db.auth.getSession();
+  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  currentUser = r.data.session.user;
+  var p = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (p.data) {
+    document.getElementById('name').value = p.data.name || '';
+    document.getElementById('age').value = p.data.age || '';
+    document.getElementById('city').value = p.data.city || '';
+    document.getElementById('about').value = p.data.about || '';
+    document.getElementById('gender').value = p.data.gender || '';
+    document.getElementById('looking_for').value = p.data.looking_for || '';
+    if (p.data.photo_url) {
+      showPhoto(p.data.photo_url);
+      uploadedPhotoUrl = p.data.photo_url;
+    }
+  }
+}
+
+function showPhoto(url) {
+  var img = document.getElementById('photo-preview');
+  img.src = url;
+  img.style.display = 'block';
+  document.getElementById('photo-placeholder').style.display = 'none';
+}
+
+async function handlePhoto(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { setMsg('Фото не должно превышать 5MB', 'error'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) { showPhoto(e.target.result); };
+  reader.readAsDataURL(file);
+  document.getElementById('upload-progress').style.display = 'block';
+  document.getElementById('upload-bar').style.width = '40%';
+  var ext = file.name.split('.').pop();
+  var fileName = currentUser.id + '_' + Date.now() + '.' + ext;
+  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true });
+  document.getElementById('upload-bar').style.width = '100%';
+  setTimeout(function() { document.getElementById('upload-progress').style.display = 'none'; }, 500);
+  if (r.error) { setMsg('Ошибка загрузки фото', 'error'); return; }
+  uploadedPhotoUrl = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+}
+
+async function saveProfile() {
+  var name = document.getElementById('name').value.trim();
+  var age = parseInt(document.getElementById('age').value);
+  var city = document.getElementById('city').value.trim();
+  var about = document.getElementById('about').value.trim();
+  var gender = document.getElementById('gender').value;
+  var looking_for = document.getElementById('looking_for').value;
+  if (!name) { setMsg('Введи имя', 'error'); return; }
+  if (!age || age < 18) { setMsg('Укажи возраст от 18 лет', 'error'); return; }
+  if (!gender) { setMsg('Укажи свой пол', 'error'); return; }
+  if (!looking_for) { setMsg('Укажи кого ищешь', 'error'); return; }
+  setMsg('Сохраняем...', '');
+  var r = await db.from('profiles').upsert({
+    id: currentUser.id, name, age, city, about, gender, looking_for,
+    photo_url: uploadedPhotoUrl, is_active: true
+  });
+  if (r.error) { setMsg(r.error.message, 'error'); }
+  else { setMsg('Анкета сохранена! ✓', 'success'); setTimeout(function() { window.location.href = 'feed.html'; }, 1000); }
+}
+
+function setMsg(text, type) {
+  var el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = 'msg ' + (type || '');
+}
+
+async function logout() {
+  await db.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+init();
 </script>
-<script>async function logout(){await db.auth.signOut();window.location.href="index.html"}</script></body>
+</body>
 </html>
