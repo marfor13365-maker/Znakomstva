@@ -11,7 +11,8 @@
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
 .logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.icon-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px}
+.icon-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;transition:background 0.2s}
+.icon-btn:active{background:var(--card)}
 .feed-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
 .card-stack{position:relative;width:100%;max-width:360px;height:480px}
 .profile-card{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:24px;overflow:hidden;cursor:grab;user-select:none;transition:transform 0.1s;box-shadow:0 8px 40px rgba(0,0,0,0.5)}
@@ -47,39 +48,45 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin:6px}
 .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
 .bottombar{display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border)}
-.bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:8px 20px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px}
+.bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:8px 20px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:color 0.2s}
 .bottom-btn.active{color:var(--accent)}
 .bottom-btn .ico{font-size:22px}
 .debug-bar{position:fixed;bottom:80px;left:0;right:0;background:rgba(0,0,0,0.8);color:#4cff9f;font-size:11px;padding:6px 12px;text-align:center;z-index:50;display:none}
 </style>
 </head>
 <body>
+
 <div class="topbar">
   <div class="logo">Blizko</div>
-  <button class="icon-btn" onclick="window.location.href='profile.html'">&#128100;</button>
 </div>
 
 <div class="feed-wrap" id="feed-wrap">
-  <div style="color:var(--muted);font-size:14px">&#8987; Loading...</div>
+  <div style="color:var(--muted);font-size:14px">⏳ Загрузка...</div>
 </div>
 
 <div class="actions">
-  <button class="action-btn dislike" onclick="swipe('left')">&#10060;</button>
-  <button class="action-btn like" onclick="swipe('right')">&#10084;&#65039;</button>
+  <button class="action-btn dislike" onclick="swipe('left')">❌</button>
+  <button class="action-btn like" onclick="swipe('right')">❤️</button>
 </div>
 
 <div class="bottombar">
-  <button class="bottom-btn active" onclick="window.location.href='feed.html'"><span class="ico">&#128525;</span><span>Feed</span></button>
-  <button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">&#128172;</span><span>Chats</span></button>
-  <button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">&#128100;</span><span>Profile</span></button>
+  <button class="bottom-btn active" onclick="window.location.href='feed.html'">
+    <span class="ico">😍</span><span>Лента</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='matches.html'">
+    <span class="ico">💬</span><span>Чаты</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='profile.html'">
+    <span class="ico">👤</span><span>Профиль</span>
+  </button>
 </div>
 
 <div class="match-popup" id="match-popup">
-  <div class="match-title">It's a Match!</div>
-  <div class="match-sub">You liked each other</div>
+  <div class="match-title">It's a Match! 🎉</div>
+  <div class="match-sub">Вы понравились друг другу</div>
   <div class="match-photos" id="match-photos"></div>
-  <button class="btn" onclick="goToChat()">Send Message</button>
-  <button class="btn btn-outline" onclick="closeMatch()">Keep Swiping</button>
+  <button class="btn" onclick="goToChat()">Написать сообщение</button>
+  <button class="btn btn-outline" onclick="closeMatch()">Продолжить смотреть</button>
 </div>
 
 <div class="debug-bar" id="debug-bar"></div>
@@ -106,23 +113,18 @@ function debug(msg) {
 async function init() {
   try {
     db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    debug('DB created, checking session...');
-
+    debug('DB создан, проверяем сессию...');
     var { data: { session }, error } = await db.auth.getSession();
-    
-    if (error) { debug('Session error: ' + error.message); return; }
-    if (!session) { debug('No session, redirecting...'); window.location.href = 'index.html'; return; }
-    
+    if (error) { debug('Ошибка сессии: ' + error.message); return; }
+    if (!session) { window.location.href = 'index.html'; return; }
     currentUser = session.user;
-    debug('User: ' + currentUser.id.substring(0,8) + '...');
-
+    debug('Пользователь: ' + currentUser.id.substring(0,8) + '...');
     var { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
     currentProfile = profile;
-    debug('Profile loaded: ' + (profile ? profile.name : 'none'));
-
+    debug('Профиль загружен: ' + (profile ? profile.name : 'нет'));
     await loadProfiles();
   } catch(e) {
-    debug('Init error: ' + e.message);
+    debug('Ошибка init: ' + e.message);
   }
 }
 
@@ -131,40 +133,30 @@ async function loadProfiles() {
     var { data: seen } = await db.from('likes').select('to_user').eq('from_user', currentUser.id);
     var seenIds = seen ? seen.map(function(l) { return l.to_user; }) : [];
     seenIds.push(currentUser.id);
-
-    debug('Loading profiles, excluded: ' + seenIds.length);
-
+    debug('Загружаем профили, исключено: ' + seenIds.length);
     var query = db.from('profiles').select('*').eq('is_active', true);
-    
     if (seenIds.length > 0) {
       query = query.not('id', 'in', '(' + seenIds.join(',') + ')');
     }
-    
     var { data, error } = await query.limit(20);
-    
-    if (error) { debug('Load error: ' + error.message); return; }
-    
+    if (error) { debug('Ошибка загрузки: ' + error.message); return; }
     profiles = data || [];
-    debug('Profiles loaded: ' + profiles.length);
-
+    debug('Профилей загружено: ' + profiles.length);
     var { data: adsData } = await db.from('ads').select('*').eq('is_active', true);
     ads = adsData || [];
-
     renderFeed();
   } catch(e) {
-    debug('LoadProfiles error: ' + e.message);
+    debug('Ошибка loadProfiles: ' + e.message);
   }
 }
 
 function renderFeed() {
   var wrap = document.getElementById('feed-wrap');
   wrap.innerHTML = '';
-
   if (profiles.length === 0 || currentIndex >= profiles.length) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">&#128149;</div><p>No more profiles<br>Check back later</p></div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p>Анкеты закончились<br>Загляни позже</p></div>';
     return;
   }
-
   var showAd = ads.length > 0 && currentIndex > 0 && currentIndex % 5 === 0;
   if (showAd) {
     var ad = ads[currentIndex % ads.length];
@@ -176,56 +168,46 @@ function renderFeed() {
     setTimeout(function() { currentIndex++; renderFeed(); }, 3000);
     return;
   }
-
   var profile = profiles[currentIndex];
   if (!profile) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">&#128149;</div><p>No more profiles</p></div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p>Анкеты закончились</p></div>';
     return;
   }
-
   var stack = document.createElement('div');
   stack.className = 'card-stack';
-
   var card = document.createElement('div');
   card.className = 'profile-card';
   card.id = 'current-card';
-
   var likeLabel = document.createElement('div');
   likeLabel.className = 'like-label';
   likeLabel.id = 'like-label';
   likeLabel.textContent = 'LIKE';
-
   var nopeLabel = document.createElement('div');
   nopeLabel.className = 'nope-label';
   nopeLabel.id = 'nope-label';
   nopeLabel.textContent = 'NOPE';
-
   card.appendChild(likeLabel);
   card.appendChild(nopeLabel);
-
   if (profile.photo_url) {
     var img = document.createElement('img');
     img.className = 'card-photo';
     img.src = profile.photo_url;
-    img.onerror = function() { this.outerHTML = '<div class="card-no-photo">&#128100;</div>'; };
+    img.onerror = function() { this.outerHTML = '<div class="card-no-photo">👤</div>'; };
     card.appendChild(img);
   } else {
     var noPhoto = document.createElement('div');
     noPhoto.className = 'card-no-photo';
-    noPhoto.textContent = '&#128100;';
+    noPhoto.textContent = '👤';
     card.appendChild(noPhoto);
   }
-
   var overlay = document.createElement('div');
   overlay.className = 'card-overlay';
   overlay.innerHTML = '<div class="card-name">' + profile.name + (profile.age ? ', ' + profile.age : '') + '</div>' +
-    (profile.city ? '<div class="card-info">&#128205; ' + profile.city + '</div>' : '') +
+    (profile.city ? '<div class="card-info">📍 ' + profile.city + '</div>' : '') +
     (profile.about ? '<div class="card-about">' + profile.about + '</div>' : '');
   card.appendChild(overlay);
-
   stack.appendChild(card);
   wrap.appendChild(stack);
-
   setupDrag(card);
 }
 
@@ -284,45 +266,33 @@ function dragEnd(e) {
 async function swipe(dir) {
   var card = document.getElementById('current-card');
   if (!card) return;
-  
   var profile = profiles[currentIndex];
   if (!profile) return;
-
-  if (!currentUser) {
-    debug('ERROR: currentUser is null!');
-    return;
-  }
-
+  if (!currentUser) { debug('ОШИБКА: currentUser пустой!'); return; }
   card.classList.add(dir === 'right' ? 'fly-right' : 'fly-left');
-
-  debug('Saving like: ' + currentUser.id.substring(0,8) + ' -> ' + profile.id.substring(0,8));
-
+  debug('Сохраняем лайк: ' + currentUser.id.substring(0,8) + ' -> ' + profile.id.substring(0,8));
   var { error } = await db.from('likes').insert({
     from_user: currentUser.id,
     to_user: profile.id,
     is_like: dir === 'right'
   });
-
   if (error) {
-    debug('Like error: ' + error.message + ' code:' + error.code);
+    debug('Ошибка лайка: ' + error.message);
   } else {
-    debug('Like saved! Checking match...');
-    
+    debug('Лайк сохранён! Проверяем матч...');
     if (dir === 'right') {
       var { data: matchData } = await db.from('matches').select('*')
         .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + profile.id + '),and(user1.eq.' + profile.id + ',user2.eq.' + currentUser.id + ')')
         .single();
-      
       if (matchData) {
         currentMatchId = matchData.id;
-        debug('MATCH! id=' + matchData.id);
+        debug('МАТЧ! id=' + matchData.id);
         showMatch(profile);
       } else {
-        debug('No match yet');
+        debug('Матча пока нет');
       }
     }
   }
-
   setTimeout(function() { currentIndex++; renderFeed(); }, 400);
 }
 
@@ -331,10 +301,10 @@ function showMatch(profile) {
   var ph = document.getElementById('match-photos');
   ph.innerHTML = (currentProfile && currentProfile.photo_url ?
     '<img class="match-photo" src="' + currentProfile.photo_url + '">' :
-    '<div class="match-photo-placeholder">&#128100;</div>') +
+    '<div class="match-photo-placeholder">👤</div>') +
     (profile.photo_url ?
     '<img class="match-photo" src="' + profile.photo_url + '">' :
-    '<div class="match-photo-placeholder">&#128100;</div>');
+    '<div class="match-photo-placeholder">👤</div>');
 }
 
 function closeMatch() {
