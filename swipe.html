@@ -1,1 +1,251 @@
 
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Blizko - Знакомства</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:center;padding:16px 20px;border-bottom:1px solid var(--border)}
+.logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.feed-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.card-stack{position:relative;width:100%;max-width:360px;height:480px}
+.profile-card{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:24px;overflow:hidden;cursor:grab;user-select:none;transition:transform 0.1s;box-shadow:0 8px 40px rgba(0,0,0,0.5)}
+.profile-card.dragging{transition:none;cursor:grabbing}
+.profile-card.fly-right{transition:transform 0.4s ease,opacity 0.4s;transform:translateX(150%) rotate(20deg)!important;opacity:0}
+.profile-card.fly-left{transition:transform 0.4s ease,opacity 0.4s;transform:translateX(-150%) rotate(-20deg)!important;opacity:0}
+.card-photo{width:100%;height:100%;object-fit:cover;background:var(--card)}
+.card-no-photo{width:100%;height:100%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:80px}
+.card-overlay{position:absolute;bottom:0;left:0;right:0;padding:24px;background:linear-gradient(transparent,rgba(0,0,0,0.85))}
+.card-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-bottom:4px}
+.card-info{font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:8px}
+.card-about{font-size:12px;color:rgba(255,255,255,0.6);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.like-label{position:absolute;top:30px;left:20px;border:3px solid var(--green);color:var(--green);font-family:'Unbounded',sans-serif;font-size:18px;padding:6px 14px;border-radius:8px;opacity:0;transform:rotate(-15deg)}
+.nope-label{position:absolute;top:30px;right:20px;border:3px solid var(--accent);color:var(--accent);font-family:'Unbounded',sans-serif;font-size:18px;padding:6px 14px;border-radius:8px;opacity:0;transform:rotate(15deg)}
+.empty-state{text-align:center;color:var(--muted);padding:40px 20px}
+.empty-state .icon{font-size:60px;margin-bottom:16px}
+.empty-state p{font-size:14px;line-height:1.6}
+.actions{display:flex;justify-content:center;gap:24px;padding:20px}
+.action-btn{width:60px;height:60px;border-radius:50%;border:2px solid var(--border);background:var(--card);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.action-btn:active{transform:scale(0.9)}
+.action-btn.dislike:active{border-color:var(--accent);background:#2a1016}
+.action-btn.like:active{border-color:var(--green);background:#0a2a1a}
+.match-popup{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;padding:20px}
+.match-popup.show{display:flex}
+.match-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;text-align:center}
+.match-sub{color:var(--muted);font-size:14px;margin-bottom:32px;text-align:center}
+.match-photos{display:flex;gap:16px;margin-bottom:32px}
+.match-photo{width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--accent)}
+.match-photo-placeholder{width:100px;height:100px;border-radius:50%;background:var(--card);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:40px}
+.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin:6px;width:100%;max-width:280px}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.bottombar{display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border)}
+.bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:8px 12px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:color 0.2s}
+.bottom-btn.active{color:var(--accent)}
+.bottom-btn .ico{font-size:22px}
+.debug-bar{position:fixed;bottom:80px;left:0;right:0;background:rgba(0,0,0,0.8);color:#4cff9f;font-size:11px;padding:6px 12px;text-align:center;z-index:50;display:none}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">Знакомства</div>
+</div>
+
+<div class="feed-wrap" id="feed-wrap">
+  <div style="color:var(--muted);font-size:14px">⏳ Загрузка...</div>
+</div>
+
+<div class="actions">
+  <button class="action-btn dislike" onclick="swipe('left')">❌</button>
+  <button class="action-btn like" onclick="swipe('right')">❤️</button>
+</div>
+
+<div class="bottombar">
+  <button class="bottom-btn" onclick="window.location.href='feed.html'">
+    <span class="ico">🏠</span><span>Лента</span>
+  </button>
+  <button class="bottom-btn active" onclick="window.location.href='swipe.html'">
+    <span class="ico">😍</span><span>Знакомства</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='matches.html'">
+    <span class="ico">💬</span><span>Чаты</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='profile.html'">
+    <span class="ico">👤</span><span>Профиль</span>
+  </button>
+</div>
+
+<div class="match-popup" id="match-popup">
+  <div class="match-title">🎉 Match!</div>
+  <div class="match-sub">Вы понравились друг другу!</div>
+  <div class="match-photos" id="match-photos"></div>
+  <button class="btn" onclick="goToChat()">Написать сообщение</button>
+  <button class="btn btn-outline" onclick="closeMatch()">Продолжить смотреть</button>
+</div>
+
+<div class="debug-bar" id="debug-bar"></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var db = null, currentUser = null, currentProfile = null;
+var profiles = [], currentIndex = 0, currentMatchId = null;
+var isDragging = false, startX = 0, startY = 0;
+
+function debug(msg) {
+  var bar = document.getElementById('debug-bar');
+  bar.style.display = 'block';
+  bar.textContent = msg;
+}
+
+async function init() {
+  try {
+    db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    var { data: { session }, error } = await db.auth.getSession();
+    if (error || !session) { window.location.href = 'index.html'; return; }
+    currentUser = session.user;
+    var { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+    currentProfile = profile;
+    await loadProfiles();
+  } catch(e) { debug('Ошибка: ' + e.message); }
+}
+
+async function loadProfiles() {
+  var { data: seen } = await db.from('likes').select('to_user').eq('from_user', currentUser.id);
+  var seenIds = seen ? seen.map(function(l) { return l.to_user; }) : [];
+  seenIds.push(currentUser.id);
+  var query = db.from('profiles').select('*').eq('is_active', true);
+  if (seenIds.length > 0) query = query.not('id', 'in', '(' + seenIds.join(',') + ')');
+  var { data, error } = await query.limit(20);
+  if (error) { debug('Ошибка: ' + error.message); return; }
+  profiles = data || [];
+  debug('Загружено анкет: ' + profiles.length);
+  renderFeed();
+}
+
+function renderFeed() {
+  var wrap = document.getElementById('feed-wrap');
+  wrap.innerHTML = '';
+  if (profiles.length === 0 || currentIndex >= profiles.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p>Анкеты закончились.<br>Загляни позже!</p></div>';
+    return;
+  }
+  var profile = profiles[currentIndex];
+  var stack = document.createElement('div');
+  stack.className = 'card-stack';
+  var card = document.createElement('div');
+  card.className = 'profile-card';
+  card.id = 'current-card';
+  var likeLabel = document.createElement('div');
+  likeLabel.className = 'like-label'; likeLabel.id = 'like-label'; likeLabel.textContent = 'LIKE';
+  var nopeLabel = document.createElement('div');
+  nopeLabel.className = 'nope-label'; nopeLabel.id = 'nope-label'; nopeLabel.textContent = 'NOPE';
+  card.appendChild(likeLabel);
+  card.appendChild(nopeLabel);
+  if (profile.photo_url) {
+    var img = document.createElement('img');
+    img.className = 'card-photo'; img.src = profile.photo_url;
+    img.onerror = function() { this.outerHTML = '<div class="card-no-photo">👤</div>'; };
+    card.appendChild(img);
+  } else {
+    var np = document.createElement('div');
+    np.className = 'card-no-photo'; np.textContent = '👤';
+    card.appendChild(np);
+  }
+  var overlay = document.createElement('div');
+  overlay.className = 'card-overlay';
+  overlay.innerHTML = '<div class="card-name">' + profile.name + (profile.age ? ', ' + profile.age : '') + '</div>' +
+    (profile.city ? '<div class="card-info">📍 ' + profile.city + '</div>' : '') +
+    (profile.about ? '<div class="card-about">' + profile.about + '</div>' : '');
+  card.appendChild(overlay);
+  stack.appendChild(card);
+  wrap.appendChild(stack);
+  setupDrag(card);
+}
+
+function setupDrag(card) {
+  card.addEventListener('mousedown', dragStart);
+  card.addEventListener('touchstart', dragStart, {passive: true});
+  document.addEventListener('mousemove', dragMove);
+  document.addEventListener('touchmove', dragMove, {passive: true});
+  document.addEventListener('mouseup', dragEnd);
+  document.addEventListener('touchend', dragEnd);
+}
+
+function dragStart(e) {
+  isDragging = true;
+  var card = document.getElementById('current-card');
+  if (card) card.classList.add('dragging');
+  var pt = e.touches ? e.touches[0] : e;
+  startX = pt.clientX; startY = pt.clientY;
+}
+
+function dragMove(e) {
+  if (!isDragging) return;
+  var card = document.getElementById('current-card');
+  if (!card) return;
+  var pt = e.touches ? e.touches[0] : e;
+  var dx = pt.clientX - startX, dy = pt.clientY - startY;
+  card.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx * 0.1) + 'deg)';
+  var ll = document.getElementById('like-label'), nl = document.getElementById('nope-label');
+  if (ll) ll.style.opacity = dx > 20 ? Math.min((dx-20)/80, 1) : 0;
+  if (nl) nl.style.opacity = dx < -20 ? Math.min((-dx-20)/80, 1) : 0;
+}
+
+function dragEnd() {
+  if (!isDragging) return;
+  isDragging = false;
+  var card = document.getElementById('current-card');
+  if (!card) return;
+  card.classList.remove('dragging');
+  var m = card.style.transform.match(/translate\(([^,]+)px/);
+  var dx = m ? parseFloat(m[1]) : 0;
+  if (dx > 80) swipe('right');
+  else if (dx < -80) swipe('left');
+  else {
+    card.style.transform = '';
+    var ll = document.getElementById('like-label'), nl = document.getElementById('nope-label');
+    if (ll) ll.style.opacity = 0;
+    if (nl) nl.style.opacity = 0;
+  }
+}
+
+async function swipe(dir) {
+  var card = document.getElementById('current-card');
+  if (!card) return;
+  var profile = profiles[currentIndex];
+  if (!profile || !currentUser) return;
+  card.classList.add(dir === 'right' ? 'fly-right' : 'fly-left');
+  await db.from('likes').insert({ from_user: currentUser.id, to_user: profile.id, is_like: dir === 'right' });
+  if (dir === 'right') {
+    var { data: matchData } = await db.from('matches').select('*')
+      .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + profile.id + '),and(user1.eq.' + profile.id + ',user2.eq.' + currentUser.id + ')')
+      .single();
+    if (matchData) { currentMatchId = matchData.id; showMatch(profile); }
+  }
+  setTimeout(function() { currentIndex++; renderFeed(); }, 400);
+}
+
+function showMatch(profile) {
+  document.getElementById('match-popup').classList.add('show');
+  var ph = document.getElementById('match-photos');
+  ph.innerHTML =
+    (currentProfile && currentProfile.photo_url ? '<img class="match-photo" src="' + currentProfile.photo_url + '">' : '<div class="match-photo-placeholder">👤</div>') +
+    (profile.photo_url ? '<img class="match-photo" src="' + profile.photo_url + '">' : '<div class="match-photo-placeholder">👤</div>');
+}
+
+function closeMatch() { document.getElementById('match-popup').classList.remove('show'); }
+
+function goToChat() {
+  if (currentMatchId) window.location.href = 'chat.html?match=' + currentMatchId;
+  closeMatch();
+}
+
+init();
+</script>
+</body>
+</html>
