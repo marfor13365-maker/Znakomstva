@@ -6,7 +6,7 @@
 <title>Blizko - Лента</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
-:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-bottom:80px}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
@@ -37,6 +37,19 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .modal-footer{padding:16px 20px;flex-shrink:0}
 .modal-caption{font-size:14px;color:var(--text);line-height:1.5}
 .modal-time{font-size:11px;color:var(--muted);margin-top:6px}
+.match-btn{margin-top:16px;width:100%;padding:14px;background:var(--accent);border:none;border-radius:14px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.match-btn:active{opacity:0.8}
+.match-sent{margin-top:16px;text-align:center;color:var(--green);font-size:13px;font-weight:600}
+.match-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.match-sheet-overlay.show{display:flex}
+.match-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
+.match-sheet-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:14px;text-align:center}
+.match-comment-input{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:70px;margin-bottom:14px;transition:border-color 0.2s}
+.match-comment-input:focus{border-color:var(--accent)}
+.match-sheet-actions{display:flex;gap:10px}
+.match-sheet-actions .btn{margin:0;width:auto;flex:1}
+.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
 .upload-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:200;display:none;flex-direction:column}
 .upload-modal.show{display:flex}
 .upload-topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -77,6 +90,9 @@ input[type="file"]{display:none}
   <button class="bottom-btn" onclick="window.location.href='swipe.html'">
     <span class="ico">😍</span><span>Знакомства</span>
   </button>
+  <button class="bottom-btn" onclick="window.location.href='likes.html'">
+    <span class="ico">💖</span><span>Лайки</span>
+  </button>
   <button class="bottom-btn" onclick="window.location.href='matches.html'">
     <span class="ico">💬</span><span>Чаты</span>
   </button>
@@ -101,6 +117,20 @@ input[type="file"]{display:none}
   <div class="modal-footer">
     <div class="modal-caption" id="modal-caption"></div>
     <div class="modal-time" id="modal-time"></div>
+    <button class="match-btn" id="match-btn" onclick="openMatchSheet()">❤️ Match</button>
+    <div class="match-sent" id="match-sent" style="display:none">✓ Лайк отправлен</div>
+  </div>
+</div>
+
+<!-- Окно лайка с комментарием -->
+<div class="match-sheet-overlay" id="match-sheet-overlay">
+  <div class="match-sheet">
+    <div class="match-sheet-title">❤️ Понравился(ась)?</div>
+    <textarea class="match-comment-input" id="match-comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
+    <div class="match-sheet-actions">
+      <button class="btn btn-outline" onclick="closeMatchSheet()">Отмена</button>
+      <button class="btn" onclick="sendMatchLike()">Лайкнуть</button>
+    </div>
   </div>
 </div>
 
@@ -148,6 +178,10 @@ async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) { window.location.href = 'index.html'; return; }
   currentUser = r.data.session.user;
+
+  var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
+  (myLikes || []).forEach(function(l) { if (l.is_like) myLikesGiven[l.to_user] = true; });
+
   await loadFeed();
 }
 
@@ -181,10 +215,14 @@ async function loadFeed() {
   wrap.appendChild(grid);
 }
 
+var currentViewedAuthorId = null;
+var myLikesGiven = {};
+
 function openPost(idx) {
   var post = posts[idx];
   if (!post) return;
   var p = post.profiles || {};
+  currentViewedAuthorId = post.user_id;
   document.getElementById('modal-name').textContent = p.name || 'Пользователь';
   document.getElementById('modal-city').textContent = p.city || '';
   document.getElementById('modal-img').src = post.photo_url || '';
@@ -192,10 +230,65 @@ function openPost(idx) {
   document.getElementById('modal-time').textContent = timeAgo(post.created_at);
   var av = document.getElementById('modal-avatar');
   av.innerHTML = p.photo_url ? '<img src="' + p.photo_url + '">' : '👤';
+
+  // Не показываем кнопку Match на своих постах
+  var matchBtn = document.getElementById('match-btn');
+  var matchSent = document.getElementById('match-sent');
+  if (post.user_id === currentUser.id) {
+    matchBtn.style.display = 'none';
+    matchSent.style.display = 'none';
+  } else if (myLikesGiven[post.user_id]) {
+    matchBtn.style.display = 'none';
+    matchSent.style.display = 'block';
+  } else {
+    matchBtn.style.display = 'block';
+    matchSent.style.display = 'none';
+  }
+
   document.getElementById('view-modal').classList.add('show');
 }
 
 function closeModal() { document.getElementById('view-modal').classList.remove('show'); }
+
+function openMatchSheet() {
+  document.getElementById('match-comment').value = '';
+  document.getElementById('match-sheet-overlay').classList.add('show');
+}
+
+function closeMatchSheet() {
+  document.getElementById('match-sheet-overlay').classList.remove('show');
+}
+
+async function sendMatchLike() {
+  if (!currentViewedAuthorId) return;
+  var comment = document.getElementById('match-comment').value.trim();
+
+  await db.from('likes').upsert({
+    from_user: currentUser.id,
+    to_user: currentViewedAuthorId,
+    is_like: true,
+    comment: comment || null
+  }, { onConflict: 'from_user,to_user' });
+
+  myLikesGiven[currentViewedAuthorId] = true;
+  closeMatchSheet();
+
+  document.getElementById('match-btn').style.display = 'none';
+  document.getElementById('match-sent').style.display = 'block';
+
+  // Проверяем матч
+  var { data: matchData } = await db.from('matches').select('*')
+    .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + currentViewedAuthorId + '),and(user1.eq.' + currentViewedAuthorId + ',user2.eq.' + currentUser.id + ')')
+    .single();
+
+  if (matchData) {
+    setTimeout(function() {
+      if (confirm('🎉 Это взаимный лайк! Перейти в чат?')) {
+        window.location.href = 'chat.html?match=' + matchData.id;
+      }
+    }, 300);
+  }
+}
 
 function openUpload() { document.getElementById('upload-modal').classList.add('show'); }
 
