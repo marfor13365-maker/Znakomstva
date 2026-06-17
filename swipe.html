@@ -46,10 +46,20 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin:6px;width:100%;max-width:280px}
 .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
 .bottombar{display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border)}
-.bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:8px 12px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:color 0.2s}
+.bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:9px;transition:color 0.2s}
 .bottom-btn.active{color:var(--accent)}
-.bottom-btn .ico{font-size:22px}
+.bottom-btn .ico{font-size:20px}
 .debug-bar{position:fixed;bottom:80px;left:0;right:0;background:rgba(0,0,0,0.8);color:#4cff9f;font-size:11px;padding:6px 12px;text-align:center;z-index:50;display:none}
+
+/* Окно лайка с комментарием */
+.like-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:150;display:none;align-items:flex-end;justify-content:center}
+.like-modal.show{display:flex}
+.like-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
+.like-sheet-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:14px;text-align:center}
+.like-comment-input{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:70px;margin-bottom:14px;transition:border-color 0.2s}
+.like-comment-input:focus{border-color:var(--accent)}
+.like-sheet-actions{display:flex;gap:10px}
+.like-sheet-actions .btn{margin:0}
 </style>
 </head>
 <body>
@@ -63,7 +73,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 
 <div class="actions">
   <button class="action-btn dislike" onclick="swipe('left')">❌</button>
-  <button class="action-btn like" onclick="swipe('right')">❤️</button>
+  <button class="action-btn like" onclick="openLikeModal()">❤️</button>
 </div>
 
 <div class="bottombar">
@@ -73,12 +83,27 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <button class="bottom-btn active" onclick="window.location.href='swipe.html'">
     <span class="ico">😍</span><span>Знакомства</span>
   </button>
+  <button class="bottom-btn" onclick="window.location.href='likes.html'">
+    <span class="ico">💖</span><span>Лайки</span>
+  </button>
   <button class="bottom-btn" onclick="window.location.href='matches.html'">
     <span class="ico">💬</span><span>Чаты</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='profile.html'">
     <span class="ico">👤</span><span>Профиль</span>
   </button>
+</div>
+
+<!-- Окно лайка с комментарием -->
+<div class="like-modal" id="like-modal">
+  <div class="like-sheet">
+    <div class="like-sheet-title">❤️ Понравился(ась)?</div>
+    <textarea class="like-comment-input" id="like-comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
+    <div class="like-sheet-actions">
+      <button class="btn btn-outline" onclick="closeLikeModal()">Отмена</button>
+      <button class="btn" onclick="confirmLike()">Лайкнуть</button>
+    </div>
+  </div>
 </div>
 
 <div class="match-popup" id="match-popup">
@@ -96,7 +121,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script>
 var db = null, currentUser = null, currentProfile = null;
 var profiles = [], currentIndex = 0, currentMatchId = null;
-var likesMap = {}; // to_user -> is_like (true/false)
+var likesMap = {};
 var isDragging = false, startX = 0, startY = 0;
 
 function debug(msg) {
@@ -118,23 +143,19 @@ async function init() {
 }
 
 async function loadProfiles() {
-  // Загружаем ВСЕ активные анкеты кроме своей собственной — по кругу
   var query = db.from('profiles')
     .select('*')
     .eq('is_active', true)
     .neq('id', currentUser.id);
 
-  // Фильтр по полу: показываем только тех, кто соответствует моему "ищу"
   if (currentProfile && currentProfile.looking_for && currentProfile.looking_for !== 'any') {
     query = query.eq('gender', currentProfile.looking_for);
   }
 
   var { data, error } = await query.limit(100);
-
   if (error) { debug('Ошибка: ' + error.message); return; }
   profiles = data || [];
 
-  // Загружаем мои лайки/дизлайки чтобы показывать метки
   var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
   likesMap = {};
   (myLikes || []).forEach(function(l) { likesMap[l.to_user] = l.is_like; });
@@ -146,37 +167,29 @@ async function loadProfiles() {
 function renderFeed() {
   var wrap = document.getElementById('feed-wrap');
   wrap.innerHTML = '';
-
   if (profiles.length === 0) {
     wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p>Пока нет анкет.<br>Загляни позже!</p></div>';
     return;
   }
-
-  // Ходим по кругу
   if (currentIndex >= profiles.length) currentIndex = 0;
-
   var profile = profiles[currentIndex];
   var stack = document.createElement('div');
   stack.className = 'card-stack';
   var card = document.createElement('div');
   card.className = 'profile-card';
   card.id = 'current-card';
-
   var likeLabel = document.createElement('div');
   likeLabel.className = 'like-label'; likeLabel.id = 'like-label'; likeLabel.textContent = 'LIKE';
   var nopeLabel = document.createElement('div');
   nopeLabel.className = 'nope-label'; nopeLabel.id = 'nope-label'; nopeLabel.textContent = 'NOPE';
   card.appendChild(likeLabel);
   card.appendChild(nopeLabel);
-
-  // Метка если уже свайпали эту анкету
   if (likesMap.hasOwnProperty(profile.id)) {
     var badge = document.createElement('div');
     badge.className = 'seen-badge ' + (likesMap[profile.id] ? 'liked' : 'disliked');
     badge.textContent = likesMap[profile.id] ? '❤️ Понравилось' : '❌ Пропущено';
     card.appendChild(badge);
   }
-
   if (profile.photo_url) {
     var img = document.createElement('img');
     img.className = 'card-photo'; img.src = profile.photo_url;
@@ -187,14 +200,12 @@ function renderFeed() {
     np.className = 'card-no-photo'; np.textContent = '👤';
     card.appendChild(np);
   }
-
   var overlay = document.createElement('div');
   overlay.className = 'card-overlay';
   overlay.innerHTML = '<div class="card-name">' + profile.name + (profile.age ? ', ' + profile.age : '') + '</div>' +
     (profile.city ? '<div class="card-info">📍 ' + profile.city + '</div>' : '') +
     (profile.about ? '<div class="card-about">' + profile.about + '</div>' : '');
   card.appendChild(overlay);
-
   stack.appendChild(card);
   wrap.appendChild(stack);
   setupDrag(card);
@@ -237,7 +248,7 @@ function dragEnd() {
   card.classList.remove('dragging');
   var m = card.style.transform.match(/translate\(([^,]+)px/);
   var dx = m ? parseFloat(m[1]) : 0;
-  if (dx > 80) swipe('right');
+  if (dx > 80) { card.style.transform = ''; openLikeModal(); }
   else if (dx < -80) swipe('left');
   else {
     card.style.transform = '';
@@ -247,7 +258,23 @@ function dragEnd() {
   }
 }
 
-async function swipe(dir) {
+function openLikeModal() {
+  if (!profiles[currentIndex]) return;
+  document.getElementById('like-comment').value = '';
+  document.getElementById('like-modal').classList.add('show');
+}
+
+function closeLikeModal() {
+  document.getElementById('like-modal').classList.remove('show');
+}
+
+async function confirmLike() {
+  var comment = document.getElementById('like-comment').value.trim();
+  closeLikeModal();
+  await swipe('right', comment);
+}
+
+async function swipe(dir, comment) {
   var card = document.getElementById('current-card');
   if (!card) return;
   var profile = profiles[currentIndex];
@@ -256,11 +283,11 @@ async function swipe(dir) {
 
   var isLike = dir === 'right';
 
-  // upsert: если уже свайпал эту анкету — перезапишет старый выбор (отмена/смена решения)
   await db.from('likes').upsert({
     from_user: currentUser.id,
     to_user: profile.id,
-    is_like: isLike
+    is_like: isLike,
+    comment: isLike ? (comment || null) : null
   }, { onConflict: 'from_user,to_user' });
 
   likesMap[profile.id] = isLike;
