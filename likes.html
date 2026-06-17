@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Blizko - Лайки</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-bottom:80px}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
+.back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center}
+.page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
+.list{flex:1}
+.like-item{display:flex;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--input-bg);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid var(--border)}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.like-info{flex:1;min-width:0}
+.like-name{font-weight:600;font-size:15px;margin-bottom:3px}
+.like-city{font-size:12px;color:var(--muted);margin-bottom:6px}
+.like-comment{font-size:13px;color:var(--text);background:var(--card);padding:8px 12px;border-radius:10px;border:1px solid var(--border);line-height:1.4}
+.like-actions{display:flex;gap:8px;margin-top:10px}
+.mini-btn{padding:8px 16px;border-radius:10px;border:none;font-family:'Unbounded',sans-serif;font-size:11px;font-weight:600;cursor:pointer}
+.mini-btn.like{background:var(--accent);color:white}
+.mini-btn.skip{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.matched-tag{font-size:11px;color:var(--green);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:4px}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
+.empty-state .icon{font-size:60px;margin-bottom:16px}
+.empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
+.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border);background:var(--bg);z-index:10}
+.bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:9px;transition:color 0.2s}
+.bottom-btn.active{color:var(--accent)}
+.bottom-btn .ico{font-size:20px}
+.loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <div class="page-title">Кто меня лайкнул</div>
+</div>
+
+<div class="list" id="list-wrap">
+  <div class="loading">⏳ Загрузка...</div>
+</div>
+
+<div class="bottombar">
+  <button class="bottom-btn" onclick="window.location.href='feed.html'">
+    <span class="ico">🏠</span><span>Лента</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='swipe.html'">
+    <span class="ico">😍</span><span>Знакомства</span>
+  </button>
+  <button class="bottom-btn active" onclick="window.location.href='likes.html'">
+    <span class="ico">💖</span><span>Лайки</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='matches.html'">
+    <span class="ico">💬</span><span>Чаты</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='profile.html'">
+    <span class="ico">👤</span><span>Профиль</span>
+  </button>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var currentUser = null;
+var myResponses = {}; // to_user (т.е. кого я уже оценил) -> is_like
+
+async function init() {
+  var r = await db.auth.getSession();
+  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  currentUser = r.data.session.user;
+  await loadLikes();
+}
+
+async function loadLikes() {
+  var wrap = document.getElementById('list-wrap');
+
+  // Кто лайкнул меня
+  var { data: likesData, error } = await db.from('likes')
+    .select('*, profiles!likes_from_user_fkey(name, age, city, photo_url)')
+    .eq('to_user', currentUser.id)
+    .eq('is_like', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    // Фоллбэк без явного имени fk constraint
+    var fallback = await db.from('likes')
+      .select('*')
+      .eq('to_user', currentUser.id)
+      .eq('is_like', true)
+      .order('created_at', { ascending: false });
+    likesData = fallback.data;
+    if (likesData) {
+      for (var i = 0; i < likesData.length; i++) {
+        var p = await db.from('profiles').select('name, age, city, photo_url').eq('id', likesData[i].from_user).single();
+        likesData[i].profiles = p.data;
+      }
+    }
+  }
+
+  likesData = likesData || [];
+
+  // Мои собственные оценки (чтобы понять с кем уже матч / кого я лайкнул в ответ)
+  var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
+  myResponses = {};
+  (myLikes || []).forEach(function(l) { myResponses[l.to_user] = l.is_like; });
+
+  if (likesData.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">💖</div><p>Пока никто не лайкнул.<br>Заполни профиль и добавь фото —<br>тебя будут находить чаще!</p></div>';
+    return;
+  }
+
+  wrap.innerHTML = '';
+  likesData.forEach(function(like) {
+    var p = like.profiles || {};
+    var alreadyMatched = myResponses.hasOwnProperty(like.from_user) && myResponses[like.from_user] === true;
+
+    var item = document.createElement('div');
+    item.className = 'like-item';
+
+    var actionsHtml = '';
+    if (alreadyMatched) {
+      actionsHtml = '<div class="matched-tag">✓ Это уже мэтч — переходи в чат</div>';
+    } else {
+      actionsHtml =
+        '<div class="like-actions">' +
+        '<button class="mini-btn like" onclick="likeBack(\'' + like.from_user + '\')">❤️ Лайкнуть в ответ</button>' +
+        '<button class="mini-btn skip" onclick="skipLike(\'' + like.from_user + '\', this)">Пропустить</button>' +
+        '</div>';
+    }
+
+    item.innerHTML =
+      '<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
+      '<div class="like-info">' +
+        '<div class="like-name">' + (p.name || 'Пользователь') + (p.age ? ', ' + p.age : '') + '</div>' +
+        '<div class="like-city">' + (p.city ? '📍 ' + p.city : '') + '</div>' +
+        (like.comment ? '<div class="like-comment">💬 ' + escapeHtml(like.comment) + '</div>' : '') +
+        actionsHtml +
+      '</div>';
+
+    wrap.appendChild(item);
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function likeBack(otherUserId) {
+  await db.from('likes').upsert({
+    from_user: currentUser.id,
+    to_user: otherUserId,
+    is_like: true
+  }, { onConflict: 'from_user,to_user' });
+
+  // Проверяем — образовался матч?
+  var { data: matchData } = await db.from('matches').select('*')
+    .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
+    .single();
+
+  if (matchData) {
+    window.location.href = 'chat.html?match=' + matchData.id;
+  } else {
+    await loadLikes();
+  }
+}
+
+async function skipLike(otherUserId, btnEl) {
+  await db.from('likes').upsert({
+    from_user: currentUser.id,
+    to_user: otherUserId,
+    is_like: false
+  }, { onConflict: 'from_user,to_user' });
+  await loadLikes();
+}
+
+init();
+</script>
+</body>
+</html>
