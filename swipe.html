@@ -119,11 +119,17 @@ async function init() {
 
 async function loadProfiles() {
   // Загружаем ВСЕ активные анкеты кроме своей собственной — по кругу
-  var { data, error } = await db.from('profiles')
+  var query = db.from('profiles')
     .select('*')
     .eq('is_active', true)
-    .neq('id', currentUser.id)
-    .limit(100);
+    .neq('id', currentUser.id);
+
+  // Фильтр по полу: показываем только тех, кто соответствует моему "ищу"
+  if (currentProfile && currentProfile.looking_for && currentProfile.looking_for !== 'any') {
+    query = query.eq('gender', currentProfile.looking_for);
+  }
+
+  var { data, error } = await query.limit(100);
 
   if (error) { debug('Ошибка: ' + error.message); return; }
   profiles = data || [];
