@@ -117,7 +117,8 @@ async function loadLikes() {
   }
 
   wrap.innerHTML = '';
-  likesData.forEach(function(like) {
+  for (var i = 0; i < likesData.length; i++) {
+    var like = likesData[i];
     var p = like.profiles || {};
     var alreadyMatched = myResponses.hasOwnProperty(like.from_user) && myResponses[like.from_user] === true;
 
@@ -126,7 +127,13 @@ async function loadLikes() {
 
     var actionsHtml = '';
     if (alreadyMatched) {
-      actionsHtml = '<div class="matched-tag">✓ Это уже мэтч — переходи в чат</div>';
+      var { data: matchRow } = await db.from('matches').select('id')
+        .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + like.from_user + '),and(user1.eq.' + like.from_user + ',user2.eq.' + currentUser.id + ')')
+        .single();
+      var matchId = matchRow ? matchRow.id : null;
+      actionsHtml = matchId
+        ? '<div class="matched-tag" style="cursor:pointer" onclick="window.location.href=\'chat.html?match=' + matchId + '\'">✓ Это уже мэтч — открыть чат →</div>'
+        : '<div class="matched-tag">✓ Это уже мэтч</div>';
     } else {
       actionsHtml =
         '<div class="like-actions">' +
@@ -145,7 +152,7 @@ async function loadLikes() {
       '</div>';
 
     wrap.appendChild(item);
-  });
+  }
 }
 
 function escapeHtml(str) {
