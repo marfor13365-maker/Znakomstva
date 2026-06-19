@@ -112,21 +112,14 @@ async function loadChats() {
 
     var { data: otherProfile } = await db.from('profiles').select('name,photo_url').eq('id', otherId).single();
 
-    var { data: messages } = await db.from('messages').select('text,created_at,from_user')
+    var { data: messages } = await db.from('messages').select('text,created_at,sender_id')
       .eq('match_id', m.id)
       .order('created_at', { ascending: false })
       .limit(1);
 
     var lastMsg = messages && messages.length > 0 ? messages[0] : null;
 
-    // Считаем непрочитанные (from_user != currentUser и нет read_at)
-    var { count: unread } = await db.from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('match_id', m.id)
-      .neq('from_user', currentUser.id)
-      .is('read_at', null);
-
-    items.push({ match: m, profile: otherProfile, lastMsg, unread: unread || 0 });
+    items.push({ match: m, profile: otherProfile, lastMsg });
   }
 
   if (items.length === 0) {
@@ -138,7 +131,7 @@ async function loadChats() {
   items.forEach(function(item) {
     var p = item.profile || {};
     var lastText = item.lastMsg
-      ? (item.lastMsg.from_user === currentUser.id ? 'Вы: ' : '') + item.lastMsg.text
+      ? (item.lastMsg.sender_id === currentUser.id ? 'Вы: ' : '') + item.lastMsg.text
       : 'Напишите первым!';
     var lastTime = item.lastMsg ? timeAgo(item.lastMsg.created_at) : '';
 
@@ -156,7 +149,7 @@ async function loadChats() {
       '</div>' +
       '<div class="chat-meta">' +
         '<div class="chat-time">' + lastTime + '</div>' +
-        (item.unread > 0 ? '<div class="chat-badge">' + item.unread + '</div>' : '') +
+        '' +
       '</div>';
 
     wrap.appendChild(el);
