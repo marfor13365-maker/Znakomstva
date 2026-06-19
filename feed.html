@@ -40,6 +40,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .match-btn{margin-top:16px;width:100%;padding:14px;background:var(--accent);border:none;border-radius:14px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
 .match-btn:active{opacity:0.8}
 .match-sent{margin-top:16px;text-align:center;color:var(--green);font-size:13px;font-weight:600}
+.delete-post-btn{margin-top:12px;width:100%;padding:12px;background:transparent;border:1px solid var(--accent);border-radius:14px;color:var(--accent);font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
 .match-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
 .match-sheet-overlay.show{display:flex}
 .match-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
@@ -119,6 +120,7 @@ input[type="file"]{display:none}
     <div class="modal-time" id="modal-time"></div>
     <button class="match-btn" id="match-btn" onclick="openMatchSheet()">❤️ Match</button>
     <div class="match-sent" id="match-sent" style="display:none">✓ Лайк отправлен</div>
+    <button class="delete-post-btn" id="delete-post-btn" onclick="deleteCurrentPost()" style="display:none">🗑 Удалить пост</button>
   </div>
 </div>
 
@@ -217,12 +219,14 @@ async function loadFeed() {
 
 var currentViewedAuthorId = null;
 var myLikesGiven = {};
+var currentViewedPostId = null;
 
 function openPost(idx) {
   var post = posts[idx];
   if (!post) return;
   var p = post.profiles || {};
   currentViewedAuthorId = post.user_id;
+  currentViewedPostId = post.id;
   document.getElementById('modal-name').textContent = p.name || 'Пользователь';
   document.getElementById('modal-city').textContent = p.city || '';
   document.getElementById('modal-img').src = post.photo_url || '';
@@ -231,21 +235,36 @@ function openPost(idx) {
   var av = document.getElementById('modal-avatar');
   av.innerHTML = p.photo_url ? '<img src="' + p.photo_url + '">' : '👤';
 
-  // Не показываем кнопку Match на своих постах
   var matchBtn = document.getElementById('match-btn');
   var matchSent = document.getElementById('match-sent');
+  var deleteBtn = document.getElementById('delete-post-btn');
+
   if (post.user_id === currentUser.id) {
     matchBtn.style.display = 'none';
     matchSent.style.display = 'none';
+    deleteBtn.style.display = 'block';
   } else if (myLikesGiven[post.user_id]) {
     matchBtn.style.display = 'none';
     matchSent.style.display = 'block';
+    deleteBtn.style.display = 'none';
   } else {
     matchBtn.style.display = 'block';
     matchSent.style.display = 'none';
+    deleteBtn.style.display = 'none';
   }
 
   document.getElementById('view-modal').classList.add('show');
+}
+
+async function deleteCurrentPost() {
+  if (!currentViewedPostId) return;
+  if (!confirm('Удалить этот пост?')) return;
+
+  var { error } = await db.from('posts').delete().eq('id', currentViewedPostId);
+  if (error) { alert('Ошибка удаления: ' + error.message); return; }
+
+  closeModal();
+  await loadFeed();
 }
 
 function closeModal() { document.getElementById('view-modal').classList.remove('show'); }
