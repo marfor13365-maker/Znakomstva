@@ -127,7 +127,8 @@ var isRecording = false;
 
 function getMatchId() {
   var params = new URLSearchParams(window.location.search);
-  return params.get('match');
+  var val = params.get('match');
+  return val ? parseInt(val, 10) : null;
 }
 
 function timeStr(dateStr) {
@@ -166,7 +167,7 @@ function renderMessages(messages) {
       wrap.appendChild(div);
       lastDate = msgDate;
     }
-    var isMine = msg.from_user === currentUser.id;
+    var isMine = msg.sender_id === currentUser.id;
     var row = document.createElement('div');
     row.className = 'msg-row ' + (isMine ? 'mine' : 'theirs');
     var bubble = document.createElement('div');
@@ -202,11 +203,6 @@ async function loadMessages() {
     .eq('match_id', matchId)
     .order('created_at', { ascending: true });
   renderMessages(data || []);
-
-  await db.from('messages').update({ read_at: new Date().toISOString() })
-    .eq('match_id', matchId)
-    .neq('from_user', currentUser.id)
-    .is('read_at', null);
 }
 
 async function sendMessage() {
@@ -217,7 +213,7 @@ async function sendMessage() {
 
   var payload = {
     match_id: matchId,
-    from_user: currentUser.id,
+    sender_id: currentUser.id,
     text: text || null
   };
 
