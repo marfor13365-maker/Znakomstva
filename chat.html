@@ -231,7 +231,12 @@ async function sendMessage() {
   cancelAttachment();
 
   var { error } = await db.from('messages').insert(payload);
-  if (!error) await loadMessages();
+  if (!error) {
+    await loadMessages();
+  } else {
+    alert('Ошибка отправки: ' + error.message);
+    input.value = text; // вернуть текст обратно чтобы не потерялся
+  }
 }
 
 function openAttachMenu() {
