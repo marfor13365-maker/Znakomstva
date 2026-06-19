@@ -61,16 +61,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:9px}
 .bottom-btn.active{color:var(--accent)}
 .bottom-btn .ico{font-size:20px}
-
-/* Редактор фото (crop/rotate) */
-.editor-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:#000;z-index:300;display:none;flex-direction:column}
-.editor-overlay.show{display:flex}
-.editor-topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;flex-shrink:0}
-.editor-btn{background:none;border:none;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:8px 4px}
-.editor-canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;touch-action:none}
-.editor-crop-box{position:absolute;border:2px solid white;box-shadow:0 0 0 2000px rgba(0,0,0,0.6)}
-.editor-controls{padding:16px 20px calc(16px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:20px;flex-shrink:0}
-.editor-tool-btn{width:50px;height:50px;border-radius:50%;background:#222;border:none;color:white;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
@@ -153,18 +143,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
   <button class="bottom-btn active"><span class="ico">👤</span><span>Профиль</span></button>
 </div>
 
-<!-- Редактор фото: crop + rotate -->
-<div class="editor-overlay" id="editor-overlay">
-  <div class="editor-topbar">
-    <button class="editor-btn" onclick="cancelEdit()">Отмена</button>
-    <button class="editor-btn" onclick="rotateImage()">⟳ Повернуть</button>
-    <button class="editor-btn" onclick="confirmEdit()">Готово</button>
-  </div>
-  <div class="editor-canvas-wrap" id="editor-canvas-wrap">
-    <canvas id="editor-canvas"></canvas>
-  </div>
-</div>
-
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -172,13 +150,6 @@ var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 var uploadedPhotoUrl = null;
 var galleryItems = [];
-
-var editTarget = null; // 'avatar' или 'gallery'
-var editImg = null;
-var editRotation = 0;
-var editScale = 1;
-var editOffsetX = 0, editOffsetY = 0;
-var isDraggingEditor = false, dragStartX = 0, dragStartY = 0;
 
 async function init() {
   var r = await db.auth.getSession();
@@ -286,108 +257,52 @@ async function uploadGalleryVideo(file) {
 
 /* ===== Редактор фото: crop (квадрат) + rotate ===== */
 
-function startEdit(input, target) {
+/* ===== Прямая загрузка фото (без редактора, временно) ===== */
+
+async function startEdit(input, target) {
   var file = input.files[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
 
-  editTarget = target;
-  editRotation = 0;
-
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    editImg = new Image();
-    editImg.onload = function() {
-      openEditor();
-    };
-    editImg.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  if (target === 'avatar') {
+    await uploadAvatarBlob(file);
+  } else if (target === 'gallery') {
+    await uploadGalleryBlob(file);
+  }
   input.value = '';
 }
 
-function openEditor() {
-  document.getElementById('editor-overlay').classList.add('show');
-  drawEditorCanvas();
-}
-
-function drawEditorCanvas() {
-  var canvas = document.getElementById('editor-canvas');
-  var wrap = document.getElementById('editor-canvas-wrap');
-  var size = Math.min(wrap.clientWidth, wrap.clientHeight) * 0.9;
-  canvas.width = size;
-  canvas.height = size;
-  canvas.style.width = size + 'px';
-  canvas.style.height = size + 'px';
-
-  var ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, size, size);
-  ctx.save();
-  ctx.translate(size / 2, size / 2);
-  ctx.rotate(editRotation * Math.PI / 180);
-
-  var imgW = editImg.width, imgH = editImg.height;
-  var scale = Math.max(size / imgW, size / imgH);
-  var drawW = imgW * scale, drawH = imgH * scale;
-
-  ctx.drawImage(editImg, -drawW / 2, -drawH / 2, drawW, drawH);
-  ctx.restore();
-}
-
-function rotateImage() {
-  editRotation = (editRotation + 90) % 360;
-  drawEditorCanvas();
-}
-
-function cancelEdit() {
-  document.getElementById('editor-overlay').classList.remove('show');
-  editImg = null;
-  editTarget = null;
-}
-
-async function confirmEdit() {
-  var canvas = document.getElementById('editor-canvas');
-  canvas.toBlob(async function(blob) {
-    document.getElementById('editor-overlay').classList.remove('show');
-
-    if (editTarget === 'avatar') {
-      await uploadAvatarBlob(blob);
-    } else if (editTarget === 'gallery') {
-      await uploadGalleryBlob(blob);
-    }
-
-    editImg = null;
-    editTarget = null;
-  }, 'image/jpeg', 0.9);
-}
-
-async function uploadAvatarBlob(blob) {
+async function uploadAvatarBlob(file) {
   document.getElementById('avatar-upload-progress').style.display = 'block';
   document.getElementById('avatar-upload-bar').style.width = '40%';
 
-  var fileName = currentUser.id + '_' + Date.now() + '.jpg';
-  var r = await db.storage.from('photos').upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
+  var ext = file.name ? file.name.split('.').pop() : 'jpg';
+  var fileName = currentUser.id + '_' + Date.now() + '.' + ext;
+  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true });
 
   document.getElementById('avatar-upload-bar').style.width = '100%';
   setTimeout(function() { document.getElementById('avatar-upload-progress').style.display = 'none'; }, 500);
 
-  if (r.error) { setMsg('Ошибка загрузки фото', 'error'); return; }
+  if (r.error) { setMsg('Ошибка загрузки фото: ' + r.error.message, 'error'); return; }
 
   uploadedPhotoUrl = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
   showAvatarPreview(uploadedPhotoUrl);
-  await db.from('profiles').update({ photo_url: uploadedPhotoUrl }).eq('id', currentUser.id);
+  var upd = await db.from('profiles').update({ photo_url: uploadedPhotoUrl }).eq('id', currentUser.id);
+  if (upd.error) setMsg('Фото загружено, но не сохранено в анкете: ' + upd.error.message, 'error');
 }
 
-async function uploadGalleryBlob(blob) {
+async function uploadGalleryBlob(file) {
   if (galleryItems.length >= 9) { alert('Максимум 9 фото/видео в галерее'); return; }
 
-  var fileName = 'gallery/' + currentUser.id + '_' + Date.now() + '.jpg';
-  var r = await db.storage.from('photos').upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
+  var ext = file.name ? file.name.split('.').pop() : 'jpg';
+  var fileName = 'gallery/' + currentUser.id + '_' + Date.now() + '.' + ext;
+  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true });
 
   if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
 
   var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-  await db.from('profile_photos').insert({ user_id: currentUser.id, photo_url: url, media_type: 'photo', position: galleryItems.length });
+  var ins = await db.from('profile_photos').insert({ user_id: currentUser.id, photo_url: url, media_type: 'photo', position: galleryItems.length });
+  if (ins.error) { alert('Фото загружено, но не сохранено в галерее: ' + ins.error.message); return; }
   await loadGallery();
 }
 
