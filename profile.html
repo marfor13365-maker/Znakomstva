@@ -9,10 +9,10 @@
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-bottom:80px}
-.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;position:fixed;top:0;left:0;right:0;background:linear-gradient(rgba(13,13,13,0.85),transparent);z-index:10}
 .back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center}
 .logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.content{padding:20px}
+.content{padding:20px;padding-top:80px}
 h2{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;margin-bottom:20px}
 
 /* Аватар */
@@ -61,6 +61,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:9px}
 .bottom-btn.active{color:var(--accent)}
 .bottom-btn .ico{font-size:20px}
+
+.delete-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.delete-overlay.show{display:flex}
+.delete-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--accent)}
+.delete-sheet-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:10px;color:var(--accent)}
+.delete-sheet-text{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:18px}
+.delete-sheet-actions{display:flex;gap:10px}
+.delete-sheet-actions .btn{margin:0;flex:1}
 
 .gallery-viewer{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:300;display:none;align-items:center;justify-content:center}
 .gallery-viewer.show{display:flex}
@@ -136,8 +144,21 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
     </div>
   </div>
 
+  <div class="section">
+    <div class="section-title">Приватность анкеты</div>
+    <div class="form-group">
+      <label>Кто видит мою полную анкету (о себе, галерею)</label>
+      <select id="profile_visibility">
+        <option value="all">Открыта всем</option>
+        <option value="matches">Только для мэтчей</option>
+        <option value="none">Закрыта для всех</option>
+      </select>
+    </div>
+  </div>
+
   <button class="btn" onclick="saveProfile()">Сохранить анкету</button>
-  <button class="btn btn-danger" onclick="logout()">Выйти из аккаунта</button>
+  <button class="btn btn-outline" onclick="logout()">Выйти из аккаунта</button>
+  <button class="btn btn-danger" onclick="openDeleteAccountSheet()">Удалить аккаунт навсегда</button>
   <div class="msg" id="msg"></div>
 </div>
 
@@ -193,6 +214,7 @@ async function init() {
     document.getElementById('about').value = p.data.about || '';
     document.getElementById('gender').value = p.data.gender || '';
     document.getElementById('looking_for').value = p.data.looking_for || '';
+    document.getElementById('profile_visibility').value = p.data.profile_visibility || 'matches';
     if (p.data.photo_url) {
       showAvatarPreview(p.data.photo_url);
       uploadedPhotoUrl = p.data.photo_url;
@@ -344,6 +366,7 @@ async function saveProfile() {
   var about = document.getElementById('about').value.trim();
   var gender = document.getElementById('gender').value;
   var looking_for = document.getElementById('looking_for').value;
+  var profile_visibility = document.getElementById('profile_visibility').value;
 
   if (!name) { setMsg('Введи имя', 'error'); return; }
   if (!age || age < 18) { setMsg('Укажи возраст от 18 лет', 'error'); return; }
@@ -352,7 +375,7 @@ async function saveProfile() {
 
   setMsg('Сохраняем...', '');
   var r = await db.from('profiles').upsert({
-    id: currentUser.id, name, age, city, about, gender, looking_for,
+    id: currentUser.id, name, age, city, about, gender, looking_for, profile_visibility,
     photo_url: uploadedPhotoUrl, is_active: true
   });
 
@@ -371,7 +394,50 @@ async function logout() {
   window.location.href = 'index.html';
 }
 
+function openDeleteAccountSheet() {
+  document.getElementById('delete-account-overlay').classList.add('show');
+}
+
+function closeDeleteAccountSheet() {
+  document.getElementById('delete-account-overlay').classList.remove('show');
+}
+
+async function confirmDeleteAccount() {
+  var btn = document.getElementById('confirm-delete-btn');
+  btn.disabled = true;
+  btn.textContent = 'Удаляем...';
+
+  var uid = currentUser.id;
+
+  // Удаляем все данные пользователя по очереди
+  await db.from('messages').delete().eq('sender_id', uid);
+  await db.from('likes').delete().or('from_user.eq.' + uid + ',to_user.eq.' + uid);
+  await db.from('matches').delete().or('user1.eq.' + uid + ',user2.eq.' + uid);
+  await db.from('posts').delete().eq('user_id', uid);
+  await db.from('profile_photos').delete().eq('user_id', uid);
+  await db.from('profiles').delete().eq('id', uid);
+
+  // Выходим из аккаунта (полное удаление пользователя из auth.users требует серверных прав,
+  // поэтому просто выходим — все личные данные уже удалены)
+  await db.auth.signOut();
+  alert('Аккаунт и все данные удалены.');
+  window.location.href = 'index.html';
+}
+
 init();
 </script>
+
+<!-- Подтверждение удаления аккаунта -->
+<div class="delete-overlay" id="delete-account-overlay">
+  <div class="delete-sheet">
+    <div class="delete-sheet-title">⚠️ Удалить аккаунт навсегда?</div>
+    <div class="delete-sheet-text">Все твои фото, посты, лайки, мэтчи и переписки будут удалены без возможности восстановления.</div>
+    <div class="delete-sheet-actions">
+      <button class="btn btn-outline" onclick="closeDeleteAccountSheet()">Отмена</button>
+      <button class="btn btn-danger" id="confirm-delete-btn" onclick="confirmDeleteAccount()">Удалить навсегда</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
