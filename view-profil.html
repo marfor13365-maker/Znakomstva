@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Blizko - Анкета</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
+.back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center}
+.page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
+.content{flex:1;padding-bottom:40px}
+.loading{padding:60px 20px;text-align:center;color:var(--muted);font-size:14px}
+
+.avatar-block{display:flex;flex-direction:column;align-items:center;padding:30px 20px}
+.avatar-circle{width:120px;height:120px;border-radius:50%;background:var(--input-bg);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:48px;border:2px solid var(--border)}
+.avatar-circle img{width:100%;height:100%;object-fit:cover}
+.profile-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-top:14px}
+.profile-meta{font-size:13px;color:var(--muted);margin-top:6px}
+
+.section{padding:0 20px;margin-bottom:20px}
+.section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:10px}
+.about-text{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px;line-height:1.6}
+
+.gallery-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;padding:0 20px}
+.gallery-item{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--input-bg);cursor:pointer}
+.gallery-item img,.gallery-item video{width:100%;height:100%;object-fit:cover}
+
+.locked-state{text-align:center;padding:50px 30px;color:var(--muted)}
+.locked-state .icon{font-size:50px;margin-bottom:14px}
+.locked-state p{font-size:14px;line-height:1.6}
+
+.viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:100;display:none;align-items:center;justify-content:center}
+.viewer-overlay.show{display:flex}
+.viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:101}
+.viewer-content{max-width:100%;max-height:100%;padding:20px}
+.viewer-content img,.viewer-content video{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">&#8592;</button>
+  <div class="page-title">Анкета</div>
+</div>
+
+<div class="content" id="content">
+  <div class="loading">⏳ Загрузка...</div>
+</div>
+
+<div class="viewer-overlay" id="viewer-overlay">
+  <button class="viewer-close" onclick="closeViewer()">✕</button>
+  <div class="viewer-content" id="viewer-content"></div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var currentUser = null;
+var galleryItems = [];
+
+function getTargetUserId() {
+  var params = new URLSearchParams(window.location.search);
+  return params.get('user');
+}
+
+async function isMatched(otherUserId) {
+  var { data } = await db.from('matches').select('id')
+    .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
+    .single();
+  return !!data;
+}
+
+async function init() {
+  var r = await db.auth.getSession();
+  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  currentUser = r.data.session.user;
+
+  var targetId = getTargetUserId();
+  if (!targetId) { window.location.href = 'feed.html'; return; }
+
+  var { data: profile } = await db.from('profiles').select('*').eq('id', targetId).single();
+  if (!profile) {
+    document.getElementById('content').innerHTML = '<div class="loading">Анкета не найдена</div>';
+    return;
+  }
+
+  var visibility = profile.profile_visibility || 'matches';
+  var canSeeFull = true;
+
+  if (visibility === 'none') {
+    canSeeFull = false;
+  } else if (visibility === 'matches') {
+    canSeeFull = await isMatched(targetId);
+  }
+  // visibility === 'all' -> canSeeFull = true всегда
+
+  renderProfile(profile, canSeeFull, targetId);
+}
+
+function renderProfile(profile, canSeeFull, targetId) {
+  var content = document.getElementById('content');
+
+  var html =
+    '<div class="avatar-block">' +
+      '<div class="avatar-circle">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
+      '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
+      '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
+    '</div>';
+
+  if (!canSeeFull) {
+    html += '<div class="locked-state"><div class="icon">🔒</div><p>Этот человек скрыл анкету.<br>Полная информация и галерея<br>недоступны.</p></div>';
+    content.innerHTML = html;
+    return;
+  }
+
+  html += '<div class="section"><div class="section-title">О себе</div><div class="about-text">' +
+    (profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
+    '</div></div>';
+
+  html += '<div class="section"><div class="section-title">Галерея</div></div>';
+  html += '<div class="gallery-grid" id="gallery-grid"></div>';
+
+  content.innerHTML = html;
+  loadGallery(targetId);
+}
+
+function escapeHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function loadGallery(targetId) {
+  var { data } = await db.from('profile_photos').select('*').eq('user_id', targetId).order('position', { ascending: true });
+  galleryItems = data || [];
+
+  var grid = document.getElementById('gallery-grid');
+  if (!grid) return;
+
+  if (galleryItems.length === 0) {
+    grid.innerHTML = '<div style="padding:0 4px;color:var(--muted);font-size:13px">Галерея пуста</div>';
+    return;
+  }
+
+  grid.innerHTML = '';
+  galleryItems.forEach(function(item, idx) {
+    var el = document.createElement('div');
+    el.className = 'gallery-item';
+    el.onclick = function() { openViewer(idx); };
+    if (item.media_type === 'video') {
+      el.innerHTML = '<video src="' + item.photo_url + '" muted></video>';
+    } else {
+      el.innerHTML = '<img src="' + item.photo_url + '">';
+    }
+    grid.appendChild(el);
+  });
+}
+
+function openViewer(idx) {
+  var item = galleryItems[idx];
+  if (!item) return;
+  var content = document.getElementById('viewer-content');
+  if (item.media_type === 'video') {
+    content.innerHTML = '<video src="' + item.photo_url + '" controls autoplay playsinline></video>';
+  } else {
+    content.innerHTML = '<img src="' + item.photo_url + '">';
+  }
+  document.getElementById('viewer-overlay').classList.add('show');
+}
+
+function closeViewer() {
+  document.getElementById('viewer-overlay').classList.remove('show');
+  document.getElementById('viewer-content').innerHTML = '';
+}
+
+init();
+</script>
+</body>
+</html>
