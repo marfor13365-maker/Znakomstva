@@ -66,7 +66,7 @@ input[type="file"]{display:none}
 
 <div class="topbar">
   <button class="back-btn" onclick="window.location.href='matches.html'">&#8592;</button>
-  <div class="chat-header">
+  <div class="chat-header" id="chat-header" onclick="goToProfile()" style="cursor:pointer">
     <div class="chat-avatar" id="chat-avatar">👤</div>
     <div class="chat-name" id="chat-name">Загрузка...</div>
   </div>
@@ -119,6 +119,7 @@ var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 var matchId = null;
 var otherProfile = null;
+var otherUserId = null;
 var subscription = null;
 var pendingAttachment = null; // { url, type, name }
 var mediaRecorder = null;
@@ -192,6 +193,12 @@ function renderMessages(messages) {
 
     contentHtml += '<div class="time">' + timeStr(msg.created_at) + '</div>';
     bubble.innerHTML = contentHtml;
+
+    if (isMine) {
+      bubble.dataset.msgId = msg.id;
+      attachLongPress(bubble, msg.id);
+    }
+
     row.appendChild(bubble);
     wrap.appendChild(row);
   });
@@ -203,6 +210,32 @@ async function loadMessages() {
     .eq('match_id', matchId)
     .order('created_at', { ascending: true });
   renderMessages(data || []);
+}
+
+var longPressTimer = null;
+
+function attachLongPress(el, msgId) {
+  var start = function() {
+    longPressTimer = setTimeout(function() {
+      if (confirm('Удалить это сообщение?')) {
+        deleteMessage(msgId);
+      }
+    }, 600);
+  };
+  var cancel = function() { clearTimeout(longPressTimer); };
+
+  el.addEventListener('touchstart', start, { passive: true });
+  el.addEventListener('touchend', cancel);
+  el.addEventListener('touchmove', cancel);
+  el.addEventListener('mousedown', start);
+  el.addEventListener('mouseup', cancel);
+  el.addEventListener('mouseleave', cancel);
+}
+
+async function deleteMessage(msgId) {
+  var { error } = await db.from('messages').delete().eq('id', msgId).eq('sender_id', currentUser.id);
+  if (error) { alert('Ошибка удаления: ' + error.message); return; }
+  await loadMessages();
 }
 
 async function sendMessage() {
@@ -371,6 +404,7 @@ async function init() {
   if (!match) { window.location.href = 'matches.html'; return; }
 
   var otherId = match.user1 === currentUser.id ? match.user2 : match.user1;
+  otherUserId = otherId;
   var { data: profile } = await db.from('profiles').select('name,photo_url').eq('id', otherId).single();
   otherProfile = profile;
 
@@ -383,6 +417,10 @@ async function init() {
 
   await loadMessages();
   subscribeToMessages();
+}
+
+function goToProfile() {
+  if (otherUserId) window.location.href = 'view-profile.html?user=' + otherUserId;
 }
 
 window.addEventListener('beforeunload', function() {
