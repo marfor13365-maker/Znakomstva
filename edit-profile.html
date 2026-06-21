@@ -30,6 +30,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .msg{text-align:center;font-size:13px;margin-top:12px;min-height:20px}
 .msg.error{color:#ff6b6b}
 .msg.success{color:#6bffb8}
+.theme-toggle-row{display:flex;gap:10px}
+.theme-mode-btn{flex:1;padding:12px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;cursor:pointer;transition:all 0.2s}
+.theme-mode-btn.active{border-color:var(--accent);background:rgba(255,77,109,0.1);font-weight:600}
+.color-row{display:flex;gap:14px}
+.color-swatch{width:42px;height:42px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s}
+.color-swatch.active{border-color:white;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
 </style>
 </head>
 <body>
@@ -86,10 +92,30 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
     </div>
   </div>
 
+  <div class="section">
+    <div class="section-title">Оформление</div>
+    <div class="form-group">
+      <label>Режим</label>
+      <div class="theme-toggle-row">
+        <button class="theme-mode-btn" id="mode-dark-btn" onclick="selectMode('dark')">🌙 Тёмный</button>
+        <button class="theme-mode-btn" id="mode-light-btn" onclick="selectMode('light')">☀️ Светлый</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Цвет акцента</label>
+      <div class="color-row">
+        <button class="color-swatch" id="color-pink-btn" style="background:linear-gradient(135deg,#ff4d6d,#ff8fa3)" onclick="selectColor('pink')"></button>
+        <button class="color-swatch" id="color-tiffany-btn" style="background:linear-gradient(135deg,#0abab5,#5fd9d4)" onclick="selectColor('tiffany')"></button>
+        <button class="color-swatch" id="color-green-btn" style="background:linear-gradient(135deg,#34c759,#7ee89a)" onclick="selectColor('green')"></button>
+      </div>
+    </div>
+  </div>
+
   <button class="btn" onclick="saveProfile()">Сохранить анкету</button>
   <div class="msg" id="msg"></div>
 </div>
 
+<script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -111,6 +137,30 @@ async function init() {
     document.getElementById('looking_for').value = p.data.looking_for || '';
     document.getElementById('profile_visibility').value = p.data.profile_visibility || 'matches';
   }
+
+  updateThemeButtons();
+}
+
+function updateThemeButtons() {
+  var mode = window.BlizkoTheme.getMode();
+  var color = window.BlizkoTheme.getColor();
+
+  document.getElementById('mode-dark-btn').classList.toggle('active', mode === 'dark');
+  document.getElementById('mode-light-btn').classList.toggle('active', mode === 'light');
+
+  document.getElementById('color-pink-btn').classList.toggle('active', color === 'pink');
+  document.getElementById('color-tiffany-btn').classList.toggle('active', color === 'tiffany');
+  document.getElementById('color-green-btn').classList.toggle('active', color === 'green');
+}
+
+function selectMode(mode) {
+  window.BlizkoTheme.setMode(mode);
+  updateThemeButtons();
+}
+
+function selectColor(color) {
+  window.BlizkoTheme.setColor(color);
+  updateThemeButtons();
 }
 
 async function saveProfile() {
