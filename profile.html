@@ -8,73 +8,76 @@
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-bottom:80px}
-.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;position:fixed;top:0;left:0;right:0;background:linear-gradient(rgba(13,13,13,0.85),transparent);z-index:10}
-.back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center}
-.logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.content{padding:20px;padding-top:80px}
-h2{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;margin-bottom:20px}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
 
-/* Аватар */
-.photo-block{display:flex;flex-direction:column;align-items:center;margin-bottom:8px}
-.photo-circle{width:120px;height:120px;border-radius:50%;background:var(--input-bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative}
-.photo-circle img{width:100%;height:100%;object-fit:cover}
-.photo-placeholder{text-align:center;color:var(--muted)}
-.photo-placeholder .icon{font-size:32px;margin-bottom:4px}
-.photo-placeholder .hint{font-size:11px}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;position:fixed;top:0;left:0;right:0;background:transparent;z-index:20}
+.back-btn{background:rgba(0,0,0,0.4);border:none;color:white;font-size:20px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,#ff4d6d,#ff8fa3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(0,0,0,0.6));flex:1}
+.settings-wrap{position:relative}
+.settings-btn{background:rgba(0,0,0,0.4);border:none;color:white;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.settings-menu{position:absolute;top:46px;right:0;background:var(--card);border:1px solid var(--border);border-radius:14px;min-width:200px;box-shadow:0 8px 30px rgba(0,0,0,0.5);display:none;overflow:hidden;z-index:30}
+.settings-menu.show{display:block}
+.settings-menu-item{display:block;width:100%;text-align:left;padding:14px 16px;background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)}
+.settings-menu-item:last-child{border-bottom:none}
+.settings-menu-item.danger{color:var(--accent)}
+.settings-menu-item:active{background:var(--input-bg)}
+
+.profile-header{padding:80px 20px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.avatar-circle{width:100px;height:100px;border-radius:50%;background:var(--input-bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative}
+.avatar-circle img{width:100%;height:100%;object-fit:cover}
+.avatar-circle .icon{font-size:28px;color:var(--muted)}
+.profile-name{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;margin-top:12px}
+.profile-meta{font-size:13px;color:var(--muted);margin-top:4px}
 .avatar-actions{display:flex;gap:10px;margin-top:10px}
 .avatar-action-btn{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 8px;text-decoration:underline}
 .avatar-action-btn.danger{color:var(--accent)}
+.upload-progress{width:140px;height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.upload-bar{height:100%;background:var(--accent);width:0%;transition:width 0.3s}
 
-/* Галерея */
-.gallery-section{margin:24px 0}
-.gallery-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:12px}
-.gallery-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px}
-.gallery-item{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--input-bg)}
-.gallery-item img,.gallery-item video{width:100%;height:100%;object-fit:cover}
-.gallery-item .del-btn{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:white;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.gallery-add{aspect-ratio:1;border-radius:12px;background:var(--input-bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:28px;color:var(--muted)}
-.gallery-hint{font-size:11px;color:var(--muted);margin-top:10px}
+.stats-row{display:flex;justify-content:center;gap:30px;padding:0 20px 16px;border-bottom:1px solid var(--border)}
+.stat-item{text-align:center}
+.stat-num{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+
+.visibility-row{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.visibility-label{font-size:12px;color:var(--muted)}
+.visibility-select{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text);font-size:12px}
+
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:2px;padding-bottom:90px}
+.grid-item{position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--card)}
+.grid-item img{width:100%;height:100%;object-fit:cover;display:block}
+.grid-item .del-mini{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:white;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+.empty-posts{padding:60px 20px;text-align:center;color:var(--muted)}
+.empty-posts .icon{font-size:50px;margin-bottom:14px}
+.empty-posts p{font-size:13px;line-height:1.6}
+
+.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:transparent;z-index:10;gap:6px}
+.bottom-btn{background:linear-gradient(135deg,#ff4d6d,#ff8fa3);border:none;color:rgba(255,255,255,0.85);cursor:pointer;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:opacity 0.2s;flex:1;border-radius:16px;box-shadow:0 2px 10px rgba(255,77,109,0.4)}
+.bottom-btn.active{color:white;font-weight:600;opacity:1}
+.bottom-btn:not(.active){opacity:0.85}
+.bottom-btn .ico{font-size:22px}
 
 input[type="file"]{display:none}
-.section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
-.section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:16px}
-.form-group{margin-bottom:16px}
-.form-group:last-child{margin-bottom:0}
-label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
-input[type="text"],input[type="number"],select,textarea{width:100%;padding:13px 14px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;outline:none;transition:border-color 0.2s;-webkit-appearance:none}
-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer}
-select option{background:#1e1e1e}
-textarea{resize:none;height:90px;line-height:1.5}
-input:focus,select:focus,textarea:focus{border-color:var(--accent)}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.btn{width:100%;padding:16px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:0.5px;margin-top:8px}
-.btn:active{transform:scale(0.98);opacity:0.9}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
-.btn-danger{background:transparent;border:1px solid var(--accent);color:var(--accent);margin-top:10px}
-.msg{text-align:center;font-size:13px;margin-top:12px;min-height:20px}
-.msg.error{color:#ff6b6b}
-.msg.success{color:#6bffb8}
-.upload-progress{width:100%;height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
-.upload-bar{height:100%;background:var(--accent);width:0%;transition:width 0.3s}
-.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border);background:var(--bg);z-index:10}
-.bottom-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:9px}
-.bottom-btn.active{color:var(--accent)}
-.bottom-btn .ico{font-size:20px}
+.loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 
-.delete-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
-.delete-overlay.show{display:flex}
-.delete-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--accent)}
-.delete-sheet-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:10px;color:var(--accent)}
-.delete-sheet-text{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:18px}
+/* Просмотр фото в полный размер */
+.viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:300;display:none;align-items:center;justify-content:center}
+.viewer-overlay.show{display:flex}
+.viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:301}
+.viewer-content{max-width:100%;max-height:100%;padding:20px}
+.viewer-content img,.viewer-content video{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}
+
+/* Модалка удаления аккаунта */
+.delete-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.delete-sheet-overlay.show{display:flex}
+.delete-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
+.delete-sheet-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:10px;text-align:center;color:var(--accent)}
+.delete-sheet-text{font-size:13px;color:var(--muted);margin-bottom:18px;text-align:center;line-height:1.5}
 .delete-sheet-actions{display:flex;gap:10px}
+.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
 .delete-sheet-actions .btn{margin:0;flex:1}
-
-.gallery-viewer{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:300;display:none;align-items:center;justify-content:center}
-.gallery-viewer.show{display:flex}
-.gallery-viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:301}
-.gallery-viewer-content{max-width:100%;max-height:100%;padding:20px}
-.gallery-viewer-content img,.gallery-viewer-content video{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}
 </style>
 </head>
 <body>
@@ -82,84 +85,49 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">&#8592;</button>
   <div class="logo">Blizko</div>
+  <div class="settings-wrap">
+    <button class="settings-btn" onclick="toggleSettingsMenu()">⚙️</button>
+    <div class="settings-menu" id="settings-menu">
+      <button class="settings-menu-item" onclick="window.location.href='edit-profile.html'">Моя анкета</button>
+      <button class="settings-menu-item" onclick="logout()">Выйти из аккаунта</button>
+      <button class="settings-menu-item danger" onclick="openDeleteAccountSheet()">Удалить аккаунт навсегда</button>
+    </div>
+  </div>
 </div>
 
-<div class="content">
-  <h2>Моя анкета</h2>
-
-  <div class="photo-block">
-    <div class="photo-circle" onclick="document.getElementById('avatar-input').click()">
-      <img id="photo-preview" src="" alt="" style="display:none">
-      <div class="photo-placeholder" id="photo-placeholder">
-        <div class="icon">📷</div>
-        <div class="hint">добавить фото</div>
-      </div>
-    </div>
-    <div class="avatar-actions">
-      <button class="avatar-action-btn" onclick="document.getElementById('avatar-input').click()">Сменить</button>
-      <button class="avatar-action-btn danger" id="avatar-delete-btn" onclick="deleteAvatar()" style="display:none">Удалить</button>
-    </div>
-    <div class="upload-progress" id="avatar-upload-progress"><div class="upload-bar" id="avatar-upload-bar"></div></div>
-    <input type="file" id="avatar-input" accept="image/*" onchange="startEdit(this, 'avatar')">
+<div class="profile-header">
+  <div class="avatar-circle" id="avatar-circle" onclick="document.getElementById('avatar-input').click()">
+    <span class="icon" id="avatar-placeholder">📷</span>
+    <img id="avatar-img" src="" style="display:none">
   </div>
-
-  <div class="gallery-section">
-    <div class="gallery-title">Галерея (до 9 фото/видео)</div>
-    <div class="gallery-grid" id="gallery-grid"></div>
-    <div class="gallery-hint">Видны всем, кто открыл твою анкету</div>
-    <input type="file" id="gallery-input" accept="image/*,video/*" onchange="handleGalleryAdd(this)">
+  <div class="profile-name" id="profile-name">Загрузка...</div>
+  <div class="profile-meta" id="profile-meta"></div>
+  <div class="avatar-actions">
+    <button class="avatar-action-btn" onclick="document.getElementById('avatar-input').click()">Сменить фото</button>
+    <button class="avatar-action-btn danger" id="avatar-delete-btn" onclick="deleteAvatar()" style="display:none">Удалить</button>
   </div>
+  <div class="upload-progress" id="avatar-upload-progress"><div class="upload-bar" id="avatar-upload-bar"></div></div>
+  <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(this)">
+</div>
 
-  <div class="section">
-    <div class="section-title">О себе</div>
-    <div class="form-group"><label>Имя</label><input type="text" id="name" maxlength="40" placeholder="Как тебя зовут?"></div>
-    <div class="row">
-      <div class="form-group"><label>Возраст</label><input type="number" id="age" min="18" max="99" placeholder="25"></div>
-      <div class="form-group"><label>Город</label><input type="text" id="city" maxlength="50" placeholder="Москва"></div>
-    </div>
-    <div class="form-group"><label>О себе</label><textarea id="about" placeholder="Расскажи о себе..."></textarea></div>
+<div class="stats-row">
+  <div class="stat-item">
+    <div class="stat-num" id="posts-count">0</div>
+    <div class="stat-label">постов</div>
   </div>
+</div>
 
-  <div class="section">
-    <div class="section-title">Предпочтения</div>
-    <div class="row">
-      <div class="form-group">
-        <label>Я</label>
-        <select id="gender">
-          <option value="">Выбери...</option>
-          <option value="male">Мужчина</option>
-          <option value="female">Женщина</option>
-          <option value="other">Другое</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Ищу</label>
-        <select id="looking_for">
-          <option value="">Выбери...</option>
-          <option value="male">Мужчину</option>
-          <option value="female">Женщину</option>
-          <option value="any">Любого</option>
-        </select>
-      </div>
-    </div>
-  </div>
+<div class="visibility-row">
+  <div class="visibility-label">Кто видит мои фото в ленте</div>
+  <select class="visibility-select" id="posts_visibility" onchange="savePostsVisibility()">
+    <option value="all">Всем</option>
+    <option value="matches">Только мэтчам</option>
+    <option value="none">Никому</option>
+  </select>
+</div>
 
-  <div class="section">
-    <div class="section-title">Приватность анкеты</div>
-    <div class="form-group">
-      <label>Кто видит мою полную анкету (о себе, галерею)</label>
-      <select id="profile_visibility">
-        <option value="all">Открыта всем</option>
-        <option value="matches">Только для мэтчей</option>
-        <option value="none">Закрыта для всех</option>
-      </select>
-    </div>
-  </div>
-
-  <button class="btn" onclick="saveProfile()">Сохранить анкету</button>
-  <button class="btn btn-outline" onclick="logout()">Выйти из аккаунта</button>
-  <button class="btn btn-danger" onclick="openDeleteAccountSheet()">Удалить аккаунт навсегда</button>
-  <div class="msg" id="msg"></div>
+<div id="posts-grid-wrap">
+  <div class="loading">⏳ Загрузка...</div>
 </div>
 
 <div class="bottombar">
@@ -170,224 +138,152 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
   <button class="bottom-btn active"><span class="ico">👤</span><span>Профиль</span></button>
 </div>
 
-<script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- Просмотр фото/видео в полный размер -->
-<div class="gallery-viewer" id="gallery-viewer">
-  <button class="gallery-viewer-close" onclick="closeGalleryViewer()">✕</button>
-  <div class="gallery-viewer-content" id="gallery-viewer-content"></div>
+<!-- Просмотр фото -->
+<div class="viewer-overlay" id="viewer-overlay">
+  <button class="viewer-close" onclick="closeViewer()">✕</button>
+  <div class="viewer-content" id="viewer-content"></div>
 </div>
 
+<!-- Удаление аккаунта -->
+<div class="delete-sheet-overlay" id="delete-account-overlay">
+  <div class="delete-sheet">
+    <div class="delete-sheet-title">⚠️ Удалить аккаунт навсегда?</div>
+    <div class="delete-sheet-text">Будут удалены: анкета, фото, посты, лайки, чаты и сообщения. Это действие нельзя отменить.</div>
+    <div class="delete-sheet-actions">
+      <button class="btn btn-outline" onclick="closeDeleteAccountSheet()">Отмена</button>
+      <button class="btn" style="background:var(--accent)" onclick="confirmDeleteAccount()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
-var uploadedPhotoUrl = null;
-var galleryItems = [];
-
-function openGalleryViewer(idx) {
-  var item = galleryItems[idx];
-  if (!item) return;
-  var content = document.getElementById('gallery-viewer-content');
-  if (item.media_type === 'video') {
-    content.innerHTML = '<video src="' + item.photo_url + '" controls autoplay playsinline></video>';
-  } else {
-    content.innerHTML = '<img src="' + item.photo_url + '">';
-  }
-  document.getElementById('gallery-viewer').classList.add('show');
-}
-
-function closeGalleryViewer() {
-  document.getElementById('gallery-viewer').classList.remove('show');
-  document.getElementById('gallery-viewer-content').innerHTML = '';
-}
+var myPosts = [];
 
 async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) { window.location.href = 'index.html'; return; }
   currentUser = r.data.session.user;
 
-  var p = await db.from('profiles').select('*').eq('id', currentUser.id).single();
-  if (p.data) {
-    document.getElementById('name').value = p.data.name || '';
-    document.getElementById('age').value = p.data.age || '';
-    document.getElementById('city').value = p.data.city || '';
-    document.getElementById('about').value = p.data.about || '';
-    document.getElementById('gender').value = p.data.gender || '';
-    document.getElementById('looking_for').value = p.data.looking_for || '';
-    document.getElementById('profile_visibility').value = p.data.profile_visibility || 'matches';
-    if (p.data.photo_url) {
-      showAvatarPreview(p.data.photo_url);
-      uploadedPhotoUrl = p.data.photo_url;
-    }
+  var { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (profile) {
+    document.getElementById('profile-name').textContent = profile.name || 'Пользователь';
+    document.getElementById('profile-meta').textContent = (profile.age ? profile.age + ' лет' : '') + (profile.city ? ' · ' + profile.city : '');
+    if (profile.photo_url) showAvatar(profile.photo_url);
+    document.getElementById('posts_visibility').value = profile.posts_visibility || 'all';
   }
 
-  await loadGallery();
+  await loadMyPosts();
 }
 
-function showAvatarPreview(url) {
-  var img = document.getElementById('photo-preview');
-  img.src = url;
-  img.style.display = 'block';
-  document.getElementById('photo-placeholder').style.display = 'none';
+function showAvatar(url) {
+  document.getElementById('avatar-img').src = url;
+  document.getElementById('avatar-img').style.display = 'block';
+  document.getElementById('avatar-placeholder').style.display = 'none';
   document.getElementById('avatar-delete-btn').style.display = 'inline-block';
 }
 
 async function deleteAvatar() {
   if (!confirm('Удалить фото профиля?')) return;
-  uploadedPhotoUrl = null;
-  document.getElementById('photo-preview').style.display = 'none';
-  document.getElementById('photo-placeholder').style.display = 'block';
+  document.getElementById('avatar-img').style.display = 'none';
+  document.getElementById('avatar-placeholder').style.display = 'block';
   document.getElementById('avatar-delete-btn').style.display = 'none';
   await db.from('profiles').update({ photo_url: null }).eq('id', currentUser.id);
 }
 
-async function loadGallery() {
-  var { data } = await db.from('profile_photos').select('*').eq('user_id', currentUser.id).order('position', { ascending: true });
-  galleryItems = data || [];
-  renderGallery();
-}
-
-function renderGallery() {
-  var grid = document.getElementById('gallery-grid');
-  grid.innerHTML = '';
-
-  galleryItems.forEach(function(item, idx) {
-    var el = document.createElement('div');
-    el.className = 'gallery-item';
-    if (item.media_type === 'video') {
-      el.innerHTML = '<video src="' + item.photo_url + '" muted></video>';
-    } else {
-      el.innerHTML = '<img src="' + item.photo_url + '">';
-    }
-    el.onclick = function() { openGalleryViewer(idx); };
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'del-btn';
-    delBtn.textContent = '✕';
-    delBtn.onclick = function(e) { e.stopPropagation(); deleteGalleryItem(item.id); };
-    el.appendChild(delBtn);
-    grid.appendChild(el);
-  });
-
-  if (galleryItems.length < 9) {
-    var addEl = document.createElement('div');
-    addEl.className = 'gallery-add';
-    addEl.textContent = '+';
-    addEl.onclick = function() { document.getElementById('gallery-input').click(); };
-    grid.appendChild(addEl);
-  }
-}
-
-async function deleteGalleryItem(id) {
-  if (!confirm('Удалить это фото/видео?')) return;
-  await db.from('profile_photos').delete().eq('id', id);
-  await loadGallery();
-}
-
-function handleGalleryAdd(input) {
-  var file = input.files[0];
-  if (!file) return;
-  var isVideo = file.type.startsWith('video');
-
-  if (isVideo) {
-    uploadGalleryVideo(file);
-  } else {
-    startEdit(input, 'gallery');
-  }
-  input.value = '';
-}
-
-async function uploadGalleryVideo(file) {
-  if (file.size > 20 * 1024 * 1024) { alert('Видео не более 20MB'); return; }
-  var ext = file.name.split('.').pop();
-  var fileName = 'gallery/' + currentUser.id + '_' + Date.now() + '.' + ext;
-  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true });
-  if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
-  var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-  await db.from('profile_photos').insert({ user_id: currentUser.id, photo_url: url, media_type: 'video', position: galleryItems.length });
-  await loadGallery();
-}
-
-/* ===== Редактор фото: crop (квадрат) + rotate ===== */
-
-/* ===== Прямая загрузка фото (без редактора, временно) ===== */
-
-async function startEdit(input, target) {
+async function handleAvatarUpload(input) {
   var file = input.files[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
 
-  if (target === 'avatar') {
-    await uploadAvatarBlob(file);
-  } else if (target === 'gallery') {
-    await uploadGalleryBlob(file);
-  }
-  input.value = '';
-}
-
-async function uploadAvatarBlob(file) {
   document.getElementById('avatar-upload-progress').style.display = 'block';
   document.getElementById('avatar-upload-bar').style.width = '40%';
 
-  var ext = file.name ? file.name.split('.').pop() : 'jpg';
+  var ext = file.name.split('.').pop();
   var fileName = currentUser.id + '_' + Date.now() + '.' + ext;
   var r = await db.storage.from('photos').upload(fileName, file, { upsert: true });
 
   document.getElementById('avatar-upload-bar').style.width = '100%';
   setTimeout(function() { document.getElementById('avatar-upload-progress').style.display = 'none'; }, 500);
 
-  if (r.error) { setMsg('Ошибка загрузки фото: ' + r.error.message, 'error'); return; }
-
-  uploadedPhotoUrl = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-  showAvatarPreview(uploadedPhotoUrl);
-  var upd = await db.from('profiles').update({ photo_url: uploadedPhotoUrl }).eq('id', currentUser.id);
-  if (upd.error) setMsg('Фото загружено, но не сохранено в анкете: ' + upd.error.message, 'error');
-}
-
-async function uploadGalleryBlob(file) {
-  if (galleryItems.length >= 9) { alert('Максимум 9 фото/видео в галерее'); return; }
-
-  var ext = file.name ? file.name.split('.').pop() : 'jpg';
-  var fileName = 'gallery/' + currentUser.id + '_' + Date.now() + '.' + ext;
-  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true });
-
   if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
 
   var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-  var ins = await db.from('profile_photos').insert({ user_id: currentUser.id, photo_url: url, media_type: 'photo', position: galleryItems.length });
-  if (ins.error) { alert('Фото загружено, но не сохранено в галерее: ' + ins.error.message); return; }
-  await loadGallery();
+  showAvatar(url);
+  await db.from('profiles').update({ photo_url: url }).eq('id', currentUser.id);
+  input.value = '';
 }
 
-async function saveProfile() {
-  var name = document.getElementById('name').value.trim();
-  var age = parseInt(document.getElementById('age').value);
-  var city = document.getElementById('city').value.trim();
-  var about = document.getElementById('about').value.trim();
-  var gender = document.getElementById('gender').value;
-  var looking_for = document.getElementById('looking_for').value;
-  var profile_visibility = document.getElementById('profile_visibility').value;
+async function savePostsVisibility() {
+  var val = document.getElementById('posts_visibility').value;
+  await db.from('profiles').update({ posts_visibility: val }).eq('id', currentUser.id);
+}
 
-  if (!name) { setMsg('Введи имя', 'error'); return; }
-  if (!age || age < 18) { setMsg('Укажи возраст от 18 лет', 'error'); return; }
-  if (!gender) { setMsg('Укажи свой пол', 'error'); return; }
-  if (!looking_for) { setMsg('Укажи кого ищешь', 'error'); return; }
+async function loadMyPosts() {
+  var wrap = document.getElementById('posts-grid-wrap');
+  var { data, error } = await db.from('posts')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
 
-  setMsg('Сохраняем...', '');
-  var r = await db.from('profiles').upsert({
-    id: currentUser.id, name, age, city, about, gender, looking_for, profile_visibility,
-    photo_url: uploadedPhotoUrl, is_active: true
+  if (error) { wrap.innerHTML = '<div class="loading">Ошибка загрузки</div>'; return; }
+
+  myPosts = data || [];
+  document.getElementById('posts-count').textContent = myPosts.length;
+
+  if (myPosts.length === 0) {
+    wrap.innerHTML = '<div class="empty-posts"><div class="icon">📸</div><p>У тебя пока нет постов.<br>Опубликуй фото в общей ленте!</p></div>';
+    return;
+  }
+
+  var grid = document.createElement('div');
+  grid.className = 'grid';
+
+  myPosts.forEach(function(post, idx) {
+    var item = document.createElement('div');
+    item.className = 'grid-item';
+    item.innerHTML = '<img src="' + post.photo_url + '" loading="lazy">' +
+      '<button class="del-mini" onclick="event.stopPropagation();deletePost(\'' + post.id + '\')">✕</button>';
+    item.querySelector('img').onclick = function() { openViewer(idx); };
+    grid.appendChild(item);
   });
 
-  if (r.error) { setMsg(r.error.message, 'error'); }
-  else { setMsg('Анкета сохранена! ✓', 'success'); setTimeout(function() { window.location.href = 'feed.html'; }, 1000); }
+  wrap.innerHTML = '';
+  wrap.appendChild(grid);
 }
 
-function setMsg(text, type) {
-  var el = document.getElementById('msg');
-  el.textContent = text;
-  el.className = 'msg ' + (type || '');
+function openViewer(idx) {
+  var post = myPosts[idx];
+  if (!post) return;
+  document.getElementById('viewer-content').innerHTML = '<img src="' + post.photo_url + '">';
+  document.getElementById('viewer-overlay').classList.add('show');
 }
+
+function closeViewer() {
+  document.getElementById('viewer-overlay').classList.remove('show');
+  document.getElementById('viewer-content').innerHTML = '';
+}
+
+async function deletePost(postId) {
+  if (!confirm('Удалить этот пост?')) return;
+  var { error } = await db.from('posts').delete().eq('id', postId);
+  if (error) { alert('Ошибка удаления: ' + error.message); return; }
+  await loadMyPosts();
+}
+
+function toggleSettingsMenu() {
+  document.getElementById('settings-menu').classList.toggle('show');
+}
+
+document.addEventListener('click', function(e) {
+  var wrap = document.querySelector('.settings-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('settings-menu').classList.remove('show');
+  }
+});
 
 async function logout() {
   await db.auth.signOut();
@@ -395,6 +291,7 @@ async function logout() {
 }
 
 function openDeleteAccountSheet() {
+  toggleSettingsMenu();
   document.getElementById('delete-account-overlay').classList.add('show');
 }
 
@@ -403,41 +300,24 @@ function closeDeleteAccountSheet() {
 }
 
 async function confirmDeleteAccount() {
-  var btn = document.getElementById('confirm-delete-btn');
-  btn.disabled = true;
-  btn.textContent = 'Удаляем...';
+  closeDeleteAccountSheet();
 
-  var uid = currentUser.id;
-
-  // Удаляем все данные пользователя по очереди
-  await db.from('messages').delete().eq('sender_id', uid);
-  await db.from('likes').delete().or('from_user.eq.' + uid + ',to_user.eq.' + uid);
-  await db.from('matches').delete().or('user1.eq.' + uid + ',user2.eq.' + uid);
-  await db.from('posts').delete().eq('user_id', uid);
-  await db.from('profile_photos').delete().eq('user_id', uid);
-  await db.from('profiles').delete().eq('id', uid);
-
-  // Выходим из аккаунта (полное удаление пользователя из auth.users требует серверных прав,
-  // поэтому просто выходим — все личные данные уже удалены)
-  await db.auth.signOut();
-  alert('Аккаунт и все данные удалены.');
-  window.location.href = 'index.html';
+  try {
+    await db.from('messages').delete().eq('sender_id', currentUser.id);
+    await db.from('likes').delete().or('from_user.eq.' + currentUser.id + ',to_user.eq.' + currentUser.id);
+    await db.from('matches').delete().or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id);
+    await db.from('posts').delete().eq('user_id', currentUser.id);
+    await db.from('profile_photos').delete().eq('user_id', currentUser.id);
+    await db.from('profiles').delete().eq('id', currentUser.id);
+    await db.auth.signOut();
+    alert('Аккаунт удалён.');
+    window.location.href = 'index.html';
+  } catch (e) {
+    alert('Ошибка при удалении: ' + e.message);
+  }
 }
 
 init();
 </script>
-
-<!-- Подтверждение удаления аккаунта -->
-<div class="delete-overlay" id="delete-account-overlay">
-  <div class="delete-sheet">
-    <div class="delete-sheet-title">⚠️ Удалить аккаунт навсегда?</div>
-    <div class="delete-sheet-text">Все твои фото, посты, лайки, мэтчи и переписки будут удалены без возможности восстановления.</div>
-    <div class="delete-sheet-actions">
-      <button class="btn btn-outline" onclick="closeDeleteAccountSheet()">Отмена</button>
-      <button class="btn btn-danger" id="confirm-delete-btn" onclick="confirmDeleteAccount()">Удалить навсегда</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
