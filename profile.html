@@ -21,6 +21,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .settings-menu-item:last-child{border-bottom:none}
 .settings-menu-item.danger{color:var(--accent)}
 .settings-menu-item:active{background:var(--input-bg)}
+.settings-menu-section{padding:10px 16px;border-bottom:1px solid var(--border)}
+.settings-menu-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;margin-top:8px}
+.settings-menu-label:first-child{margin-top:0}
+.theme-toggle-row{display:flex;gap:8px;margin-bottom:4px}
+.theme-mode-btn{flex:1;padding:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;cursor:pointer;transition:all 0.2s}
+.theme-mode-btn.active{border-color:var(--accent);background:rgba(255,77,109,0.15)}
+.color-row{display:flex;gap:10px}
+.color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s}
+.color-swatch.active{border-color:var(--text)}
 
 .profile-header{padding:80px 20px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .avatar-circle{width:100px;height:100px;border-radius:50%;background:var(--input-bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative}
@@ -89,6 +98,19 @@ input[type="file"]{display:none}
     <button class="settings-btn" onclick="toggleSettingsMenu()">⚙️</button>
     <div class="settings-menu" id="settings-menu">
       <button class="settings-menu-item" onclick="window.location.href='edit-profile.html'">Моя анкета</button>
+      <div class="settings-menu-section">
+        <div class="settings-menu-label">Режим</div>
+        <div class="theme-toggle-row">
+          <button class="theme-mode-btn" id="mode-dark-btn" onclick="selectMode('dark')">🌙</button>
+          <button class="theme-mode-btn" id="mode-light-btn" onclick="selectMode('light')">☀️</button>
+        </div>
+        <div class="settings-menu-label">Цвет</div>
+        <div class="color-row">
+          <button class="color-swatch" id="color-pink-btn" style="background:linear-gradient(135deg,#ff4d6d,#ff8fa3)" onclick="selectColor('pink')"></button>
+          <button class="color-swatch" id="color-tiffany-btn" style="background:linear-gradient(135deg,#0abab5,#5fd9d4)" onclick="selectColor('tiffany')"></button>
+          <button class="color-swatch" id="color-green-btn" style="background:linear-gradient(135deg,#34c759,#7ee89a)" onclick="selectColor('green')"></button>
+        </div>
+      </div>
       <button class="settings-menu-item" onclick="logout()">Выйти из аккаунта</button>
       <button class="settings-menu-item danger" onclick="openDeleteAccountSheet()">Удалить аккаунт навсегда</button>
     </div>
@@ -178,6 +200,29 @@ async function init() {
   }
 
   await loadMyPosts();
+  updateThemeButtons();
+}
+
+function updateThemeButtons() {
+  var mode = window.BlizkoTheme.getMode();
+  var color = window.BlizkoTheme.getColor();
+
+  document.getElementById('mode-dark-btn').classList.toggle('active', mode === 'dark');
+  document.getElementById('mode-light-btn').classList.toggle('active', mode === 'light');
+
+  document.getElementById('color-pink-btn').classList.toggle('active', color === 'pink');
+  document.getElementById('color-tiffany-btn').classList.toggle('active', color === 'tiffany');
+  document.getElementById('color-green-btn').classList.toggle('active', color === 'green');
+}
+
+function selectMode(mode) {
+  window.BlizkoTheme.setMode(mode);
+  updateThemeButtons();
+}
+
+function selectColor(color) {
+  window.BlizkoTheme.setColor(color);
+  updateThemeButtons();
 }
 
 function showAvatar(url) {
