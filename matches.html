@@ -121,7 +121,7 @@ async function loadChats() {
 
     var lastMsg = messages && messages.length > 0 ? messages[0] : null;
 
-    items.push({ match: m, profile: otherProfile, lastMsg });
+    items.push({ match: m, profile: otherProfile, lastMsg, otherId: otherId });
   }
 
   if (items.length === 0) {
@@ -142,7 +142,7 @@ async function loadChats() {
     el.onclick = function() { window.location.href = 'chat.html?match=' + item.match.id; };
 
     el.innerHTML =
-      '<div class="avatar">' +
+      '<div class="avatar" onclick="event.stopPropagation();window.location.href=\'view-profile.html?user=' + item.otherId + '\'">' +
         (p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤') +
       '</div>' +
       '<div class="chat-info">' +
