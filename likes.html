@@ -129,20 +129,17 @@ async function loadLikes() {
 
     var actionsHtml = '';
     if (alreadyMatched) {
-      var { data: matchRow } = await db.from('matches').select('id')
-        .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + like.from_user + '),and(user1.eq.' + like.from_user + ',user2.eq.' + currentUser.id + ')')
-        .single();
-      var matchId = matchRow ? matchRow.id : null;
-      actionsHtml = matchId
-        ? '<div class="matched-tag" style="cursor:pointer" onclick="window.location.href=\'chat.html?match=' + matchId + '\'">✓ Это уже мэтч — открыть чат →</div>'
-        : '<div class="matched-tag">✓ Это уже мэтч</div>';
+      actionsHtml = '<div class="matched-tag">✓ Взаимный лайк</div>';
     } else {
       actionsHtml =
         '<div class="like-actions">' +
-        '<button class="mini-btn like" onclick="likeBack(\'' + like.from_user + '\')">❤️ Лайкнуть в ответ</button>' +
-        '<button class="mini-btn skip" onclick="skipLike(\'' + like.from_user + '\', this)">Пропустить</button>' +
+        '<button class="mini-btn like" onclick="event.stopPropagation();likeBack(\'' + like.from_user + '\')">❤️ Лайкнуть в ответ</button>' +
+        '<button class="mini-btn skip" onclick="event.stopPropagation();skipLike(\'' + like.from_user + '\', this)">Пропустить</button>' +
         '</div>';
     }
+
+    item.style.cursor = 'pointer';
+    item.onclick = function() { window.location.href = 'view-profile.html?user=' + like.from_user; };
 
     item.innerHTML =
       '<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
