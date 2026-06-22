@@ -20,6 +20,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .avatar-circle img{width:100%;height:100%;object-fit:cover}
 .profile-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-top:14px}
 .profile-meta{font-size:13px;color:var(--muted);margin-top:6px}
+.message-btn{margin-top:14px;padding:10px 20px;background:var(--accent);border:none;border-radius:14px;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
 
 .section{padding:0 20px;margin-bottom:20px}
 .section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:10px}
@@ -69,11 +70,11 @@ function getTargetUserId() {
   return params.get('user');
 }
 
-async function isMatched(otherUserId) {
+async function getMatchId(otherUserId) {
   var { data } = await db.from('matches').select('id')
     .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
     .single();
-  return !!data;
+  return data ? data.id : null;
 }
 
 async function init() {
@@ -90,31 +91,41 @@ async function init() {
     return;
   }
 
+  var matchId = await getMatchId(targetId);
   var visibility = profile.profile_visibility || 'matches';
   var canSeeFull = true;
 
   if (visibility === 'none') {
     canSeeFull = false;
   } else if (visibility === 'matches') {
-    canSeeFull = await isMatched(targetId);
+    canSeeFull = !!matchId;
   }
   // visibility === 'all' -> canSeeFull = true всегда
 
-  renderProfile(profile, canSeeFull, targetId);
+  renderProfile(profile, canSeeFull, targetId, matchId);
 }
 
-function renderProfile(profile, canSeeFull, targetId) {
+function renderProfile(profile, canSeeFull, targetId, matchId) {
   var content = document.getElementById('content');
 
   var html =
     '<div class="avatar-block">' +
       '<div class="avatar-circle">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
       '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
-      '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
-    '</div>';
+      '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>';
+
+  if (matchId) {
+    html += '<button class="message-btn" onclick="window.location.href=\'chat.html?match=' + matchId + '\'">💬 Написать сообщение</button>';
+  }
+
+  html += '</div>';
 
   if (!canSeeFull) {
-    html += '<div class="locked-state"><div class="icon">🔒</div><p>Этот человек скрыл анкету.<br>Полная информация и галерея<br>недоступны.</p></div>';
+    var visibility = profile.profile_visibility || 'matches';
+    var reason = visibility === 'none'
+      ? 'Этот человек закрыл анкету для всех.'
+      : 'Анкета открыта только для тех, с кем есть взаимный лайк (мэтч).';
+    html += '<div class="locked-state"><div class="icon">🔒</div><p>' + reason + '<br>Информация "о себе" и галерея недоступны.</p></div>';
     content.innerHTML = html;
     return;
   }
