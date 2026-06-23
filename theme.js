@@ -4,9 +4,9 @@
 
 (function() {
   var THEMES = {
-    pink: { accent: '#ff1744', accent2: '#ff6b7a' },
-    tiffany: { accent: '#0abab5', accent2: '#5fd9d4' },
-    green: { accent: '#34c759', accent2: '#7ee89a' }
+    pink: { accent: '#ff1744', accent2: '#ff5252' },
+    tiffany: { accent: '#00bfb3', accent2: '#00e6d6' },
+    green: { accent: '#00c853', accent2: '#43ea69' }
   };
 
   function getMode() {
