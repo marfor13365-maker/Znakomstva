@@ -4,7 +4,7 @@
 
 (function() {
   var THEMES = {
-    pink: { accent: '#ff4d6d', accent2: '#ff8fa3' },
+    pink: { accent: '#ff1744', accent2: '#ff6b7a' },
     tiffany: { accent: '#0abab5', accent2: '#5fd9d4' },
     green: { accent: '#34c759', accent2: '#7ee89a' }
   };
