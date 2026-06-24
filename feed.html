@@ -41,6 +41,27 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .match-btn:active{opacity:0.8}
 .match-sent{margin-top:16px;text-align:center;color:var(--green);font-size:13px;font-weight:600}
 .post-actions-row{display:flex;gap:10px;margin-top:12px}
+.follow-btn{background:var(--accent);border:none;color:white;font-size:11px;font-weight:600;padding:7px 14px;border-radius:14px;cursor:pointer;font-family:'Unbounded',sans-serif;flex-shrink:0}
+.follow-btn.following{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.like-comment-row{display:flex;align-items:center;margin-bottom:10px}
+.like-btn{background:none;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--text);padding:4px 0}
+.like-btn#liked{color:var(--accent)}
+.like-btn span{font-size:14px;font-weight:600;color:var(--muted)}
+.comments-section{margin-top:16px;border-top:1px solid var(--border);padding-top:14px}
+.comments-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:500}
+.comment-item{display:flex;gap:8px;margin-bottom:10px;align-items:flex-start}
+.comment-avatar{width:28px;height:28px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px}
+.comment-avatar img{width:100%;height:100%;object-fit:cover}
+.comment-body{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
+.comment-name{font-size:12px;font-weight:600;margin-bottom:2px}
+.comment-text{font-size:13px;line-height:1.4}
+.comment-del{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:4px;flex-shrink:0}
+.comment-input-row{display:flex;gap:8px;margin-top:8px}
+.comment-input-row input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:18px;padding:10px 14px;color:var(--text);font-size:13px;outline:none}
+.comment-input-row input:focus{border-color:var(--accent)}
+.comment-input-row button{background:var(--accent);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:14px;flex-shrink:0}
+.comments-disabled-msg{font-size:12px;color:var(--muted);text-align:center;padding:8px 0}
+#toggle-comments-btn.disabled-state{color:var(--accent);border-color:var(--accent)}
 .icon-action-btn-row{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;color:var(--text);font-size:18px;cursor:pointer}
 .icon-action-btn-row span{font-size:10px;color:var(--muted)}
 .icon-action-btn-row:active{background:var(--border)}
@@ -122,9 +143,13 @@ input[type="file"]{display:none}
         <div class="modal-city" id="modal-city"></div>
       </div>
     </div>
+    <button class="follow-btn" id="follow-btn" onclick="toggleFollow()" style="display:none">Подписаться</button>
   </div>
   <div class="modal-photo" id="modal-photo-wrap"><img id="modal-img" src="" alt="" onclick="toggleZoom()"></div>
   <div class="modal-footer">
+    <div class="like-comment-row">
+      <button class="like-btn" id="post-like-btn" onclick="togglePostLike()">🤍 <span id="like-count">0</span></button>
+    </div>
     <div class="modal-caption" id="modal-caption"></div>
     <div class="modal-time" id="modal-time"></div>
     <button class="match-btn" id="match-btn" onclick="openMatchSheet()">❤️ Match</button>
@@ -132,7 +157,19 @@ input[type="file"]{display:none}
     <div class="post-actions-row" id="post-actions-row" style="display:none">
       <button class="icon-action-btn-row" id="delete-action-btn" onclick="deleteCurrentPost()">🗑<span>Удалить</span></button>
       <button class="icon-action-btn-row" onclick="sharePost()">🔗<span>Поделиться</span></button>
+      <button class="icon-action-btn-row" id="toggle-comments-btn" onclick="toggleCommentsEnabled()">💬<span>Комм.</span></button>
     </div>
+
+    <div class="comments-section">
+      <div class="comments-title">Комментарии</div>
+      <div id="comments-list"></div>
+      <div class="comment-input-row" id="comment-input-row">
+        <input type="text" id="comment-input" placeholder="Написать комментарий..." maxlength="300">
+        <button onclick="sendComment()">➤</button>
+      </div>
+      <div class="comments-disabled-msg" id="comments-disabled-msg" style="display:none">Комментарии отключены автором</div>
+    </div>
+  </div>
   </div>
 </div>
 
@@ -252,19 +289,23 @@ function openPost(idx) {
   var matchBtn = document.getElementById('match-btn');
   var matchSent = document.getElementById('match-sent');
   var actionsRow = document.getElementById('post-actions-row');
+  var followBtn = document.getElementById('follow-btn');
 
   if (post.user_id === currentUser.id) {
     matchBtn.style.display = 'none';
     matchSent.style.display = 'none';
     actionsRow.style.display = 'flex';
+    followBtn.style.display = 'none';
   } else if (myLikesGiven[post.user_id]) {
     matchBtn.style.display = 'none';
     matchSent.style.display = 'block';
     actionsRow.style.display = 'none';
+    followBtn.style.display = 'block';
   } else {
     matchBtn.style.display = 'block';
     matchSent.style.display = 'none';
     actionsRow.style.display = 'none';
+    followBtn.style.display = 'block';
   }
 
   // Сброс зума при открытии нового поста
@@ -273,6 +314,139 @@ function openPost(idx) {
   zoomLevel = 0;
 
   document.getElementById('view-modal').classList.add('show');
+
+  loadFollowStatus(post.user_id);
+  loadPostLikes(post.id);
+  loadComments(post.id, post.comments_enabled !== false, post.user_id === currentUser.id);
+}
+
+async function loadFollowStatus(authorId) {
+  var followBtn = document.getElementById('follow-btn');
+  var { data } = await db.from('follows').select('id').eq('follower_id', currentUser.id).eq('following_id', authorId).single();
+  followBtn.classList.toggle('following', !!data);
+  followBtn.textContent = data ? '✓ Подписан' : 'Подписаться';
+}
+
+async function toggleFollow() {
+  var authorId = currentViewedAuthorId;
+  if (!authorId) return;
+  var followBtn = document.getElementById('follow-btn');
+  var isFollowing = followBtn.classList.contains('following');
+
+  if (isFollowing) {
+    await db.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', authorId);
+  } else {
+    await db.from('follows').insert({ follower_id: currentUser.id, following_id: authorId });
+  }
+  loadFollowStatus(authorId);
+}
+
+async function loadPostLikes(postId) {
+  var { count } = await db.from('post_likes').select('id', { count: 'exact', head: true }).eq('post_id', postId);
+  document.getElementById('like-count').textContent = count || 0;
+
+  var { data: myLike } = await db.from('post_likes').select('id').eq('post_id', postId).eq('user_id', currentUser.id).single();
+  var likeBtn = document.getElementById('post-like-btn');
+  if (myLike) {
+    likeBtn.id = 'liked';
+    likeBtn.innerHTML = '❤️ <span id="like-count">' + (count || 0) + '</span>';
+  } else {
+    likeBtn.removeAttribute('id');
+    likeBtn.id = 'post-like-btn';
+    likeBtn.innerHTML = '🤍 <span id="like-count">' + (count || 0) + '</span>';
+  }
+}
+
+async function togglePostLike() {
+  var postId = currentViewedPostId;
+  if (!postId) return;
+  var likeBtn = document.getElementById('post-like-btn') || document.getElementById('liked');
+  var isLiked = likeBtn.id === 'liked';
+
+  if (isLiked) {
+    await db.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
+  } else {
+    await db.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
+  }
+  loadPostLikes(postId);
+}
+
+async function loadComments(postId, commentsEnabled, isOwner) {
+  var inputRow = document.getElementById('comment-input-row');
+  var disabledMsg = document.getElementById('comments-disabled-msg');
+  var toggleBtn = document.getElementById('toggle-comments-btn');
+
+  if (toggleBtn) {
+    toggleBtn.classList.toggle('disabled-state', !commentsEnabled);
+    toggleBtn.innerHTML = commentsEnabled ? '💬<span>Комм.</span>' : '🚫<span>Комм.</span>';
+  }
+
+  if (!commentsEnabled && !isOwner) {
+    inputRow.style.display = 'none';
+    disabledMsg.style.display = 'block';
+  } else {
+    inputRow.style.display = commentsEnabled ? 'flex' : 'none';
+    disabledMsg.style.display = commentsEnabled ? 'none' : 'block';
+  }
+
+  var { data } = await db.from('post_comments')
+    .select('*, profiles(name, photo_url)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+
+  var list = document.getElementById('comments-list');
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Пока нет комментариев</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  data.forEach(function(c) {
+    var cp = c.profiles || {};
+    var canDelete = c.user_id === currentUser.id || isOwner;
+    var item = document.createElement('div');
+    item.className = 'comment-item';
+    item.innerHTML =
+      '<div class="comment-avatar">' + (cp.photo_url ? '<img src="' + cp.photo_url + '">' : '👤') + '</div>' +
+      '<div class="comment-body"><div class="comment-name">' + (cp.name || 'Пользователь') + '</div><div class="comment-text">' + escapeHtmlComment(c.text) + '</div></div>' +
+      (canDelete ? '<button class="comment-del" onclick="deleteComment(\'' + c.id + '\')">✕</button>' : '');
+    list.appendChild(item);
+  });
+}
+
+function escapeHtmlComment(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function sendComment() {
+  var input = document.getElementById('comment-input');
+  var text = input.value.trim();
+  if (!text || !currentViewedPostId) return;
+
+  var { error } = await db.from('post_comments').insert({ post_id: currentViewedPostId, user_id: currentUser.id, text: text });
+  if (error) { alert('Ошибка: ' + error.message); return; }
+
+  input.value = '';
+  var post = posts.find(function(p) { return p.id === currentViewedPostId; });
+  loadComments(currentViewedPostId, post ? post.comments_enabled !== false : true, post ? post.user_id === currentUser.id : false);
+}
+
+async function deleteComment(commentId) {
+  if (!confirm('Удалить комментарий?')) return;
+  var { error } = await db.from('post_comments').delete().eq('id', commentId);
+  if (error) { alert('Ошибка удаления: ' + error.message); return; }
+
+  var post = posts.find(function(p) { return p.id === currentViewedPostId; });
+  loadComments(currentViewedPostId, post ? post.comments_enabled !== false : true, post ? post.user_id === currentUser.id : false);
+}
+
+async function toggleCommentsEnabled() {
+  var post = posts.find(function(p) { return p.id === currentViewedPostId; });
+  if (!post) return;
+  var newVal = !(post.comments_enabled !== false);
+  await db.from('posts').update({ comments_enabled: newVal }).eq('id', post.id);
+  post.comments_enabled = newVal;
+  loadComments(post.id, newVal, true);
 }
 
 function toggleZoom() {
