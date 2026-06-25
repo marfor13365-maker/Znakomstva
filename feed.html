@@ -243,7 +243,7 @@ async function loadFeed() {
     .select('*, profiles(name, city, photo_url)')
     .order('created_at', { ascending: false })
     .limit(60);
-  if (error) { wrap.innerHTML = '<div class="loading">Ошибка загрузки</div>'; return; }
+  if (error) { console.error('loadFeed error:', error); wrap.innerHTML = '<div class="loading">Ошибка загрузки</div>'; return; }
   posts = data || [];
   if (posts.length === 0) {
     wrap.innerHTML = '<div class="empty-state"><div class="icon">📸</div><p>Пока нет фото.<br>Будь первым — добавь своё!</p></div>';
@@ -322,7 +322,7 @@ function openPost(idx) {
 
 async function loadFollowStatus(authorId) {
   var followBtn = document.getElementById('follow-btn');
-  var { data } = await db.from('follows').select('id').eq('follower_id', currentUser.id).eq('following_id', authorId).single();
+  var { data } = await db.from('follows').select('id').eq('follower_id', currentUser.id).eq('following_id', authorId).maybeSingle();
   followBtn.classList.toggle('following', !!data);
   followBtn.textContent = data ? '✓ Подписан' : 'Подписаться';
 }
@@ -345,7 +345,7 @@ async function loadPostLikes(postId) {
   var { count } = await db.from('post_likes').select('id', { count: 'exact', head: true }).eq('post_id', postId);
   document.getElementById('like-count').textContent = count || 0;
 
-  var { data: myLike } = await db.from('post_likes').select('id').eq('post_id', postId).eq('user_id', currentUser.id).single();
+  var { data: myLike } = await db.from('post_likes').select('id').eq('post_id', postId).eq('user_id', currentUser.id).maybeSingle();
   var likeBtn = document.getElementById('post-like-btn');
   if (myLike) {
     likeBtn.id = 'liked';
@@ -389,20 +389,38 @@ async function loadComments(postId, commentsEnabled, isOwner) {
     disabledMsg.style.display = commentsEnabled ? 'none' : 'block';
   }
 
-  var { data } = await db.from('post_comments')
-    .select('*, profiles(name, photo_url)')
+  var list = document.getElementById('comments-list');
+
+  // Грузим комментарии БЕЗ join (join по FK иногда не виден в schema cache Supabase
+  // и тогда весь select молча возвращает ошибку/пусто). Профили подгружаем отдельным запросом.
+  var { data: comments, error: cErr } = await db.from('post_comments')
+    .select('*')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
 
-  var list = document.getElementById('comments-list');
-  if (!data || data.length === 0) {
+  if (cErr) {
+    console.error('loadComments error:', cErr);
+    list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Ошибка загрузки комментариев</div>';
+    return;
+  }
+
+  if (!comments || comments.length === 0) {
     list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Пока нет комментариев</div>';
     return;
   }
 
+  var userIds = [];
+  comments.forEach(function(c) { if (userIds.indexOf(c.user_id) === -1) userIds.push(c.user_id); });
+
+  var profilesMap = {};
+  if (userIds.length > 0) {
+    var { data: profs } = await db.from('profiles').select('id, name, photo_url').in('id', userIds);
+    (profs || []).forEach(function(p) { profilesMap[p.id] = p; });
+  }
+
   list.innerHTML = '';
-  data.forEach(function(c) {
-    var cp = c.profiles || {};
+  comments.forEach(function(c) {
+    var cp = profilesMap[c.user_id] || {};
     var canDelete = c.user_id === currentUser.id || isOwner;
     var item = document.createElement('div');
     item.className = 'comment-item';
@@ -515,7 +533,7 @@ async function sendMatchLike() {
   // Проверяем матч
   var { data: matchData } = await db.from('matches').select('*')
     .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + currentViewedAuthorId + '),and(user1.eq.' + currentViewedAuthorId + ',user2.eq.' + currentUser.id + ')')
-    .single();
+    .maybeSingle();
 
   if (matchData) {
     setTimeout(function() {
