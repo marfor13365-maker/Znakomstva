@@ -146,7 +146,7 @@ input[type="file"]{display:none}
     </div>
     <button class="follow-btn" id="follow-btn" onclick="toggleFollow()" style="display:none">Подписаться</button>
   </div>
-  <div class="modal-photo" id="modal-photo-wrap"><img id="modal-img" src="" alt="" onclick="toggleZoom()"><video id="modal-video" src="" controls playsinline style="display:none;max-width:100%;max-height:100%"></video></div>
+  <div class="modal-photo" id="modal-photo-wrap"><img id="modal-img" src="" alt="" onclick="toggleZoom()"><video id="modal-video" src="" controls playsinline style="display:none;max-width:100%;max-height:100%" onerror="console.error('Видео не загрузилось:', this.src, this.error)"></video></div>
   <div class="modal-footer">
     <div class="like-comment-row">
       <button class="like-btn" id="post-like-btn" onclick="togglePostLike()">🤍 <span id="like-count">0</span></button>
@@ -595,7 +595,7 @@ async function handlePostPhoto(input) {
   document.getElementById('upload-bar').style.width = '30%';
   var ext = file.name.split('.').pop();
   var fileName = 'posts/' + currentUser.id + '_' + Date.now() + '.' + ext;
-  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true });
+  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
   document.getElementById('upload-bar').style.width = '100%';
   setTimeout(function() { document.getElementById('upload-progress').style.display = 'none'; }, 600);
   if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
