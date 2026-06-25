@@ -11,10 +11,10 @@
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
 
 .topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;position:fixed;top:0;left:0;right:0;background:transparent;z-index:20}
-.back-btn{background:rgba(0,0,0,0.4);border:none;color:white;font-size:20px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.back-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(0,0,0,0.6));flex:1}
 .settings-wrap{position:relative}
-.settings-btn{background:rgba(0,0,0,0.4);border:none;color:white;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.settings-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .settings-menu{position:absolute;top:46px;right:0;background:var(--card);border:1px solid var(--border);border-radius:14px;min-width:200px;box-shadow:0 8px 30px rgba(0,0,0,0.5);display:none;overflow:hidden;z-index:30}
 .settings-menu.show{display:block}
 .settings-menu-item{display:block;width:100%;text-align:left;padding:14px 16px;background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)}
