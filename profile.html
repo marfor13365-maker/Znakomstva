@@ -329,7 +329,7 @@ async function handleAvatarUpload(input) {
 
   var ext = file.name.split('.').pop();
   var fileName = currentUser.id + '_' + Date.now() + '.' + ext;
-  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true });
+  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
 
   document.getElementById('avatar-upload-bar').style.width = '100%';
   setTimeout(function() { document.getElementById('avatar-upload-progress').style.display = 'none'; }, 500);
@@ -395,7 +395,7 @@ function openViewer(idx) {
   var post = myPosts[idx];
   if (!post) return;
   var html = post.media_type === 'video'
-    ? '<video src="' + post.photo_url + '" controls autoplay playsinline></video>'
+    ? '<video src="' + post.photo_url + '" controls autoplay playsinline onerror="console.error(\'Видео не загрузилось:\', this.src, this.error)"></video>'
     : '<img src="' + post.photo_url + '">';
   document.getElementById('viewer-content').innerHTML = html;
   document.getElementById('viewer-overlay').classList.add('show');
@@ -424,7 +424,7 @@ async function handleGalleryUpload(input) {
 
   var ext = file.name.split('.').pop();
   var fileName = 'gallery/' + currentUser.id + '_' + Date.now() + '.' + ext;
-  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true });
+  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
 
   if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
 
