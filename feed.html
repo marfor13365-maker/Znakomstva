@@ -16,6 +16,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:2px;padding-bottom:90px}
 .grid-item{position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--card)}
 .grid-item img{width:100%;height:100%;object-fit:cover;display:block}
+.grid-item video{width:100%;height:100%;object-fit:cover;display:block}
 .grid-item:active{opacity:0.85}
 .grid-item .overlay{position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.75))}
 .grid-item .user-name{font-size:11px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -145,7 +146,7 @@ input[type="file"]{display:none}
     </div>
     <button class="follow-btn" id="follow-btn" onclick="toggleFollow()" style="display:none">Подписаться</button>
   </div>
-  <div class="modal-photo" id="modal-photo-wrap"><img id="modal-img" src="" alt="" onclick="toggleZoom()"></div>
+  <div class="modal-photo" id="modal-photo-wrap"><img id="modal-img" src="" alt="" onclick="toggleZoom()"><video id="modal-video" src="" controls playsinline style="display:none;max-width:100%;max-height:100%"></video></div>
   <div class="modal-footer">
     <div class="like-comment-row">
       <button class="like-btn" id="post-like-btn" onclick="togglePostLike()">🤍 <span id="like-count">0</span></button>
@@ -189,13 +190,13 @@ input[type="file"]{display:none}
 <div class="upload-modal" id="upload-modal">
   <div class="upload-topbar">
     <button class="modal-back" onclick="closeUpload()">←</button>
-    <div class="upload-title">Новое фото</div>
+    <div class="upload-title">Новый пост</div>
     <button class="publish-btn" id="publish-btn" onclick="publishPost()" disabled>Опубликовать</button>
   </div>
   <div class="upload-content">
     <div class="photo-pick" id="photo-pick" onclick="document.getElementById('post-file').click()">
       <div class="pick-hint">📷</div>
-      <div class="pick-text">Нажми чтобы выбрать фото</div>
+      <div class="pick-text">Нажми чтобы выбрать фото или видео</div>
     </div>
     <textarea class="caption-input" id="caption-input" placeholder="Напиши что-нибудь..."></textarea>
     <div class="upload-progress" id="upload-progress">
@@ -204,7 +205,7 @@ input[type="file"]{display:none}
   </div>
 </div>
 
-<input type="file" id="post-file" accept="image/*" onchange="handlePostPhoto(this)">
+<input type="file" id="post-file" accept="image/*,video/*" onchange="handlePostPhoto(this)">
 
 <script src="theme.js"></script>
 <script src="config.js"></script>
@@ -213,6 +214,7 @@ input[type="file"]{display:none}
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 var pendingPhotoUrl = null;
+var pendingMediaType = 'photo';
 var posts = [];
 
 function timeAgo(dateStr) {
@@ -256,7 +258,10 @@ async function loadFeed() {
     item.className = 'grid-item';
     item.onclick = function() { openPost(idx); };
     if (post.photo_url) {
-      item.innerHTML = '<img src="' + post.photo_url + '" loading="lazy">' +
+      var mediaHtml = post.media_type === 'video'
+        ? '<video src="' + post.photo_url + '" muted></video>'
+        : '<img src="' + post.photo_url + '" loading="lazy">';
+      item.innerHTML = mediaHtml +
         '<div class="overlay"><div class="user-name">' + ((post.profiles && post.profiles.name) ? post.profiles.name : '') + '</div></div>';
     } else {
       item.innerHTML = '<div class="no-photo">📷</div>';
@@ -280,7 +285,19 @@ function openPost(idx) {
   currentViewedPostId = post.id;
   document.getElementById('modal-name').textContent = p.name || 'Пользователь';
   document.getElementById('modal-city').textContent = p.city || '';
-  document.getElementById('modal-img').src = post.photo_url || '';
+  var modalImg = document.getElementById('modal-img');
+  var modalVideo = document.getElementById('modal-video');
+  if (post.media_type === 'video') {
+    modalVideo.src = post.photo_url || '';
+    modalVideo.style.display = 'block';
+    modalImg.style.display = 'none';
+    modalImg.src = '';
+  } else {
+    modalImg.src = post.photo_url || '';
+    modalImg.style.display = 'block';
+    modalVideo.style.display = 'none';
+    modalVideo.src = '';
+  }
   document.getElementById('modal-caption').textContent = post.caption || '';
   document.getElementById('modal-time').textContent = timeAgo(post.created_at);
   var av = document.getElementById('modal-avatar');
@@ -549,7 +566,8 @@ function openUpload() { document.getElementById('upload-modal').classList.add('s
 function closeUpload() {
   document.getElementById('upload-modal').classList.remove('show');
   pendingPhotoUrl = null;
-  document.getElementById('photo-pick').innerHTML = '<div class="pick-hint">📷</div><div class="pick-text">Нажми чтобы выбрать фото</div>';
+  pendingMediaType = 'photo';
+  document.getElementById('photo-pick').innerHTML = '<div class="pick-hint">📷</div><div class="pick-text">Нажми чтобы выбрать фото или видео</div>';
   document.getElementById('caption-input').value = '';
   document.getElementById('publish-btn').disabled = true;
   document.getElementById('upload-bar').style.width = '0%';
@@ -558,10 +576,19 @@ function closeUpload() {
 async function handlePostPhoto(input) {
   var file = input.files[0];
   if (!file) return;
-  if (file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
+  var isVideo = file.type.startsWith('video');
+  pendingMediaType = isVideo ? 'video' : 'photo';
+
+  if (isVideo && file.size > 30 * 1024 * 1024) { alert('Видео не более 30MB'); return; }
+  if (!isVideo && file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
+
   var reader = new FileReader();
   reader.onload = function(e) {
-    document.getElementById('photo-pick').innerHTML = '<img src="' + e.target.result + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover">';
+    if (isVideo) {
+      document.getElementById('photo-pick').innerHTML = '<video src="' + e.target.result + '" muted style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover"></video>';
+    } else {
+      document.getElementById('photo-pick').innerHTML = '<img src="' + e.target.result + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover">';
+    }
   };
   reader.readAsDataURL(file);
   document.getElementById('upload-progress').style.display = 'block';
@@ -581,7 +608,7 @@ async function publishPost() {
   var caption = document.getElementById('caption-input').value.trim();
   var btn = document.getElementById('publish-btn');
   btn.disabled = true; btn.textContent = '...';
-  var { error } = await db.from('posts').insert({ user_id: currentUser.id, photo_url: pendingPhotoUrl, caption: caption });
+  var { error } = await db.from('posts').insert({ user_id: currentUser.id, photo_url: pendingPhotoUrl, caption: caption, media_type: pendingMediaType });
   if (error) { alert('Ошибка: ' + error.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
   closeUpload();
   await loadFeed();
