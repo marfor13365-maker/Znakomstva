@@ -44,7 +44,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .upload-bar{height:100%;background:var(--accent);width:0%;transition:width 0.3s}
 
 .stats-row{display:flex;justify-content:center;gap:30px;padding:0 20px 16px;border-bottom:1px solid var(--border)}
-.stat-item{text-align:center}
+.stat-item{text-align:center;cursor:pointer}
+.stat-item:active{opacity:0.7}
 .stat-num{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
 .stat-label{font-size:11px;color:var(--muted);margin-top:2px}
 
@@ -71,14 +72,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 input[type="file"]{display:none}
 .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 
-/* Просмотр фото в полный размер */
 .viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:300;display:none;align-items:center;justify-content:center}
 .viewer-overlay.show{display:flex}
 .viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:301}
 .viewer-content{max-width:100%;max-height:100%;padding:20px}
 .viewer-content img,.viewer-content video{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}
 
-/* Модалка удаления аккаунта */
 .delete-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
 .delete-sheet-overlay.show{display:flex}
 .delete-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
@@ -88,6 +87,19 @@ input[type="file"]{display:none}
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
 .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
 .delete-sheet-actions .btn{margin:0;flex:1}
+
+.list-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.list-sheet-overlay.show{display:flex}
+.list-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;max-height:75vh;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-top:1px solid var(--border);display:flex;flex-direction:column}
+.list-sheet-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600;margin-bottom:12px;text-align:center}
+.list-sheet-body{overflow-y:auto;flex:1}
+.list-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border)}
+.list-row:last-child{border-bottom:none}
+.list-avatar{width:38px;height:38px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px}
+.list-avatar img{width:100%;height:100%;object-fit:cover}
+.list-name{font-size:13px;font-weight:600}
+.list-meta{font-size:11px;color:var(--muted)}
+.list-empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 0}
 </style>
 </head>
 <body>
@@ -138,6 +150,14 @@ input[type="file"]{display:none}
     <div class="stat-num" id="posts-count">0</div>
     <div class="stat-label">постов</div>
   </div>
+  <div class="stat-item" onclick="openListSheet('followers')">
+    <div class="stat-num" id="followers-count">0</div>
+    <div class="stat-label">подписчиков</div>
+  </div>
+  <div class="stat-item" onclick="openListSheet('following')">
+    <div class="stat-num" id="following-count">0</div>
+    <div class="stat-label">подписок</div>
+  </div>
 </div>
 
 <div class="visibility-row">
@@ -163,13 +183,18 @@ input[type="file"]{display:none}
   <button class="bottom-btn active"><span class="ico">👤</span><span>Профиль</span></button>
 </div>
 
-<!-- Просмотр фото -->
 <div class="viewer-overlay" id="viewer-overlay">
   <button class="viewer-close" onclick="closeViewer()">✕</button>
   <div class="viewer-content" id="viewer-content"></div>
 </div>
 
-<!-- Удаление аккаунта -->
+<div class="list-sheet-overlay" id="list-sheet-overlay" onclick="if(event.target===this) closeListSheet()">
+  <div class="list-sheet">
+    <div class="list-sheet-title" id="list-sheet-title">Подписчики</div>
+    <div class="list-sheet-body" id="list-sheet-body"></div>
+  </div>
+</div>
+
 <div class="delete-sheet-overlay" id="delete-account-overlay">
   <div class="delete-sheet">
     <div class="delete-sheet-title">⚠️ Удалить аккаунт навсегда?</div>
@@ -203,7 +228,58 @@ async function init() {
   }
 
   await loadMyPosts();
+  await loadFollowCounts();
   updateThemeButtons();
+}
+
+async function loadFollowCounts() {
+  var { count: followersCount, error: e1 } = await db.from('follows')
+    .select('id', { count: 'exact', head: true })
+    .eq('following_id', currentUser.id);
+  if (e1) console.error('followers count error:', e1);
+  document.getElementById('followers-count').textContent = followersCount || 0;
+
+  var { count: followingCount, error: e2 } = await db.from('follows')
+    .select('id', { count: 'exact', head: true })
+    .eq('follower_id', currentUser.id);
+  if (e2) console.error('following count error:', e2);
+  document.getElementById('following-count').textContent = followingCount || 0;
+}
+
+async function openListSheet(type) {
+  var title = document.getElementById('list-sheet-title');
+  var body = document.getElementById('list-sheet-body');
+  title.textContent = type === 'followers' ? 'Подписчики' : 'Подписки';
+  body.innerHTML = '<div class="list-empty">⏳ Загрузка...</div>';
+  document.getElementById('list-sheet-overlay').classList.add('show');
+
+  var query = type === 'followers'
+    ? db.from('follows').select('follower_id').eq('following_id', currentUser.id)
+    : db.from('follows').select('following_id').eq('follower_id', currentUser.id);
+
+  var { data, error } = await query;
+  if (error) { console.error('list sheet error:', error); body.innerHTML = '<div class="list-empty">Ошибка загрузки</div>'; return; }
+
+  var ids = (data || []).map(function(row) { return type === 'followers' ? row.follower_id : row.following_id; });
+  if (ids.length === 0) {
+    body.innerHTML = '<div class="list-empty">' + (type === 'followers' ? 'Пока нет подписчиков' : 'Ты пока ни на кого не подписан(а)') + '</div>';
+    return;
+  }
+
+  var { data: profs } = await db.from('profiles').select('id, name, city, photo_url').in('id', ids);
+  body.innerHTML = '';
+  (profs || []).forEach(function(p) {
+    var row = document.createElement('div');
+    row.className = 'list-row';
+    row.innerHTML =
+      '<div class="list-avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
+      '<div><div class="list-name">' + (p.name || 'Пользователь') + '</div><div class="list-meta">' + (p.city || '') + '</div></div>';
+    body.appendChild(row);
+  });
+}
+
+function closeListSheet() {
+  document.getElementById('list-sheet-overlay').classList.remove('show');
 }
 
 function updateThemeButtons() {
@@ -395,6 +471,7 @@ async function confirmDeleteAccount() {
   try {
     await db.from('messages').delete().eq('sender_id', currentUser.id);
     await db.from('likes').delete().or('from_user.eq.' + currentUser.id + ',to_user.eq.' + currentUser.id);
+    await db.from('follows').delete().or('follower_id.eq.' + currentUser.id + ',following_id.eq.' + currentUser.id);
     await db.from('matches').delete().or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id);
     await db.from('posts').delete().eq('user_id', currentUser.id);
     await db.from('profile_photos').delete().eq('user_id', currentUser.id);
