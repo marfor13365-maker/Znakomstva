@@ -329,17 +329,20 @@ async function handleAvatarUpload(input) {
 
   var ext = file.name.split('.').pop();
   var fileName = currentUser.id + '_' + Date.now() + '.' + ext;
-  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
-
-  document.getElementById('avatar-upload-bar').style.width = '100%';
-  setTimeout(function() { document.getElementById('avatar-upload-progress').style.display = 'none'; }, 500);
-
-  if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
-
-  var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-  showAvatar(url);
-  await db.from('profiles').update({ photo_url: url }).eq('id', currentUser.id);
-  input.value = '';
+  try {
+    var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
+    document.getElementById('avatar-upload-bar').style.width = '100%';
+    setTimeout(function() { document.getElementById('avatar-upload-progress').style.display = 'none'; }, 500);
+    if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
+    var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+    showAvatar(url);
+    await db.from('profiles').update({ photo_url: url }).eq('id', currentUser.id);
+    input.value = '';
+  } catch (e) {
+    document.getElementById('avatar-upload-progress').style.display = 'none';
+    document.getElementById('avatar-upload-bar').style.width = '0%';
+    alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой).\n\n' + (e && e.message ? e.message : e));
+  }
 }
 
 async function savePostsVisibility() {
@@ -422,22 +425,30 @@ async function handleGalleryUpload(input) {
   if (isVideo && file.size > 20 * 1024 * 1024) { alert('Видео не более 20MB'); return; }
   if (!isVideo && file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
 
+  var wrap = document.getElementById('posts-grid-wrap');
+  wrap.insertAdjacentHTML('afterbegin', '<div class="loading" id="gallery-upload-status">⏳ Загружаю файл...</div>');
+
   var ext = file.name.split('.').pop();
   var fileName = 'gallery/' + currentUser.id + '_' + Date.now() + '.' + ext;
-  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
+  try {
+    var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
+    if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
 
-  if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
+    var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+    await db.from('profile_photos').insert({
+      user_id: currentUser.id,
+      photo_url: url,
+      media_type: isVideo ? 'video' : 'photo',
+      position: myPosts.length
+    });
 
-  var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-  await db.from('profile_photos').insert({
-    user_id: currentUser.id,
-    photo_url: url,
-    media_type: isVideo ? 'video' : 'photo',
-    position: myPosts.length
-  });
-
-  input.value = '';
-  await loadMyPosts();
+    input.value = '';
+    await loadMyPosts();
+  } catch (e) {
+    var status = document.getElementById('gallery-upload-status');
+    if (status) status.remove();
+    alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой). Попробуй видео покороче или при более стабильном интернете.\n\n' + (e && e.message ? e.message : e));
+  }
 }
 
 function toggleSettingsMenu() {
