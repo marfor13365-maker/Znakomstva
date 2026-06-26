@@ -595,12 +595,18 @@ async function handlePostPhoto(input) {
   document.getElementById('upload-bar').style.width = '30%';
   var ext = file.name.split('.').pop();
   var fileName = 'posts/' + currentUser.id + '_' + Date.now() + '.' + ext;
-  var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
-  document.getElementById('upload-bar').style.width = '100%';
-  setTimeout(function() { document.getElementById('upload-progress').style.display = 'none'; }, 600);
-  if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
-  pendingPhotoUrl = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-  document.getElementById('publish-btn').disabled = false;
+  try {
+    var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
+    document.getElementById('upload-bar').style.width = '100%';
+    setTimeout(function() { document.getElementById('upload-progress').style.display = 'none'; }, 600);
+    if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
+    pendingPhotoUrl = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+    document.getElementById('publish-btn').disabled = false;
+  } catch (e) {
+    document.getElementById('upload-progress').style.display = 'none';
+    document.getElementById('upload-bar').style.width = '0%';
+    alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой). Попробуй видео покороче или при более стабильном интернете.\n\n' + (e && e.message ? e.message : e));
+  }
 }
 
 async function publishPost() {
