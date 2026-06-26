@@ -112,6 +112,7 @@ input[type="file"]{display:none}
     <button class="settings-btn" onclick="toggleSettingsMenu()">⚙️</button>
     <div class="settings-menu" id="settings-menu">
       <button class="settings-menu-item" onclick="window.location.href='edit-profile.html'">Моя анкета</button>
+      <button class="settings-menu-item" onclick="enablePushNotifications()">🔔 Включить уведомления</button>
       <div class="settings-menu-section">
         <div class="settings-menu-label">Режим</div>
         <div class="theme-toggle-row">
@@ -210,6 +211,7 @@ input[type="file"]{display:none}
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="push-notifications.js"></script>
 <script>
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
@@ -449,6 +451,16 @@ async function handleGalleryUpload(input) {
     var status = document.getElementById('gallery-upload-status');
     if (status) status.remove();
     alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой). Попробуй видео покороче или при более стабильном интернете.\n\n' + (e && e.message ? e.message : e));
+  }
+}
+
+async function enablePushNotifications() {
+  toggleSettingsMenu();
+  var ok = await BlizkoPush.init(db, currentUser.id);
+  if (ok) {
+    alert('Уведомления включены! Теперь звонки и сообщения будут приходить даже когда сайт закрыт.');
+  } else {
+    alert('Не удалось включить уведомления. Проверь, что разрешение на уведомления для сайта дано в настройках браузера.');
   }
 }
 
