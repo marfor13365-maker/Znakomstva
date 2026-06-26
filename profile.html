@@ -57,6 +57,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .grid-item{position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--card)}
 .grid-add{display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted);background:var(--input-bg);border:2px dashed var(--border)}
 .grid-item img{width:100%;height:100%;object-fit:cover;display:block}
+.grid-item video{width:100%;height:100%;object-fit:cover;display:block}
 .grid-item .del-mini{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:white;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
 .empty-posts{padding:60px 20px;text-align:center;color:var(--muted)}
@@ -369,7 +370,7 @@ async function loadMyPosts() {
     var item = document.createElement('div');
     item.className = 'grid-item';
     if (post.media_type === 'video') {
-      item.innerHTML = '<video src="' + post.photo_url + '" muted></video>' +
+      item.innerHTML = '<video src="' + post.photo_url + '" muted preload="metadata" playsinline></video>' +
         '<button class="del-mini" onclick="event.stopPropagation();deletePost(\'' + post.id + '\')">✕</button>';
     } else {
       item.innerHTML = '<img src="' + post.photo_url + '" loading="lazy">' +
