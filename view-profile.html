@@ -16,11 +16,18 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .loading{padding:60px 20px;text-align:center;color:var(--muted);font-size:14px}
 
 .avatar-block{display:flex;flex-direction:column;align-items:center;padding:30px 20px}
+.avatar-wrap{position:relative}
 .avatar-circle{width:120px;height:120px;border-radius:50%;background:var(--input-bg);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:48px;border:2px solid var(--border)}
+.avatar-circle.has-new{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,77,109,0.25)}
 .avatar-circle img{width:100%;height:100%;object-fit:cover}
+.new-post-dot{position:absolute;top:2px;right:2px;width:18px;height:18px;background:var(--accent);border:3px solid var(--bg);border-radius:50%;display:none}
+.new-post-dot.show{display:block}
 .profile-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-top:14px}
 .profile-meta{font-size:13px;color:var(--muted);margin-top:6px}
-.message-btn{margin-top:14px;padding:10px 20px;background:var(--accent);border:none;border-radius:14px;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.actions-row{display:flex;gap:10px;margin-top:14px}
+.message-btn{padding:10px 20px;background:var(--accent);border:none;border-radius:14px;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.bell-btn{width:38px;height:38px;border-radius:50%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bell-btn.active{background:rgba(255,77,109,0.15);border-color:var(--accent)}
 
 .section{padding:0 20px;margin-bottom:20px}
 .section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:10px}
@@ -64,6 +71,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 var galleryItems = [];
+var bellActive = false;
+var currentTargetId = null;
 
 function getTargetUserId() {
   var params = new URLSearchParams(window.location.search);
@@ -84,6 +93,7 @@ async function init() {
 
   var targetId = getTargetUserId();
   if (!targetId) { window.location.href = 'feed.html'; return; }
+  currentTargetId = targetId;
 
   var { data: profile } = await db.from('profiles').select('*').eq('id', targetId).single();
   if (!profile) {
@@ -100,25 +110,97 @@ async function init() {
   } else if (visibility === 'matches') {
     canSeeFull = !!matchId;
   }
-  // visibility === 'all' -> canSeeFull = true всегда
 
-  renderProfile(profile, canSeeFull, targetId, matchId);
+  var hasNew = await checkHasNewPost(targetId);
+
+  renderProfile(profile, canSeeFull, targetId, matchId, hasNew);
+  await loadBellState(targetId);
+  await markProfileSeen(targetId);
 }
 
-function renderProfile(profile, canSeeFull, targetId, matchId) {
+async function checkHasNewPost(targetId) {
+  var { data: lastPost } = await db.from('posts')
+    .select('created_at')
+    .eq('user_id', targetId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!lastPost) return false;
+
+  var { data: seen } = await db.from('profile_seen')
+    .select('last_seen_at')
+    .eq('viewer_id', currentUser.id)
+    .eq('target_user_id', targetId)
+    .maybeSingle();
+
+  if (!seen) return true; // никогда не смотрели — считаем, что есть что показать
+  return new Date(lastPost.created_at) > new Date(seen.last_seen_at);
+}
+
+async function markProfileSeen(targetId) {
+  await db.from('profile_seen').upsert({
+    viewer_id: currentUser.id,
+    target_user_id: targetId,
+    last_seen_at: new Date().toISOString()
+  }, { onConflict: 'viewer_id,target_user_id' });
+}
+
+async function loadBellState(targetId) {
+  var { data } = await db.from('post_notify_subs')
+    .select('id')
+    .eq('subscriber_id', currentUser.id)
+    .eq('target_user_id', targetId)
+    .maybeSingle();
+  bellActive = !!data;
+  updateBellButton();
+}
+
+function updateBellButton() {
+  var btn = document.getElementById('bell-btn');
+  if (!btn) return;
+  btn.classList.toggle('active', bellActive);
+  btn.textContent = bellActive ? '🔔' : '🔕';
+  btn.title = bellActive ? 'Уведомления о новых постах включены' : 'Уведомлять о новых постах';
+}
+
+async function toggleBell() {
+  if (!currentTargetId) return;
+  if (bellActive) {
+    await db.from('post_notify_subs')
+      .delete()
+      .eq('subscriber_id', currentUser.id)
+      .eq('target_user_id', currentTargetId);
+    bellActive = false;
+  } else {
+    await db.from('post_notify_subs').insert({
+      subscriber_id: currentUser.id,
+      target_user_id: currentTargetId
+    });
+    bellActive = true;
+  }
+  updateBellButton();
+}
+
+function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
   var content = document.getElementById('content');
 
   var html =
     '<div class="avatar-block">' +
-      '<div class="avatar-circle">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
+      '<div class="avatar-wrap">' +
+        '<div class="avatar-circle' + (hasNew ? ' has-new' : '') + '">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
+        '<div class="new-post-dot' + (hasNew ? ' show' : '') + '"></div>' +
+      '</div>' +
       '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
-      '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>';
+      '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
+      '<div class="actions-row">' +
+        '<button class="bell-btn" id="bell-btn" onclick="toggleBell()">🔕</button>';
 
   if (matchId) {
     html += '<button class="message-btn" onclick="window.location.href=\'chat.html?match=' + matchId + '\'">💬 Написать сообщение</button>';
   }
 
-  html += '</div>';
+  html += '</div></div>';
 
   if (!canSeeFull) {
     var visibility = profile.profile_visibility || 'matches';
