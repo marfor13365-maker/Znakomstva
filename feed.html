@@ -212,6 +212,7 @@ input[type="file"]{display:none}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var BACKEND_URL = 'https://vector-chat-api.onrender.com';
 var currentUser = null;
 var pendingPhotoUrl = null;
 var pendingMediaType = 'photo';
@@ -618,6 +619,37 @@ async function publishPost() {
   if (error) { alert('Ошибка: ' + error.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
   closeUpload();
   await loadFeed();
+  notifyPostSubscribers();
+}
+
+async function notifyPostSubscribers() {
+  try {
+    var { data: subs } = await db.from('post_notify_subs')
+      .select('subscriber_id')
+      .eq('target_user_id', currentUser.id);
+
+    if (!subs || subs.length === 0) return;
+
+    var { data: myProfile } = await db.from('profiles').select('name').eq('id', currentUser.id).single();
+    var authorName = (myProfile && myProfile.name) ? myProfile.name : 'Кто-то из подписок';
+
+    subs.forEach(function(sub) {
+      fetch(BACKEND_URL + '/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'QHSRzsipKinthY7dJdPVN-SGTX5iL4CmLOT1bcQU1AA' },
+        body: JSON.stringify({
+          to_user_id: sub.subscriber_id,
+          title: 'Новый пост',
+          body: authorName + ' опубликовал(а) новый пост',
+          type: 'new_post',
+          fromUserId: currentUser.id,
+          url: 'feed.html'
+        })
+      }).catch(function(e) { console.error('Push subscriber error:', e); });
+    });
+  } catch (e) {
+    console.error('notifyPostSubscribers error:', e);
+  }
 }
 
 init();
