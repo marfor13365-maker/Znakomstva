@@ -19,6 +19,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .grid-item video{width:100%;height:100%;object-fit:cover;display:block}
 .grid-item:active{opacity:0.85}
 .grid-item .overlay{position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.75))}
+.overlay-row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.grid-views{font-size:10px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:2px;flex-shrink:0}
 .grid-new-dot{position:absolute;top:6px;right:6px;width:12px;height:12px;background:var(--accent);border:2px solid rgba(0,0,0,0.6);border-radius:50%;z-index:2}
 .grid-item .user-name{font-size:11px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .no-photo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--input-bg)}
@@ -296,19 +298,33 @@ async function loadFeed() {
     wrap.innerHTML = '<div class="empty-state"><div class="icon">📸</div><p>Пока нет фото.<br>Будь первым — добавь своё!</p></div>';
     return;
   }
+
+  var postIds = posts.map(function(p) { return p.id; });
+  var viewCounts = {};
+  if (postIds.length > 0) {
+    var { data: viewsData } = await db.from('media_views')
+      .select('item_id')
+      .eq('item_type', 'post')
+      .in('item_id', postIds);
+    (viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
+  }
+
   var grid = document.createElement('div');
   grid.className = 'grid';
   posts.forEach(function(post, idx) {
     var item = document.createElement('div');
     item.className = 'grid-item';
+    item.setAttribute('data-post-id', post.id);
     item.onclick = function() { openPost(idx); };
     if (post.photo_url) {
       var mediaHtml = post.media_type === 'video'
         ? '<video src="' + post.photo_url + '" muted></video>'
         : '<img src="' + post.photo_url + '" loading="lazy">';
       var dotHtml = isNewFromFollowed(post) ? '<div class="grid-new-dot"></div>' : '';
+      var viewsCount = viewCounts[post.id] || 0;
       item.innerHTML = mediaHtml + dotHtml +
-        '<div class="overlay"><div class="user-name">' + ((post.profiles && post.profiles.name) ? post.profiles.name : '') + '</div></div>';
+        '<div class="overlay"><div class="overlay-row"><div class="user-name">' + ((post.profiles && post.profiles.name) ? post.profiles.name : '') + '</div>' +
+        '<div class="grid-views">👁 ' + viewsCount + '</div></div></div>';
     } else {
       item.innerHTML = '<div class="no-photo">📷</div>';
     }
@@ -414,6 +430,9 @@ async function recordAndShowViews(postId) {
     .eq('item_id', postId);
 
   document.getElementById('views-count').textContent = count || 0;
+
+  var gridItem = document.querySelector('.grid-item[data-post-id="' + postId + '"] .grid-views');
+  if (gridItem) gridItem.textContent = '👁 ' + (count || 0);
 }
 
 async function loadFollowStatus(authorId) {
@@ -685,11 +704,41 @@ async function publishPost() {
   var caption = document.getElementById('caption-input').value.trim();
   var btn = document.getElementById('publish-btn');
   btn.disabled = true; btn.textContent = '...';
-  var { error } = await db.from('posts').insert({ user_id: currentUser.id, photo_url: pendingPhotoUrl, caption: caption, media_type: pendingMediaType });
+
+  // Пытаемся также добавить фото в галерею профиля (мастер-копия), если есть место (макс. 9)
+  var profilePhotoId = null;
+  var { count: galleryCount } = await db.from('profile_photos')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', currentUser.id);
+
+  if ((galleryCount || 0) < 9) {
+    var { data: profPhoto, error: profErr } = await db.from('profile_photos').insert({
+      user_id: currentUser.id,
+      photo_url: pendingPhotoUrl,
+      media_type: pendingMediaType,
+      position: galleryCount || 0
+    }).select().single();
+    if (!profErr && profPhoto) profilePhotoId = profPhoto.id;
+  }
+
+  var { error } = await db.from('posts').insert({
+    user_id: currentUser.id,
+    photo_url: pendingPhotoUrl,
+    caption: caption,
+    media_type: pendingMediaType,
+    profile_photo_id: profilePhotoId
+  });
   if (error) { alert('Ошибка: ' + error.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
+
   closeUpload();
   await loadFeed();
   notifyPostSubscribers();
+
+  if (!profilePhotoId) {
+    setTimeout(function() {
+      alert('Фото опубликовано в ленте. В профиль не добавлено — там уже максимум 9 фото. Удали что-нибудь в профиле, если хочешь, чтобы новые фото туда тоже попадали.');
+    }, 300);
+  }
 }
 
 async function notifyPostSubscribers() {
