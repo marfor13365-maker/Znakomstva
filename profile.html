@@ -78,6 +78,8 @@ input[type="file"]{display:none}
 .viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:301}
 .viewer-content{max-width:100%;max-height:100%;padding:20px}
 .viewer-content img,.viewer-content video{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}
+.viewer-content img{touch-action:none;-webkit-user-drag:none;-webkit-user-select:none;user-select:none;will-change:transform}
+.viewer-overlay.immersive .viewer-close{display:none}
 
 .delete-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
 .delete-sheet-overlay.show{display:flex}
@@ -187,7 +189,10 @@ input[type="file"]{display:none}
 
 <div class="viewer-overlay" id="viewer-overlay">
   <button class="viewer-close" onclick="closeViewer()">✕</button>
-  <div class="viewer-content" id="viewer-content"></div>
+  <div class="viewer-content" id="viewer-content">
+    <img id="viewer-img" src="" alt="" style="display:none">
+    <video id="viewer-video" src="" controls playsinline style="display:none"></video>
+  </div>
 </div>
 
 <div class="list-sheet-overlay" id="list-sheet-overlay" onclick="if(event.target===this) closeListSheet()">
@@ -210,6 +215,7 @@ input[type="file"]{display:none}
 
 <script src="theme.js"></script>
 <script src="config.js"></script>
+<script src="photo-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="push-notifications.js"></script>
 <script>
@@ -397,19 +403,50 @@ async function loadMyPosts() {
   wrap.appendChild(grid);
 }
 
+var galleryViewerAttached = false;
+function ensureGalleryViewerAttached() {
+  if (galleryViewerAttached) return;
+  galleryViewerAttached = true;
+  var img = document.getElementById('viewer-img');
+  BlizkoPhotoViewer.attach(img, {
+    onImmersiveChange: function (level) {
+      document.getElementById('viewer-overlay').classList.toggle('immersive', level > 0);
+    }
+  });
+}
+
 function openViewer(idx) {
   var post = myPosts[idx];
   if (!post) return;
-  var html = post.media_type === 'video'
-    ? '<video src="' + post.photo_url + '" controls autoplay playsinline onerror="console.error(\'Видео не загрузилось:\', this.src, this.error)"></video>'
-    : '<img src="' + post.photo_url + '">';
-  document.getElementById('viewer-content').innerHTML = html;
+  ensureGalleryViewerAttached();
+
+  var img = document.getElementById('viewer-img');
+  var video = document.getElementById('viewer-video');
+  BlizkoPhotoViewer.reset(img);
+  document.getElementById('viewer-overlay').classList.remove('immersive');
+
+  if (post.media_type === 'video') {
+    video.src = post.photo_url;
+    video.style.display = 'block';
+    img.style.display = 'none';
+    img.src = '';
+    video.play().catch(function() {});
+  } else {
+    img.src = post.photo_url;
+    img.style.display = 'block';
+    video.style.display = 'none';
+    video.src = '';
+  }
+
   document.getElementById('viewer-overlay').classList.add('show');
 }
 
 function closeViewer() {
   document.getElementById('viewer-overlay').classList.remove('show');
-  document.getElementById('viewer-content').innerHTML = '';
+  document.getElementById('viewer-overlay').classList.remove('immersive');
+  document.getElementById('viewer-video').pause();
+  document.getElementById('viewer-video').src = '';
+  document.getElementById('viewer-img').src = '';
 }
 
 async function deletePost(postId) {
