@@ -43,6 +43,25 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .upload-progress{width:140px;height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
 .upload-bar{height:100%;background:var(--accent);width:0%;transition:width 0.3s}
 
+.post-upload-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:200;display:none;flex-direction:column}
+.post-upload-modal.show{display:flex}
+.post-upload-topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.post-upload-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600}
+.post-publish-btn{background:var(--accent);border:none;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;padding:9px 18px;border-radius:10px;cursor:pointer}
+.post-publish-btn:disabled{opacity:0.4;cursor:not-allowed}
+.post-upload-content{flex:1;display:flex;flex-direction:column;padding:20px;gap:16px;overflow-y:auto}
+.post-photo-pick{width:100%;aspect-ratio:1;background:var(--input-bg);border:2px dashed var(--border);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;transition:border-color 0.2s}
+.post-photo-pick:active{border-color:var(--accent)}
+.post-pick-hint{font-size:36px;margin-bottom:8px}
+.post-pick-text{font-size:13px;color:var(--muted)}
+.post-caption-input{background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:80px;transition:border-color 0.2s}
+.post-caption-input:focus{border-color:var(--accent)}
+.post-upload-progress{height:3px;background:var(--border);border-radius:2px;overflow:hidden;display:none}
+.post-upload-bar{height:100%;background:var(--accent);width:0%;transition:width 0.3s}
+.post-feed-toggle{display:flex;align-items:center;gap:10px;padding:14px;background:var(--input-bg);border:1px solid var(--border);border-radius:12px}
+.post-feed-toggle input[type="checkbox"]{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
+.post-feed-toggle label{font-size:13px;cursor:pointer;flex:1}
+
 .stats-row{display:flex;justify-content:center;gap:30px;padding:0 20px 16px;border-bottom:1px solid var(--border)}
 .stat-item{text-align:center;cursor:pointer}
 .stat-item:active{opacity:0.7}
@@ -177,7 +196,30 @@ input[type="file"]{display:none}
   <div class="loading">⏳ Загрузка...</div>
 </div>
 
-<input type="file" id="gallery-input" accept="image/*,video/*" onchange="handleGalleryUpload(this)" style="display:none">
+<div class="post-upload-modal" id="post-upload-modal">
+  <div class="post-upload-topbar">
+    <button class="back-btn" onclick="closePostUpload()" style="width:36px;height:36px;font-size:18px">←</button>
+    <div class="post-upload-title">Новый пост</div>
+    <button class="post-publish-btn" id="post-publish-btn" onclick="publishFromProfile()" disabled>Опубликовать</button>
+  </div>
+  <div class="post-upload-content">
+    <div class="post-photo-pick" id="post-photo-pick" onclick="document.getElementById('profile-post-file').click()">
+      <div class="post-pick-hint">📷</div>
+      <div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>
+    </div>
+    <textarea class="post-caption-input" id="post-caption-input" placeholder="Напиши что-нибудь..."></textarea>
+    <div class="post-feed-toggle">
+      <input type="checkbox" id="post-also-feed">
+      <label for="post-also-feed">Опубликовать также в ленте</label>
+    </div>
+    <div class="post-upload-progress" id="post-upload-progress">
+      <div class="post-upload-bar" id="post-upload-bar"></div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="profile-post-file" accept="image/*,video/*" onchange="handleProfilePostPhoto(this)" style="display:none">
+
 
 <div class="bottombar">
   <button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span>Лента</span></button>
@@ -392,7 +434,7 @@ async function loadMyPosts() {
     var addEl = document.createElement('div');
     addEl.className = 'grid-item grid-add';
     addEl.textContent = '+';
-    addEl.onclick = function() { document.getElementById('gallery-input').click(); };
+    addEl.onclick = function() { openPostUpload(); };
     grid.appendChild(addEl);
   }
 
@@ -456,39 +498,94 @@ async function deletePost(postId) {
   await loadMyPosts();
 }
 
-async function handleGalleryUpload(input) {
+var pendingProfilePhotoUrl = null;
+var pendingProfileMediaType = 'photo';
+
+function openPostUpload() {
+  if (myPosts.length >= 9) { alert('Максимум 9 фото/видео в профиле'); return; }
+  document.getElementById('post-upload-modal').classList.add('show');
+}
+
+function closePostUpload() {
+  document.getElementById('post-upload-modal').classList.remove('show');
+  pendingProfilePhotoUrl = null;
+  pendingProfileMediaType = 'photo';
+  document.getElementById('post-photo-pick').innerHTML = '<div class="post-pick-hint">📷</div><div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>';
+  document.getElementById('post-caption-input').value = '';
+  document.getElementById('post-also-feed').checked = false;
+  document.getElementById('post-publish-btn').disabled = true;
+  document.getElementById('post-upload-bar').style.width = '0%';
+  document.getElementById('profile-post-file').value = '';
+}
+
+async function handleProfilePostPhoto(input) {
   var file = input.files[0];
   if (!file) return;
-  if (myPosts.length >= 9) { alert('Максимум 9 фото/видео в профиле'); return; }
-
   var isVideo = file.type.startsWith('video');
+  pendingProfileMediaType = isVideo ? 'video' : 'photo';
+
   if (isVideo && file.size > 20 * 1024 * 1024) { alert('Видео не более 20MB'); return; }
   if (!isVideo && file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
 
-  var wrap = document.getElementById('posts-grid-wrap');
-  wrap.insertAdjacentHTML('afterbegin', '<div class="loading" id="gallery-upload-status">⏳ Загружаю файл...</div>');
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    if (isVideo) {
+      document.getElementById('post-photo-pick').innerHTML = '<video src="' + e.target.result + '" muted style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover"></video>';
+    } else {
+      document.getElementById('post-photo-pick').innerHTML = '<img src="' + e.target.result + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover">';
+    }
+  };
+  reader.readAsDataURL(file);
 
+  document.getElementById('post-upload-progress').style.display = 'block';
+  document.getElementById('post-upload-bar').style.width = '30%';
   var ext = file.name.split('.').pop();
-  var fileName = 'gallery/' + currentUser.id + '_' + Date.now() + '.' + ext;
+  var fileName = 'posts/' + currentUser.id + '_' + Date.now() + '.' + ext;
+
   try {
     var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
+    document.getElementById('post-upload-bar').style.width = '100%';
+    setTimeout(function() { document.getElementById('post-upload-progress').style.display = 'none'; }, 600);
     if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
-
-    var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-    await db.from('profile_photos').insert({
-      user_id: currentUser.id,
-      photo_url: url,
-      media_type: isVideo ? 'video' : 'photo',
-      position: myPosts.length
-    });
-
-    input.value = '';
-    await loadMyPosts();
+    pendingProfilePhotoUrl = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+    document.getElementById('post-publish-btn').disabled = false;
   } catch (e) {
-    var status = document.getElementById('gallery-upload-status');
-    if (status) status.remove();
-    alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой). Попробуй видео покороче или при более стабильном интернете.\n\n' + (e && e.message ? e.message : e));
+    document.getElementById('post-upload-progress').style.display = 'none';
+    document.getElementById('post-upload-bar').style.width = '0%';
+    alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой).\n\n' + (e && e.message ? e.message : e));
   }
+}
+
+async function publishFromProfile() {
+  if (!pendingProfilePhotoUrl) return;
+  var caption = document.getElementById('post-caption-input').value.trim();
+  var btn = document.getElementById('post-publish-btn');
+  btn.disabled = true; btn.textContent = '...';
+
+  // 1. Мастер-копия — фото в галерее профиля
+  var { data: profPhoto, error: profErr } = await db.from('profile_photos').insert({
+    user_id: currentUser.id,
+    photo_url: pendingProfilePhotoUrl,
+    media_type: pendingProfileMediaType,
+    position: myPosts.length
+  }).select().single();
+
+  if (profErr) { alert('Ошибка: ' + profErr.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
+
+  // 2. В ленту — только если отмечен чекбокс "Опубликовать также в ленте"
+  var alsoFeed = document.getElementById('post-also-feed').checked;
+  if (alsoFeed) {
+    await db.from('posts').insert({
+      user_id: currentUser.id,
+      photo_url: pendingProfilePhotoUrl,
+      caption: caption,
+      media_type: pendingProfileMediaType,
+      profile_photo_id: profPhoto.id
+    });
+  }
+
+  closePostUpload();
+  await loadMyPosts();
 }
 
 async function enablePushNotifications() {
