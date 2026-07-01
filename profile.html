@@ -69,8 +69,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .stat-label{font-size:11px;color:var(--muted);margin-top:2px}
 
 .visibility-row{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
-.publish-row{padding:14px 20px}
-.publish-btn-main{width:100%;padding:13px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
 .visibility-label{font-size:12px;color:var(--muted)}
 .visibility-select{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text);font-size:12px}
 
@@ -80,6 +78,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .grid-item img{width:100%;height:100%;object-fit:cover;display:block}
 .grid-item video{width:100%;height:100%;object-fit:cover;display:block}
 .grid-item .del-mini{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:white;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.grid-item .send-mini{position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:white;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .grid-item-views{position:absolute;bottom:4px;left:6px;font-size:10px;color:rgba(255,255,255,0.9);background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:8px;display:flex;align-items:center;gap:2px}
 
 .empty-posts{padding:60px 20px;text-align:center;color:var(--muted)}
@@ -195,10 +194,6 @@ input[type="file"]{display:none}
   </select>
 </div>
 
-<div class="publish-row">
-  <button class="publish-btn-main" onclick="openPostUpload()">📷 Опубликовать фото или видео</button>
-</div>
-
 <div id="posts-grid-wrap">
   <div class="loading">⏳ Загрузка...</div>
 </div>
@@ -206,16 +201,16 @@ input[type="file"]{display:none}
 <div class="post-upload-modal" id="post-upload-modal">
   <div class="post-upload-topbar">
     <button class="back-btn" onclick="closePostUpload()" style="width:36px;height:36px;font-size:18px">←</button>
-    <div class="post-upload-title">Новый пост</div>
+    <div class="post-upload-title" id="post-upload-title">Новый пост</div>
     <button class="post-publish-btn" id="post-publish-btn" onclick="publishFromProfile()" disabled>Опубликовать</button>
   </div>
   <div class="post-upload-content">
-    <div class="post-photo-pick" id="post-photo-pick" onclick="document.getElementById('profile-post-file').click()">
+    <div class="post-photo-pick" id="post-photo-pick" onclick="handlePhotoPickClick()">
       <div class="post-pick-hint">📷</div>
       <div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>
     </div>
     <textarea class="post-caption-input" id="post-caption-input" placeholder="Напиши что-нибудь..."></textarea>
-    <div class="post-feed-toggle">
+    <div class="post-feed-toggle" id="post-feed-toggle-wrap">
       <input type="checkbox" id="post-also-feed">
       <label for="post-also-feed">Опубликовать также в ленте</label>
     </div>
@@ -437,13 +432,14 @@ async function loadMyPosts() {
     var item = document.createElement('div');
     item.className = 'grid-item';
     var viewsCount = viewCounts[post.id] || 0;
+    var sendBtn = '<button class="send-mini" title="Опубликовать в ленту" onclick="event.stopPropagation();publishExistingToFeed(' + idx + ')">📤</button>';
     if (post.media_type === 'video') {
       item.innerHTML = '<video src="' + post.photo_url + '" muted preload="metadata" playsinline></video>' +
-        '<div class="grid-item-views">👁 ' + viewsCount + '</div>' +
+        '<div class="grid-item-views">👁 ' + viewsCount + '</div>' + sendBtn +
         '<button class="del-mini" onclick="event.stopPropagation();deletePost(\'' + post.id + '\')">✕</button>';
     } else {
       item.innerHTML = '<img src="' + post.photo_url + '" loading="lazy">' +
-        '<div class="grid-item-views">👁 ' + viewsCount + '</div>' +
+        '<div class="grid-item-views">👁 ' + viewsCount + '</div>' + sendBtn +
         '<button class="del-mini" onclick="event.stopPropagation();deletePost(\'' + post.id + '\')">✕</button>';
     }
     item.querySelector('img,video') && (item.querySelector('img,video').onclick = function() { openViewer(idx); });
@@ -520,8 +516,39 @@ async function deletePost(postId) {
 
 var pendingProfilePhotoUrl = null;
 var pendingProfileMediaType = 'photo';
+var existingProfilePhotoId = null; // не null = публикуем уже загруженное фото из профиля (без выбора файла)
 
 function openPostUpload() {
+  existingProfilePhotoId = null;
+  document.getElementById('post-upload-title').textContent = 'Новый пост';
+  document.getElementById('post-feed-toggle-wrap').style.display = 'flex';
+  document.getElementById('post-photo-pick').innerHTML = '<div class="post-pick-hint">📷</div><div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>';
+  document.getElementById('post-publish-btn').disabled = true;
+  document.getElementById('post-upload-modal').classList.add('show');
+}
+
+function handlePhotoPickClick() {
+  if (existingProfilePhotoId) return; // в режиме "существующее фото" выбор файла не нужен
+  document.getElementById('profile-post-file').click();
+}
+
+function publishExistingToFeed(idx) {
+  var post = myPosts[idx];
+  if (!post) return;
+
+  existingProfilePhotoId = post.id;
+  pendingProfilePhotoUrl = post.photo_url;
+  pendingProfileMediaType = post.media_type;
+
+  document.getElementById('post-upload-title').textContent = 'Опубликовать в ленту';
+  document.getElementById('post-feed-toggle-wrap').style.display = 'none';
+
+  var preview = post.media_type === 'video'
+    ? '<video src="' + post.photo_url + '" muted style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover"></video>'
+    : '<img src="' + post.photo_url + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover">';
+  document.getElementById('post-photo-pick').innerHTML = preview;
+  document.getElementById('post-publish-btn').disabled = false;
+
   document.getElementById('post-upload-modal').classList.add('show');
 }
 
@@ -529,10 +556,12 @@ function closePostUpload() {
   document.getElementById('post-upload-modal').classList.remove('show');
   pendingProfilePhotoUrl = null;
   pendingProfileMediaType = 'photo';
+  existingProfilePhotoId = null;
   document.getElementById('post-photo-pick').innerHTML = '<div class="post-pick-hint">📷</div><div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>';
   document.getElementById('post-caption-input').value = '';
   document.getElementById('post-also-feed').checked = false;
   document.getElementById('post-publish-btn').disabled = true;
+  document.getElementById('post-publish-btn').textContent = 'Опубликовать';
   document.getElementById('post-upload-bar').style.width = '0%';
   document.getElementById('profile-post-file').value = '';
 }
@@ -580,6 +609,21 @@ async function publishFromProfile() {
   var caption = document.getElementById('post-caption-input').value.trim();
   var btn = document.getElementById('post-publish-btn');
   btn.disabled = true; btn.textContent = '...';
+
+  if (existingProfilePhotoId) {
+    // Публикуем уже загруженное фото из профиля — без создания новой записи в галерее
+    var { error: postErr } = await db.from('posts').insert({
+      user_id: currentUser.id,
+      photo_url: pendingProfilePhotoUrl,
+      caption: caption,
+      media_type: pendingProfileMediaType,
+      profile_photo_id: existingProfilePhotoId
+    });
+    if (postErr) { alert('Ошибка: ' + postErr.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
+    closePostUpload();
+    await loadMyPosts();
+    return;
+  }
 
   // 1. Мастер-копия — фото в галерее профиля
   var { data: profPhoto, error: profErr } = await db.from('profile_photos').insert({
