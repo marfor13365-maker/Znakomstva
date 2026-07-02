@@ -128,14 +128,15 @@ async function init() {
 }
 
 async function checkHasNewPost(targetId) {
-  var { data: lastPost } = await db.from('posts')
+  // Смотрим на последнее фото в галерее профиля этого человека
+  var { data: lastPhoto } = await db.from('profile_photos')
     .select('created_at')
     .eq('user_id', targetId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!lastPost) return false;
+  if (!lastPhoto) return false;
 
   var { data: seen } = await db.from('profile_seen')
     .select('last_seen_at')
@@ -143,8 +144,8 @@ async function checkHasNewPost(targetId) {
     .eq('target_user_id', targetId)
     .maybeSingle();
 
-  if (!seen) return true; // никогда не смотрели — считаем, что есть что показать
-  return new Date(lastPost.created_at) > new Date(seen.last_seen_at);
+  if (!seen) return true;
+  return new Date(lastPhoto.created_at) > new Date(seen.last_seen_at);
 }
 
 async function markProfileSeen(targetId) {
@@ -310,11 +311,16 @@ function openViewer(idx) {
 }
 
 async function recordAndShowProfilePhotoViews(photoId) {
-  await db.from('media_views').upsert({
-    item_type: 'profile_photo',
-    item_id: photoId,
-    viewer_id: currentUser.id
-  }, { onConflict: 'item_type,item_id,viewer_id', ignoreDuplicates: true });
+  // Записываем просмотр (один раз на пару viewer+photo, дубли игнорируются на уровне БД)
+  try {
+    await db.from('media_views').insert({
+      item_type: 'profile_photo',
+      item_id: photoId,
+      viewer_id: currentUser.id
+    });
+  } catch (e) {
+    // 409 конфликт уникальности — просмотр уже записан, это норм
+  }
 
   var { count } = await db.from('media_views')
     .select('id', { count: 'exact', head: true })
@@ -324,6 +330,7 @@ async function recordAndShowProfilePhotoViews(photoId) {
   var el = document.getElementById('viewer-views-count');
   if (el) el.textContent = count || 0;
 
+  // Обновляем бейдж на плитке в гриде
   var gridBadge = document.querySelector('.gallery-item[data-photo-id="' + photoId + '"] .gallery-item-views');
   if (gridBadge) gridBadge.textContent = '👁 ' + (count || 0);
 }
