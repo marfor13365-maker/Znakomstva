@@ -54,7 +54,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <div class="page-title">Анкета</div>
 </div>
 
-<div id="debug-log" style="position:fixed;bottom:80px;left:0;right:0;background:rgba(0,0,0,0.85);color:#4cff9f;font-size:10px;padding:6px 10px;z-index:999;max-height:120px;overflow-y:auto;display:none"></div>
+<div id="debug-log" style="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.95);color:#4cff9f;font-size:11px;padding:10px;z-index:9999;max-height:200px;overflow-y:auto;border-top:2px solid #4cff9f;font-family:monospace;"></div>
 
 <div class="content" id="content">
   <div class="loading">⏳ Загрузка...</div>
@@ -84,8 +84,7 @@ function dbg(msg) {
   console.log(msg);
   var el = document.getElementById('debug-log');
   if (!el) return;
-  el.style.display = 'block';
-  el.innerHTML += '<div>' + new Date().toLocaleTimeString() + ' ' + msg + '</div>';
+  el.innerHTML += '<div>[' + new Date().toLocaleTimeString() + '] ' + msg + '</div>';
   el.scrollTop = el.scrollHeight;
 }
 
@@ -102,60 +101,80 @@ async function getMatchId(otherUserId) {
 }
 
 async function init() {
-  var r = await db.auth.getSession();
-  if (!r.data.session) { window.location.href = 'index.html'; return; }
-  currentUser = r.data.session.user;
+  try {
+    dbg('Инициализация приложения...');
+    var r = await db.auth.getSession();
+    if (!r.data.session) { dbg('Нет сессии, редирект...'); window.location.href = 'index.html'; return; }
+    currentUser = r.data.session.user;
+    dbg('Пользователь авторизован: ' + currentUser.id);
 
-  var targetId = getTargetUserId();
-  if (!targetId) { window.location.href = 'feed.html'; return; }
-  currentTargetId = targetId;
+    var targetId = getTargetUserId();
+    if (!targetId) { dbg('ID целевого пользователя не найден в URL'); window.location.href = 'feed.html'; return; }
+    currentTargetId = targetId;
+    dbg('Загрузка профиля ID: ' + targetId);
 
-  var { data: profile } = await db.from('profiles').select('*').eq('id', targetId).single();
-  if (!profile) {
-    document.getElementById('content').innerHTML = '<div class="loading">Анкета не найдена</div>';
-    return;
+    var { data: profile, error: pErr } = await db.from('profiles').select('*').eq('id', targetId).single();
+    if (pErr) { dbg('Ошибка загрузки профиля: ' + pErr.message); }
+    if (!profile) {
+      document.getElementById('content').innerHTML = '<div class="loading">Анкета не найдена</div>';
+      return;
+    }
+    dbg('Профиль успешно загружен: ' + profile.name);
+
+    var matchId = await getMatchId(targetId);
+    var visibility = profile.profile_visibility || 'matches';
+    var canSeeFull = true;
+
+    if (visibility === 'none') {
+      canSeeFull = false;
+    } else if (visibility === 'matches') {
+      canSeeFull = !!matchId;
+    }
+
+    dbg('Проверка новых постов...');
+    var hasNew = await checkHasNewPost(targetId);
+
+    dbg('Отрисовка интерфейса...');
+    renderProfile(profile, canSeeFull, targetId, matchId, hasNew);
+    
+    dbg('Загрузка состояния уведомлений...');
+    await loadBellState(targetId);
+    
+    dbg('Обновление статуса просмотра профиля...');
+    await markProfileSeen(targetId);
+    dbg('Всё успешно загружено!');
+  } catch (err) {
+    dbg('<span style="color:#ff4d6d;font-weight:bold;">КРИТИЧЕСКАЯ ОШИБКА: ' + err.message + '</span>');
+    console.error(err);
   }
-
-  var matchId = await getMatchId(targetId);
-  var visibility = profile.profile_visibility || 'matches';
-  var canSeeFull = true;
-
-  if (visibility === 'none') {
-    canSeeFull = false;
-  } else if (visibility === 'matches') {
-    canSeeFull = !!matchId;
-  }
-
-  var hasNew = await checkHasNewPost(targetId);
-
-  renderProfile(profile, canSeeFull, targetId, matchId, hasNew);
-  await loadBellState(targetId);
-  await markProfileSeen(targetId);
 }
 
 async function checkHasNewPost(targetId) {
-  var { data: lastPhoto, error: e1 } = await db.from('profile_photos')
-    .select('created_at')
-    .eq('user_id', targetId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  try {
+    var { data: lastPhoto, error: e1 } = await db.from('profile_photos')
+      .select('created_at')
+      .eq('user_id', targetId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  dbg('lastPhoto:', lastPhoto, e1 ? e1.message : '');
-  if (!lastPhoto) return false;
+    if (e1) dbg('Ошибка profile_photos: ' + e1.message);
+    if (!lastPhoto) return false;
 
-  var { data: seen, error: e2 } = await db.from('profile_seen')
-    .select('last_seen_at')
-    .eq('viewer_id', currentUser.id)
-    .eq('target_user_id', targetId)
-    .maybeSingle();
+    var { data: seen, error: e2 } = await db.from('profile_seen')
+      .select('last_seen_at')
+      .eq('viewer_id', currentUser.id)
+      .eq('target_user_id', targetId)
+      .maybeSingle();
 
-  dbg('seen:', seen, e2 ? e2.message : '');
-  if (!seen) return true;
+    if (e2) dbg('Ошибка profile_seen: ' + e2.message);
+    if (!seen) return true;
 
-  var result = new Date(lastPhoto.created_at) > new Date(seen.last_seen_at);
-  dbg('hasNew:', result, 'lastPhoto.created_at:', lastPhoto.created_at, 'seen.last_seen_at:', seen.last_seen_at);
-  return result;
+    return new Date(lastPhoto.created_at) > new Date(seen.last_seen_at);
+  } catch(e) {
+    dbg('Ошибка в checkHasNewPost: ' + e.message);
+    return false;
+  }
 }
 
 function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
@@ -179,135 +198,3 @@ function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
   '</div>';
 
   html += '<div class="section">' +
-    '<div class="section-title">О себе</div>' +
-    '<div class="about-text">' + (profile.about || 'Нет описания') + '</div>' +
-  '</div>';
-
-  if (canSeeFull) {
-    html += '<div class="section"><div class="section-title">Галерея</div></div>' +
-            '<div class="gallery-grid" id="gallery-grid"></div>';
-    contentEl.innerHTML = html;
-    loadGallery(targetId);
-  } else {
-    html += '<div class="locked-state">' +
-      '<div class="icon">🔒</div>' +
-      '<p>Галерея доступна только после взаимной симпатии</p>' +
-    '</div>';
-    contentEl.innerHTML = html;
-  }
-}
-
-async function loadGallery(targetId) {
-  var { data, error } = await db.from('profile_photos')
-    .select('*')
-    .eq('user_id', targetId)
-    .order('created_at', { ascending: false });
-
-
-if (error) { dbg('Gallery error: ' + error.message); return; }
-galleryItems = data || [];
-var grid = document.getElementById('gallery-grid');
-if (!grid) return;
-grid.innerHTML = '';
-galleryItems.forEach(function(item, index) {
-var itemEl = document.createElement('div');
-itemEl.className = 'gallery-item';
-itemEl.onclick = function() { openGalleryViewer(index); };
-var mediaHtml = '';
-if (item.media_type === 'video') {
-mediaHtml = '';
-} else {
-mediaHtml = '';
-}
-itemEl.innerHTML = mediaHtml +
-'👁 ' + (item.views_count || 0) + '';
-grid.appendChild(itemEl);
-});
-}
-async function openGalleryViewer(index) {
-if (typeof openViewer === 'function') {
-openViewer(index);
-} else {
-var item = galleryItems[index];
-if (!item) return;
-var overlay = document.getElementById('viewer-overlay');
-var img = document.getElementById('viewer-img');
-var video = document.getElementById('viewer-video');
-var count = document.getElementById('viewer-views-count');
-if (item.media_type === 'video') {
-img.style.display = 'none';
-video.src = item.url;
-video.style.display = 'block';
-} else {
-video.style.display = 'none';
-img.src = item.url;
-img.style.display = 'block';
-}
-if (count) count.innerText = item.views_count || 0;
-if (overlay) overlay.classList.add('show');
-}
-dbg('gridBadge found: ' + galleryItems[index].id);
-await db.rpc('increment_media_views', { photo_id: galleryItems[index].id });
-dbg('media_views insert / count updated');
-}
-function closeViewer() {
-var overlay = document.getElementById('viewer-overlay');
-var video = document.getElementById('viewer-video');
-if (video) { video.pause(); video.src = ''; }
-if (overlay) overlay.classList.remove('show');
-}
-async function loadBellState(targetId) {
-var { data } = await db.from('subscriptions')
-.select('id')
-.eq('user_id', currentUser.id)
-.eq('target_id', targetId)
-.maybeSingle();
-bellActive = !!data;
-var btn = document.getElementById('bell-btn');
-if (btn) {
-if (bellActive) btn.classList.add('active');
-else btn.classList.remove('active');
-}
-}
-async function toggleBell() {
-var btn = document.getElementById('bell-btn');
-if (!btn || !currentTargetId) return;
-if (bellActive) {
-await db.from('subscriptions').delete().eq('user_id', currentUser.id).eq('target_id', currentTargetId);
-bellActive = false;
-btn.classList.remove('active');
-} else {
-await db.from('subscriptions').insert({ user_id: currentUser.id, target_id: currentTargetId });
-bellActive = true;
-btn.classList.add('active');
-}
-}
-function openChat(targetId) {
-window.location.href = 'chat.html?chat=' + targetId;
-}
-async function markProfileSeen(targetId) {
-var now = new Date().toISOString();
-dbg('markProfileSeen: ' + targetId);
-var avatarContainer = document.getElementById('profile-avatar-container');
-var newDot = document.getElementById('profile-new-dot');
-if (avatarContainer) avatarContainer.classList.remove('has-new');
-if (newDot) newDot.classList.remove('show');
-var { data: existing } = await db.from('profile_seen')
-.select('id')
-.eq('viewer_id', currentUser.id)
-.eq('target_user_id', targetId)
-.maybeSingle();
-if (existing) {
-await db.from('profile_seen')
-.update({ last_seen_at: now })
-.eq('id', existing.id);
-} else {
-await db.from('profile_seen')
-.insert({
-viewer_id: currentUser.id,
-target_user_id: targetId,
-last_seen_at: now
-});
-}
-}
-window.onload = init;
