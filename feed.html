@@ -245,7 +245,6 @@ async function init() {
   var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
   (myLikes || []).forEach(function(l) { if (l.is_like) myLikesGiven[l.to_user] = true; });
 
-  // Загружаем данные о просмотрах
   await loadSeenData();
   await loadFeed();
 }
@@ -256,10 +255,12 @@ async function loadSeenData() {
   (seen || []).forEach(function(s) { lastSeenMap[s.target_user_id] = s.last_seen_at; });
 }
 
-// Функция проверки - есть ли новый пост у пользователя
 function hasNewPost(userId, postCreatedAt) {
+  // Свои посты без метки
+  if (userId === currentUser.id) return false;
+  
   var seenAt = lastSeenMap[userId];
-  if (!seenAt) return true; // Если никогда не смотрели - есть новый
+  if (!seenAt) return true;
   return new Date(postCreatedAt) > new Date(seenAt);
 }
 
@@ -314,7 +315,6 @@ async function loadFeed() {
         ? '<video src="' + post.photo_url + '" muted></video>'
         : '<img src="' + post.photo_url + '" loading="lazy">';
       
-      // Проверяем, есть ли новый пост
       var hasNew = hasNewPost(post.user_id, post.created_at);
       var dotHtml = hasNew ? '<div class="grid-new-dot"></div>' : '';
       var viewsCount = viewCounts[post.id] || 0;
@@ -331,11 +331,9 @@ async function loadFeed() {
   wrap.appendChild(grid);
 }
 
-// Обновляем метку для конкретного пользователя
 function updateDotsForUser(userId) {
   var items = document.querySelectorAll('.grid-item[data-user-id="' + userId + '"]');
   items.forEach(function(item) {
-    var postId = item.getAttribute('data-post-id');
     var createdAt = item.getAttribute('data-created-at');
     var dot = item.querySelector('.grid-new-dot');
     if (!dot || !createdAt) return;
@@ -357,10 +355,7 @@ function openPost(idx) {
   currentViewedAuthorId = post.user_id;
   currentViewedPostId = post.id;
   
-  // Отмечаем просмотр автора
   markAuthorSeen(post.user_id);
-  
-  // Обновляем все метки этого пользователя в ленте
   updateDotsForUser(post.user_id);
   
   document.getElementById('modal-name').textContent = p.name || 'Пользователь';
