@@ -14,7 +14,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
 .content{flex:1;padding-bottom:40px}
 .loading{padding:60px 20px;text-align:center;color:var(--muted);font-size:14px}
-
 .avatar-block{display:flex;flex-direction:column;align-items:center;padding:30px 20px}
 .avatar-wrap{position:relative}
 .avatar-circle{width:120px;height:120px;border-radius:50%;background:var(--input-bg);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:48px;border:2px solid var(--border)}
@@ -28,20 +27,16 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .message-btn{padding:10px 20px;background:var(--accent);border:none;border-radius:14px;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
 .bell-btn{width:38px;height:38px;border-radius:50%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .bell-btn.active{background:rgba(255,77,109,0.15);border-color:var(--accent)}
-
 .section{padding:0 20px;margin-bottom:20px}
 .section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:10px}
 .about-text{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px;line-height:1.6}
-
 .gallery-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;padding:0 20px}
 .gallery-item{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--input-bg);cursor:pointer}
 .gallery-item img,.gallery-item video{width:100%;height:100%;object-fit:cover}
 .gallery-item-views{position:absolute;bottom:4px;right:6px;font-size:10px;color:rgba(255,255,255,0.9);background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:8px;display:flex;align-items:center;gap:2px}
-
 .locked-state{text-align:center;padding:50px 30px;color:var(--muted)}
 .locked-state .icon{font-size:50px;margin-bottom:14px}
 .locked-state p{font-size:14px;line-height:1.6}
-
 .viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:100;display:none;align-items:center;justify-content:center}
 .viewer-overlay.show{display:flex}
 .viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:101}
@@ -53,16 +48,13 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </style>
 </head>
 <body>
-
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">&#8592;</button>
   <div class="page-title">Анкета</div>
 </div>
-
 <div class="content" id="content">
   <div class="loading">⏳ Загрузка...</div>
 </div>
-
 <div class="viewer-overlay" id="viewer-overlay">
   <button class="viewer-close" onclick="closeViewer()">✕</button>
   <div class="viewer-content" id="viewer-content">
@@ -71,7 +63,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   </div>
   <div class="viewer-views" id="viewer-views">👁 <span id="viewer-views-count">0</span></div>
 </div>
-
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="photo-viewer.js"></script>
@@ -82,49 +73,39 @@ var currentUser = null;
 var galleryItems = [];
 var bellActive = false;
 var currentTargetId = null;
-
 function getTargetUserId() {
   var params = new URLSearchParams(window.location.search);
   return params.get('user');
 }
-
 async function getMatchId(otherUserId) {
   var { data } = await db.from('matches').select('id')
     .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
     .single();
   return data ? data.id : null;
 }
-
 async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) { window.location.href = 'index.html'; return; }
   currentUser = r.data.session.user;
-
   var targetId = getTargetUserId();
   if (!targetId) { window.location.href = 'feed.html'; return; }
   currentTargetId = targetId;
-
   var { data: profile } = await db.from('profiles').select('*').eq('id', targetId).single();
   if (!profile) {
     document.getElementById('content').innerHTML = '<div class="loading">Анкета не найдена</div>';
     return;
   }
-
   var matchId = await getMatchId(targetId);
   var visibility = profile.profile_visibility || 'matches';
   var canSeeFull = true;
-
   if (visibility === 'none') {
     canSeeFull = false;
   } else if (visibility === 'matches') {
     canSeeFull = !!matchId;
   }
-
   var hasNew = await checkHasNewPost(targetId);
-
   renderProfile(profile, canSeeFull, targetId, matchId, hasNew);
   await loadBellState(targetId);
-
   if (hasNew) {
     await markProfileSeen(targetId);
     var avatar=document.querySelector('.avatar-circle');
@@ -133,7 +114,6 @@ async function init() {
     if (dot) dot.classList.remove('show');
   }
 }
-
 async function checkHasNewPost(targetId) {
   var { data: lastPhoto } = await db.from('profile_photos')
     .select('created_at')
@@ -141,20 +121,15 @@ async function checkHasNewPost(targetId) {
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-
   if (!lastPhoto) return false;
-
   var { data: seen } = await db.from('profile_seen')
     .select('last_seen_at')
     .eq('viewer_id', currentUser.id)
     .eq('target_user_id', targetId)
     .maybeSingle();
-
   if (!seen) return true;
-
   return new Date(lastPhoto.created_at) > new Date(seen.last_seen_at);
 }
-
 async function markProfileSeen(targetId) {
   await db.from('profile_seen').upsert({
     viewer_id: currentUser.id,
@@ -162,7 +137,6 @@ async function markProfileSeen(targetId) {
     last_seen_at: new Date().toISOString()
   }, { onConflict: 'viewer_id,target_user_id' });
 }
-
 async function loadBellState(targetId) {
   var { data } = await db.from('post_notify_subs')
     .select('id')
@@ -172,7 +146,6 @@ async function loadBellState(targetId) {
   bellActive = !!data;
   updateBellButton();
 }
-
 function updateBellButton() {
   var btn = document.getElementById('bell-btn');
   if (!btn) return;
@@ -180,7 +153,6 @@ function updateBellButton() {
   btn.textContent = bellActive ? '🔔' : '🔕';
   btn.title = bellActive ? 'Уведомления о новых постах включены' : 'Уведомлять о новых постах';
 }
-
 async function toggleBell() {
   if (!currentTargetId) return;
   if (bellActive) {
@@ -198,10 +170,8 @@ async function toggleBell() {
   }
   updateBellButton();
 }
-
 function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
   var content = document.getElementById('content');
-
   var html =
     '<div class="avatar-block">' +
       '<div class="avatar-wrap">' +
@@ -212,13 +182,10 @@ function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
       '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
       '<div class="actions-row">' +
         '<button class="bell-btn" id="bell-btn" onclick="toggleBell()">🔕</button>';
-
   if (matchId) {
     html += '<button class="message-btn" onclick="window.location.href=\'chat.html?match=' + matchId + '\'">💬 Написать сообщение</button>';
   }
-
   html += '</div></div>';
-
   if (!canSeeFull) {
     var visibility = profile.profile_visibility || 'matches';
     var reason = visibility === 'none'
@@ -228,34 +195,26 @@ function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
     content.innerHTML = html;
     return;
   }
-
   html += '<div class="section"><div class="section-title">О себе</div><div class="about-text">' +
     (profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
     '</div></div>';
-
   html += '<div class="section"><div class="section-title">Галерея</div></div>';
   html += '<div class="gallery-grid" id="gallery-grid"></div>';
-
   content.innerHTML = html;
   loadGallery(targetId);
 }
-
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-
 async function loadGallery(targetId) {
   var { data } = await db.from('profile_photos').select('*').eq('user_id', targetId).order('position', { ascending: true });
   galleryItems = data || [];
-
   var grid = document.getElementById('gallery-grid');
   if (!grid) return;
-
   if (galleryItems.length === 0) {
     grid.innerHTML = '<div style="padding:0 4px;color:var(--muted);font-size:13px">Галерея пуста</div>';
     return;
   }
-
   var photoIds = galleryItems.map(function(p) { return p.id; });
   var viewCounts = {};
   var { data: viewsData } = await db.from('media_views')
@@ -263,7 +222,6 @@ async function loadGallery(targetId) {
     .eq('item_type', 'profile_photo')
     .in('item_id', photoIds);
   (viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
-
   grid.innerHTML = '';
   galleryItems.forEach(function(item, idx) {
     var el = document.createElement('div');
@@ -277,7 +235,6 @@ async function loadGallery(targetId) {
     grid.appendChild(el);
   });
 }
-
 var galleryViewerAttached = false;
 function ensureGalleryViewerAttached() {
   if (galleryViewerAttached) return;
@@ -289,17 +246,14 @@ function ensureGalleryViewerAttached() {
     }
   });
 }
-
 function openViewer(idx) {
   var item = galleryItems[idx];
   if (!item) return;
   ensureGalleryViewerAttached();
-
   var img = document.getElementById('viewer-img');
   var video = document.getElementById('viewer-video');
   BlizkoPhotoViewer.reset(img);
   document.getElementById('viewer-overlay').classList.remove('immersive');
-
   if (item.media_type === 'video') {
     video.src = item.photo_url;
     video.style.display = 'block';
@@ -312,30 +266,24 @@ function openViewer(idx) {
     video.style.display = 'none';
     video.src = '';
   }
-
   document.getElementById('viewer-overlay').classList.add('show');
   recordAndShowProfilePhotoViews(item.id);
 }
-
 async function recordAndShowProfilePhotoViews(photoId) {
   await db.from('media_views').insert({
     item_type: 'profile_photo',
     item_id: photoId,
     viewer_id: currentUser.id
   });
-
   var { count } = await db.from('media_views')
     .select('id', { count: 'exact', head: true })
     .eq('item_type', 'profile_photo')
     .eq('item_id', photoId);
-
   var el = document.getElementById('viewer-views-count');
   if (el) el.textContent = count || 0;
-
   var gridBadge = document.querySelector('.gallery-item[data-photo-id="' + photoId + '"] .gallery-item-views');
   if (gridBadge) gridBadge.textContent = '👁 ' + (count || 0);
 }
-
 function closeViewer() {
   document.getElementById('viewer-overlay').classList.remove('show');
   document.getElementById('viewer-overlay').classList.remove('immersive');
@@ -343,7 +291,6 @@ function closeViewer() {
   document.getElementById('viewer-video').src = '';
   document.getElementById('viewer-img').src = '';
 }
-
 init();
 </script>
 </body>
