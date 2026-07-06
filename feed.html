@@ -287,22 +287,18 @@ async function markAuthorSeen(authorId) {
   // Обновляем локальный кэш
   lastSeenMap[authorId] = now;
   
-  // Сохраняем в localStorage как резерв
+  // Сохраняем в localStorage
   localStorage.setItem('profile_seen_' + authorId, now);
   
   // Обновляем все метки этого пользователя
   updateDotsForUser(authorId);
   
   // Сохраняем в БД
-  var { error } = await db.from('profile_seen').upsert({
+  await db.from('profile_seen').upsert({
     viewer_id: currentUser.id,
     target_user_id: authorId,
     last_seen_at: now
   }, { onConflict: 'viewer_id,target_user_id' });
-  
-  if (error) {
-    console.error('markAuthorSeen error:', error);
-  }
 }
 
 async function loadFeed() {
