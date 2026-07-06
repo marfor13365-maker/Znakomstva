@@ -73,6 +73,7 @@ var currentUser = null;
 var galleryItems = [];
 var bellActive = false;
 var currentTargetId = null;
+
 function getTargetUserId() {
   var params = new URLSearchParams(window.location.search);
   return params.get('user');
@@ -122,6 +123,14 @@ async function checkHasNewPost(targetId) {
     .limit(1)
     .maybeSingle();
   if (!lastPhoto) return false;
+  
+  var seenFromStorage = localStorage.getItem('profile_seen_' + targetId);
+  if (seenFromStorage) {
+    if (new Date(lastPhoto.created_at) <= new Date(seenFromStorage)) {
+      return false;
+    }
+  }
+  
   var { data: seen } = await db.from('profile_seen')
     .select('last_seen_at')
     .eq('viewer_id', currentUser.id)
@@ -131,10 +140,12 @@ async function checkHasNewPost(targetId) {
   return new Date(lastPhoto.created_at) > new Date(seen.last_seen_at);
 }
 async function markProfileSeen(targetId) {
+  var now = new Date().toISOString();
+  localStorage.setItem('profile_seen_' + targetId, now);
   await db.from('profile_seen').upsert({
     viewer_id: currentUser.id,
     target_user_id: targetId,
-    last_seen_at: new Date().toISOString()
+    last_seen_at: now
   }, { onConflict: 'viewer_id,target_user_id' });
 }
 async function loadBellState(targetId) {
