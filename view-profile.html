@@ -54,7 +54,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <div class="page-title">Анкета</div>
 </div>
 
-<div id="debug-log" style="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.95);color:#4cff9f;font-size:11px;padding:10px;z-index:9999;max-height:200px;overflow-y:auto;border-top:2px solid #4cff9f;font-family:monospace;"></div>
+<!-- Панель логов перенесена вверх и зафиксирована -->
+<div id="debug-log" style="position:relative;background:rgba(22,22,22,0.95);color:#4cff9f;font-size:12px;padding:12px;z-index:9999;max-height:220px;overflow-y:auto;border-bottom:2px solid #4cff9f;font-family:monospace;margin:10px 20px;border-radius:8px;"></div>
 
 <div class="content" id="content">
   <div class="loading">⏳ Загрузка...</div>
@@ -197,4 +198,3 @@ function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
     '</div>' +
   '</div>';
 
-  html += '<div class="section">' +
