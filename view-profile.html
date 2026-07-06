@@ -54,9 +54,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <div class="page-title">Анкета</div>
 </div>
 
-<!-- Панель логов перенесена вверх и зафиксирована -->
-<div id="debug-log" style="position:relative;background:rgba(22,22,22,0.95);color:#4cff9f;font-size:12px;padding:12px;z-index:9999;max-height:220px;overflow-y:auto;border-bottom:2px solid #4cff9f;font-family:monospace;margin:10px 20px;border-radius:8px;"></div>
-
 <div class="content" id="content">
   <div class="loading">⏳ Загрузка...</div>
 </div>
@@ -81,46 +78,37 @@ var galleryItems = [];
 var bellActive = false;
 var currentTargetId = null;
 
-function dbg(msg) {
-  console.log(msg);
-  var el = document.getElementById('debug-log');
-  if (!el) return;
-  el.innerHTML += '<div>[' + new Date().toLocaleTimeString() + '] ' + msg + '</div>';
-  el.scrollTop = el.scrollHeight;
-}
-
 function getTargetUserId() {
   var params = new URLSearchParams(window.location.search);
   return params.get('user');
 }
 
 async function getMatchId(otherUserId) {
-  var { data } = await db.from('matches').select('id')
-    .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
-    .single();
-  return data ? data.id : null;
+  try {
+    var { data } = await db.from('matches').select('id')
+      .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
+      .single();
+    return data ? data.id : null;
+  } catch(e) {
+    return null;
+  }
 }
 
 async function init() {
   try {
-    dbg('Инициализация приложения...');
     var r = await db.auth.getSession();
-    if (!r.data.session) { dbg('Нет сессии, редирект...'); window.location.href = 'index.html'; return; }
+    if (!r.data.session) { window.location.href = 'index.html'; return; }
     currentUser = r.data.session.user;
-    dbg('Пользователь авторизован: ' + currentUser.id);
 
     var targetId = getTargetUserId();
-    if (!targetId) { dbg('ID целевого пользователя не найден в URL'); window.location.href = 'feed.html'; return; }
+    if (!targetId) { window.location.href = 'feed.html'; return; }
     currentTargetId = targetId;
-    dbg('Загрузка профиля ID: ' + targetId);
 
-    var { data: profile, error: pErr } = await db.from('profiles').select('*').eq('id', targetId).single();
-    if (pErr) { dbg('Ошибка загрузки профиля: ' + pErr.message); }
+    var { data: profile } = await db.from('profiles').select('*').eq('id', targetId).single();
     if (!profile) {
       document.getElementById('content').innerHTML = '<div class="loading">Анкета не найдена</div>';
       return;
     }
-    dbg('Профиль успешно загружен: ' + profile.name);
 
     var matchId = await getMatchId(targetId);
     var visibility = profile.profile_visibility || 'matches';
@@ -132,48 +120,38 @@ async function init() {
       canSeeFull = !!matchId;
     }
 
-    dbg('Проверка новых постов...');
     var hasNew = await checkHasNewPost(targetId);
 
-    dbg('Отрисовка интерфейса...');
     renderProfile(profile, canSeeFull, targetId, matchId, hasNew);
     
-    dbg('Загрузка состояния уведомлений...');
     await loadBellState(targetId);
-    
-    dbg('Обновление статуса просмотра профиля...');
     await markProfileSeen(targetId);
-    dbg('Всё успешно загружено!');
   } catch (err) {
-    dbg('<span style="color:#ff4d6d;font-weight:bold;">КРИТИЧЕСКАЯ ОШИБКА: ' + err.message + '</span>');
     console.error(err);
   }
 }
 
 async function checkHasNewPost(targetId) {
   try {
-    var { data: lastPhoto, error: e1 } = await db.from('profile_photos')
+    var { data: lastPhoto } = await db.from('profile_photos')
       .select('created_at')
       .eq('user_id', targetId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (e1) dbg('Ошибка profile_photos: ' + e1.message);
     if (!lastPhoto) return false;
 
-    var { data: seen, error: e2 } = await db.from('profile_seen')
+    var { data: seen } = await db.from('profile_seen')
       .select('last_seen_at')
       .eq('viewer_id', currentUser.id)
       .eq('target_user_id', targetId)
       .maybeSingle();
 
-    if (e2) dbg('Ошибка profile_seen: ' + e2.message);
     if (!seen) return true;
 
     return new Date(lastPhoto.created_at) > new Date(seen.last_seen_at);
   } catch(e) {
-    dbg('Ошибка в checkHasNewPost: ' + e.message);
     return false;
   }
 }
@@ -198,3 +176,44 @@ function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
     '</div>' +
   '</div>';
 
+  html += '<div class="section">' +
+    '<div class="section-title">О себе</div>' +
+    '<div class="about-text">' + (profile.about || 'Нет описания') + '</div>' +
+  '</div>';
+
+  if (canSeeFull) {
+    html += '<div class="section"><div class="section-title">Галерея</div></div>' +
+            '<div class="gallery-grid" id="gallery-grid"></div>';
+    contentEl.innerHTML = html;
+    loadGallery(targetId);
+  } else {
+    html += '<div class="locked-state">' +
+      '<div class="icon">🔒</div>' +
+      '<p>Галерея доступна только после взаимной симпатии</p>' +
+    '</div>';
+    contentEl.innerHTML = html;
+  }
+}
+
+async function loadGallery(targetId) {
+  try {
+    var { data } = await db.from('profile_photos')
+      .select('*')
+      .eq('user_id', targetId)
+      .order('created_at', { ascending: false });
+
+    galleryItems = data || [];
+    var grid = document.getElementById('gallery-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    galleryItems.forEach(function(item, index) {
+      var itemEl = document.createElement('div');
+      itemEl.className = 'gallery-item';
+      itemEl.onclick = function() { openGalleryViewer(index); };
+
+      var mediaHtml = '';
+      if (item.media_type === 'video') {
+        mediaHtml = '<video src="' + item.url + '"></video>';
+      } else {
+        mediaHtml = '<img src="' + item.url + '" alt="">';
