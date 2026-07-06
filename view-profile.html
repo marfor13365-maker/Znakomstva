@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Blizko - Анкета</title>
 <style>
-@import url('https://googleapis.com');
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
@@ -55,7 +55,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <body>
 
 <div class="topbar">
-  <button class="back-btn" onclick="history.back()">←</button>
+  <button class="back-btn" onclick="history.back()">&#8592;</button>
   <div class="page-title">Анкета</div>
 </div>
 
@@ -77,7 +77,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="photo-viewer.js"></script>
-<script src="https://jsdelivr.net"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
@@ -100,7 +100,6 @@ function getTargetUserId() {
 }
 
 async function getMatchId(otherUserId) {
-  if (!currentUser) return null;
   var { data } = await db.from('matches').select('id')
     .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
     .single();
@@ -108,29 +107,9 @@ async function getMatchId(otherUserId) {
 }
 
 async function init() {
-  // ИСПРАВЛЕНИЕ: Читаем сессию напрямую из localStorage без вызова методов SDK
-  var sessionData = localStorage.getItem('supabase.auth.token');
-  if (sessionData) {
-    try {
-      var parsed = JSON.parse(sessionData);
-      if (parsed && parsed.currentSession && parsed.currentSession.user) {
-        currentUser = parsed.currentSession.user;
-      }
-    } catch(e) {
-      console.log("Localstorage parse error:", e);
-    }
-  }
-
-  // Если в localStorage пусто, пробуем стандартный метод для v2 на всякий случай
-  if (!currentUser) {
-    try {
-      var r = await db.auth.getSession();
-      if (r && r.data && r.data.session) currentUser = r.data.session.user;
-    } catch(e) {}
-  }
-
-  // Если авторизация не найдена, отправляем на главную
-  if (!currentUser) { window.location.href = 'index.html'; return; }
+  var r = await db.auth.getSession();
+  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  currentUser = r.data.session.user;
 
   var targetId = getTargetUserId();
   if (!targetId) { window.location.href = 'feed.html'; return; }
@@ -160,7 +139,6 @@ async function init() {
 }
 
 async function checkHasNewPost(targetId) {
-  if (!currentUser) return false;
   var { data: lastPhoto, error: e1 } = await db.from('profile_photos')
     .select('created_at')
     .eq('user_id', targetId)
@@ -185,25 +163,201 @@ async function checkHasNewPost(targetId) {
   return result;
 }
 
+async function markProfileSeen(targetId) {
+  var r = await db.from('profile_seen').upsert({
+    viewer_id: currentUser.id,
+    target_user_id: targetId,
+    last_seen_at: new Date().toISOString()
+  }, { onConflict: 'viewer_id,target_user_id' });
+  dbg('markProfileSeen:', r.error ? r.error.message : 'OK');
+}
+
+async function loadBellState(targetId) {
+  var { data } = await db.from('post_notify_subs')
+    .select('id')
+    .eq('subscriber_id', currentUser.id)
+    .eq('target_user_id', targetId)
+    .maybeSingle();
+  bellActive = !!data;
+  updateBellButton();
+}
+
+function updateBellButton() {
+  var btn = document.getElementById('bell-btn');
+  if (!btn) return;
+  btn.classList.toggle('active', bellActive);
+  btn.textContent = bellActive ? '🔔' : '🔕';
+  btn.title = bellActive ? 'Уведомления о новых постах включены' : 'Уведомлять о новых постах';
+}
+
+async function toggleBell() {
+  if (!currentTargetId) return;
+  if (bellActive) {
+    await db.from('post_notify_subs')
+      .delete()
+      .eq('subscriber_id', currentUser.id)
+      .eq('target_user_id', currentTargetId);
+    bellActive = false;
+  } else {
+    await db.from('post_notify_subs').insert({
+      subscriber_id: currentUser.id,
+      target_user_id: currentTargetId
+    });
+    bellActive = true;
+  }
+  updateBellButton();
+}
+
 function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
-  var contentEl = document.getElementById('content');
-  var avatarClass = hasNew ? 'avatar-circle has-new' : 'avatar-circle';
-  var dotClass = hasNew ? 'new-post-dot show' : 'new-post-dot';
+  var content = document.getElementById('content');
 
-  var html = '<div class="avatar-block">' +
-    '<div class="avatar-wrap">' +
-      '<div class="' + avatarClass + '" id="profile-avatar-container">' +
-        (profile.avatar_url ? '<img src="' + profile.avatar_url + '" alt="">' : '👤') +
+  var html =
+    '<div class="avatar-block">' +
+      '<div class="avatar-wrap">' +
+        '<div class="avatar-circle' + (hasNew ? ' has-new' : '') + '">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
+        '<div class="new-post-dot' + (hasNew ? ' show' : '') + '"></div>' +
       '</div>' +
-      '<div class="' + dotClass + '" id="profile-new-dot"></div>' +
-    '</div>' +
-    '<div class="profile-name">' + (profile.name || 'Аноним') + ', ' + (profile.age || '') + '</div>' +
-    '<div class="profile-meta">📍 ' + (profile.city || 'Москва') + '</div>' +
-    '<div class="actions-row">' +
-      '<button class="bell-btn" id="bell-btn" onclick="toggleBell()">🔔</button>' +
-      '<button class="message-btn" onclick="openChat(\'' + targetId + '\')">💬 Написать сообщение</button>' +
-    '</div>' +
-  '</div>';
+      '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
+      '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
+      '<div class="actions-row">' +
+        '<button class="bell-btn" id="bell-btn" onclick="toggleBell()">🔕</button>';
 
-  html += '<div class="section">' +
-    '<div class="section-title">О себе</div>' +
+  if (matchId) {
+    html += '<button class="message-btn" onclick="window.location.href=\'chat.html?match=' + matchId + '\'">💬 Написать сообщение</button>';
+  }
+
+  html += '</div></div>';
+
+  if (!canSeeFull) {
+    var visibility = profile.profile_visibility || 'matches';
+    var reason = visibility === 'none'
+      ? 'Этот человек закрыл анкету для всех.'
+      : 'Анкета открыта только для тех, с кем есть взаимный лайк (мэтч).';
+    html += '<div class="locked-state"><div class="icon">🔒</div><p>' + reason + '<br>Информация "о себе" и галерея недоступны.</p></div>';
+    content.innerHTML = html;
+    return;
+  }
+
+  html += '<div class="section"><div class="section-title">О себе</div><div class="about-text">' +
+    (profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
+    '</div></div>';
+
+  html += '<div class="section"><div class="section-title">Галерея</div></div>';
+  html += '<div class="gallery-grid" id="gallery-grid"></div>';
+
+  content.innerHTML = html;
+  loadGallery(targetId);
+}
+
+function escapeHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function loadGallery(targetId) {
+  var { data } = await db.from('profile_photos').select('*').eq('user_id', targetId).order('position', { ascending: true });
+  galleryItems = data || [];
+
+  var grid = document.getElementById('gallery-grid');
+  if (!grid) return;
+
+  if (galleryItems.length === 0) {
+    grid.innerHTML = '<div style="padding:0 4px;color:var(--muted);font-size:13px">Галерея пуста</div>';
+    return;
+  }
+
+  var photoIds = galleryItems.map(function(p) { return p.id; });
+  var viewCounts = {};
+  var { data: viewsData } = await db.from('media_views')
+    .select('item_id')
+    .eq('item_type', 'profile_photo')
+    .in('item_id', photoIds);
+  (viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
+
+  grid.innerHTML = '';
+  galleryItems.forEach(function(item, idx) {
+    var el = document.createElement('div');
+    el.className = 'gallery-item';
+    el.setAttribute('data-photo-id', item.id);
+    el.onclick = function() { openViewer(idx); };
+    var mediaHtml = item.media_type === 'video'
+      ? '<video src="' + item.photo_url + '" muted></video>'
+      : '<img src="' + item.photo_url + '">';
+    el.innerHTML = mediaHtml + '<div class="gallery-item-views">👁 ' + (viewCounts[item.id] || 0) + '</div>';
+    grid.appendChild(el);
+  });
+}
+
+var galleryViewerAttached = false;
+function ensureGalleryViewerAttached() {
+  if (galleryViewerAttached) return;
+  galleryViewerAttached = true;
+  var img = document.getElementById('viewer-img');
+  BlizkoPhotoViewer.attach(img, {
+    onImmersiveChange: function (level) {
+      document.getElementById('viewer-overlay').classList.toggle('immersive', level > 0);
+    }
+  });
+}
+
+function openViewer(idx) {
+  var item = galleryItems[idx];
+  if (!item) return;
+  ensureGalleryViewerAttached();
+
+  var img = document.getElementById('viewer-img');
+  var video = document.getElementById('viewer-video');
+  BlizkoPhotoViewer.reset(img);
+  document.getElementById('viewer-overlay').classList.remove('immersive');
+
+  if (item.media_type === 'video') {
+    video.src = item.photo_url;
+    video.style.display = 'block';
+    img.style.display = 'none';
+    img.src = '';
+    video.play().catch(function() {});
+  } else {
+    img.src = item.photo_url;
+    img.style.display = 'block';
+    video.style.display = 'none';
+    video.src = '';
+  }
+
+  document.getElementById('viewer-overlay').classList.add('show');
+  recordAndShowProfilePhotoViews(item.id);
+}
+
+async function recordAndShowProfilePhotoViews(photoId) {
+  var insertResult = await db.from('media_views').insert({
+    item_type: 'profile_photo',
+    item_id: photoId,
+    viewer_id: currentUser.id
+  });
+  dbg('media_views insert:', insertResult.error ? insertResult.error.code + ' ' + insertResult.error.message : 'OK');
+
+  var { count, error: countErr } = await db.from('media_views')
+    .select('id', { count: 'exact', head: true })
+    .eq('item_type', 'profile_photo')
+    .eq('item_id', photoId);
+
+  dbg('media_views count:', count, countErr ? countErr.message : '');
+
+  var el = document.getElementById('viewer-views-count');
+  if (el) el.textContent = count || 0;
+
+  var gridBadge = document.querySelector('.gallery-item[data-photo-id="' + photoId + '"] .gallery-item-views');
+  dbg('gridBadge found:', !!gridBadge, 'photoId:', photoId);
+  if (gridBadge) gridBadge.textContent = '👁 ' + (count || 0);
+}
+
+function closeViewer() {
+  document.getElementById('viewer-overlay').classList.remove('show');
+  document.getElementById('viewer-overlay').classList.remove('immersive');
+  document.getElementById('viewer-video').pause();
+  document.getElementById('viewer-video').src = '';
+  document.getElementById('viewer-img').src = '';
+}
+
+init();
+</script>
+</body>
+</html>
