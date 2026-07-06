@@ -100,6 +100,7 @@ function getTargetUserId() {
 }
 
 async function getMatchId(otherUserId) {
+  if (!currentUser) return null;
   var { data } = await db.from('matches').select('id')
     .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
     .single();
@@ -107,15 +108,29 @@ async function getMatchId(otherUserId) {
 }
 
 async function init() {
-  // ИСПРАВЛЕНИЕ: Используем синтаксис Supabase v1
-  var session = db.auth.session ? db.auth.session() : null;
-  if (!session) {
-    var r = await db.auth.getSession();
-    if (r && r.data && r.data.session) session = r.data.session;
+  // ИСПРАВЛЕНИЕ: Читаем сессию напрямую из localStorage без вызова методов SDK
+  var sessionData = localStorage.getItem('supabase.auth.token');
+  if (sessionData) {
+    try {
+      var parsed = JSON.parse(sessionData);
+      if (parsed && parsed.currentSession && parsed.currentSession.user) {
+        currentUser = parsed.currentSession.user;
+      }
+    } catch(e) {
+      console.log("Localstorage parse error:", e);
+    }
   }
-  
-  if (!session) { window.location.href = 'index.html'; return; }
-  currentUser = session.user;
+
+  // Если в localStorage пусто, пробуем стандартный метод для v2 на всякий случай
+  if (!currentUser) {
+    try {
+      var r = await db.auth.getSession();
+      if (r && r.data && r.data.session) currentUser = r.data.session.user;
+    } catch(e) {}
+  }
+
+  // Если авторизация не найдена, отправляем на главную
+  if (!currentUser) { window.location.href = 'index.html'; return; }
 
   var targetId = getTargetUserId();
   if (!targetId) { window.location.href = 'feed.html'; return; }
@@ -145,6 +160,7 @@ async function init() {
 }
 
 async function checkHasNewPost(targetId) {
+  if (!currentUser) return false;
   var { data: lastPhoto, error: e1 } = await db.from('profile_photos')
     .select('created_at')
     .eq('user_id', targetId)
@@ -191,21 +207,3 @@ function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
 
   html += '<div class="section">' +
     '<div class="section-title">О себе</div>' +
-    '<div class="about-text">' + (profile.about || 'Нет описания') + '</div>' +
-  '</div>';
-
-  if (canSeeFull) {
-    html += '<div class="section"><div class="section-title">Галерея</div></div>' +
-            '<div class="gallery-grid" id="gallery-grid"></div>';
-    contentEl.innerHTML = html;
-    loadGallery(targetId);
-  } else {
-    html += '<div class="locked-state">' +
-      '<div class="icon">🔒</div>' +
-      '<p>Галерея доступна только после взаимной симпатии</p>' +
-    '</div>';
-    contentEl.innerHTML = html;
-  }
-}
-
-async function loadGallery(targetId) {
