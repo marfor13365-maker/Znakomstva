@@ -1,3 +1,306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Blizko - Профиль</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;position:fixed;top:0;left:0;right:0;background:transparent;z-index:20}
+.back-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(0,0,0,0.6));flex:1}
+.settings-wrap{position:relative}
+.settings-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.settings-menu{position:absolute;top:46px;right:0;background:var(--card);border:1px solid var(--border);border-radius:14px;min-width:200px;box-shadow:0 8px 30px rgba(0,0,0,0.5);display:none;overflow:hidden;z-index:30}
+.settings-menu.show{display:block}
+.settings-menu-item{display:block;width:100%;text-align:left;padding:14px 16px;background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)}
+.settings-menu-item:last-child{border-bottom:none}
+.settings-menu-item.danger{color:var(--accent)}
+.settings-menu-item:active{background:var(--input-bg)}
+.settings-menu-section{padding:10px 16px;border-bottom:1px solid var(--border)}
+.settings-menu-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;margin-top:8px}
+.settings-menu-label:first-child{margin-top:0}
+.theme-toggle-row{display:flex;gap:8px;margin-bottom:4px}
+.theme-mode-btn{flex:1;padding:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;cursor:pointer;transition:all 0.2s}
+.theme-mode-btn.active{border-color:var(--accent);background:rgba(255,77,109,0.15)}
+.color-row{display:flex;gap:10px}
+.color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s}
+.color-swatch.active{border-color:var(--text)}
+
+.profile-header{padding:80px 20px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.avatar-circle{width:100px;height:100px;border-radius:50%;background:var(--input-bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative}
+.avatar-circle img{width:100%;height:100%;object-fit:cover}
+.avatar-circle .icon{font-size:28px;color:var(--muted)}
+.profile-name{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;margin-top:12px}
+.profile-meta{font-size:13px;color:var(--muted);margin-top:4px}
+.avatar-actions{display:flex;gap:10px;margin-top:10px}
+.avatar-action-btn{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 8px;text-decoration:underline}
+.avatar-action-btn.danger{color:var(--accent)}
+.upload-progress{width:140px;height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.upload-bar{height:100%;background:var(--accent);width:0%;transition:width 0.3s}
+
+.post-upload-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:200;display:none;flex-direction:column}
+.post-upload-modal.show{display:flex}
+.post-upload-topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.post-upload-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600}
+.post-publish-btn{background:var(--accent);border:none;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;padding:9px 18px;border-radius:10px;cursor:pointer}
+.post-publish-btn:disabled{opacity:0.4;cursor:not-allowed}
+.post-upload-content{flex:1;display:flex;flex-direction:column;padding:20px;gap:16px;overflow-y:auto}
+.post-photo-pick{width:100%;aspect-ratio:1;background:var(--input-bg);border:2px dashed var(--border);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;transition:border-color 0.2s}
+.post-photo-pick:active{border-color:var(--accent)}
+.post-pick-hint{font-size:36px;margin-bottom:8px}
+.post-pick-text{font-size:13px;color:var(--muted)}
+.post-caption-input{background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:80px;transition:border-color 0.2s}
+.post-caption-input:focus{border-color:var(--accent)}
+.post-upload-progress{height:3px;background:var(--border);border-radius:2px;overflow:hidden;display:none}
+.post-upload-bar{height:100%;background:var(--accent);width:0%;transition:width 0.3s}
+.post-feed-toggle{display:flex;align-items:center;gap:10px;padding:14px;background:var(--input-bg);border:1px solid var(--border);border-radius:12px}
+.post-feed-toggle input[type="checkbox"]{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
+.post-feed-toggle label{font-size:13px;cursor:pointer;flex:1}
+
+.stats-row{display:flex;justify-content:center;gap:30px;padding:0 20px 16px;border-bottom:1px solid var(--border)}
+.stat-item{text-align:center;cursor:pointer}
+.stat-item:active{opacity:0.7}
+.stat-num{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+
+.visibility-row{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.visibility-label{font-size:12px;color:var(--muted)}
+.visibility-select{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text);font-size:12px}
+
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:2px;padding-bottom:90px}
+.grid-item{position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--card)}
+.grid-add{display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted);background:var(--input-bg);border:2px dashed var(--border)}
+.grid-item img{width:100%;height:100%;object-fit:cover;display:block}
+.grid-item video{width:100%;height:100%;object-fit:cover;display:block}
+.grid-item .del-mini{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:white;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.grid-item .send-mini{position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:white;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.grid-item-views{position:absolute;bottom:4px;left:6px;font-size:10px;color:rgba(255,255,255,0.9);background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:8px;display:flex;align-items:center;gap:2px}
+
+.empty-posts{padding:60px 20px;text-align:center;color:var(--muted)}
+.empty-posts .icon{font-size:50px;margin-bottom:14px}
+.empty-posts p{font-size:13px;line-height:1.6}
+
+.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:transparent;z-index:10;gap:6px}
+.bottom-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:rgba(255,255,255,0.85);cursor:pointer;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:opacity 0.2s;flex:1;border-radius:16px;box-shadow:0 2px 10px rgba(255,77,109,0.4)}
+.bottom-btn.active{color:white;font-weight:600;opacity:1}
+.bottom-btn:not(.active){opacity:0.85}
+.bottom-btn .ico{font-size:22px}
+
+input[type="file"]{display:none}
+.loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+
+.viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:300;display:none;align-items:center;justify-content:center}
+.viewer-overlay.show{display:flex}
+.viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:301}
+.viewer-content{max-width:100%;max-height:100%;padding:20px}
+.viewer-content img,.viewer-content video{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}
+.viewer-content img{touch-action:none;-webkit-user-drag:none;-webkit-user-select:none;user-select:none;will-change:transform}
+.viewer-overlay.immersive .viewer-close{display:none}
+
+.delete-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.delete-sheet-overlay.show{display:flex}
+.delete-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
+.delete-sheet-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:10px;text-align:center;color:var(--accent)}
+.delete-sheet-text{font-size:13px;color:var(--muted);margin-bottom:18px;text-align:center;line-height:1.5}
+.delete-sheet-actions{display:flex;gap:10px}
+.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.delete-sheet-actions .btn{margin:0;flex:1}
+
+.list-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.list-sheet-overlay.show{display:flex}
+.list-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;max-height:75vh;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-top:1px solid var(--border);display:flex;flex-direction:column}
+.list-sheet-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600;margin-bottom:12px;text-align:center}
+.list-sheet-body{overflow-y:auto;flex:1}
+.list-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s}
+.list-row:last-child{border-bottom:none}
+.list-row:hover{background:var(--card)}
+.list-row:active{opacity:0.7}
+.list-avatar{width:38px;height:38px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px}
+.list-avatar img{width:100%;height:100%;object-fit:cover}
+.list-name{font-size:13px;font-weight:600}
+.list-meta{font-size:11px;color:var(--muted)}
+.list-empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 0}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">&#8592;</button>
+  <div class="logo">Blizko</div>
+  <div class="settings-wrap">
+    <button class="settings-btn" onclick="toggleSettingsMenu()">⚙️</button>
+    <div class="settings-menu" id="settings-menu">
+      <button class="settings-menu-item" onclick="window.location.href='edit-profile.html'">Моя анкета</button>
+      <button class="settings-menu-item" onclick="enablePushNotifications()">🔔 Включить уведомления</button>
+      <div class="settings-menu-section">
+        <div class="settings-menu-label">Режим</div>
+        <div class="theme-toggle-row">
+          <button class="theme-mode-btn" id="mode-dark-btn" onclick="selectMode('dark')">🌙</button>
+          <button class="theme-mode-btn" id="mode-light-btn" onclick="selectMode('light')">☀️</button>
+        </div>
+        <div class="settings-menu-label">Цвет</div>
+        <div class="color-row">
+          <button class="color-swatch" id="color-pink-btn" style="background:linear-gradient(135deg,#ff1744,#ff5252)" onclick="selectColor('pink')"></button>
+          <button class="color-swatch" id="color-tiffany-btn" style="background:linear-gradient(135deg,#00bfb3,#00e6d6)" onclick="selectColor('tiffany')"></button>
+          <button class="color-swatch" id="color-green-btn" style="background:linear-gradient(135deg,#00c853,#43ea69)" onclick="selectColor('green')"></button>
+        </div>
+      </div>
+      <button class="settings-menu-item" onclick="logout()">Выйти из аккаунта</button>
+      <button class="settings-menu-item danger" onclick="openDeleteAccountSheet()">Удалить аккаунт навсегда</button>
+    </div>
+  </div>
+</div>
+
+<div class="profile-header">
+  <div class="avatar-circle" id="avatar-circle" onclick="document.getElementById('avatar-input').click()">
+    <span class="icon" id="avatar-placeholder">📷</span>
+    <img id="avatar-img" src="" style="display:none">
+  </div>
+  <div class="profile-name" id="profile-name">Загрузка...</div>
+  <div class="profile-meta" id="profile-meta"></div>
+  <div class="avatar-actions">
+    <button class="avatar-action-btn" onclick="document.getElementById('avatar-input').click()">Сменить фото</button>
+    <button class="avatar-action-btn danger" id="avatar-delete-btn" onclick="deleteAvatar()" style="display:none">Удалить</button>
+  </div>
+  <div class="upload-progress" id="avatar-upload-progress"><div class="upload-bar" id="avatar-upload-bar"></div></div>
+  <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(this)">
+</div>
+
+<div class="stats-row">
+  <div class="stat-item">
+    <div class="stat-num" id="posts-count">0</div>
+    <div class="stat-label">постов</div>
+  </div>
+  <div class="stat-item" onclick="openListSheet('followers')">
+    <div class="stat-num" id="followers-count">0</div>
+    <div class="stat-label">подписчиков</div>
+  </div>
+  <div class="stat-item" onclick="openListSheet('following')">
+    <div class="stat-num" id="following-count">0</div>
+    <div class="stat-label">подписок</div>
+  </div>
+</div>
+
+<div class="visibility-row">
+  <div class="visibility-label">Кто видит мои фото в профиле</div>
+  <select class="visibility-select" id="posts_visibility" onchange="savePostsVisibility()">
+    <option value="all">Всем</option>
+    <option value="matches">Только мэтчам</option>
+    <option value="none">Никому</option>
+  </select>
+</div>
+
+<div id="posts-grid-wrap">
+  <div class="loading">⏳ Загрузка...</div>
+</div>
+
+<div class="post-upload-modal" id="post-upload-modal">
+  <div class="post-upload-topbar">
+    <button class="back-btn" onclick="closePostUpload()" style="width:36px;height:36px;font-size:18px">←</button>
+    <div class="post-upload-title" id="post-upload-title">Новый пост</div>
+    <button class="post-publish-btn" id="post-publish-btn" onclick="publishFromProfile()" disabled>Опубликовать</button>
+  </div>
+  <div class="post-upload-content">
+    <div class="post-photo-pick" id="post-photo-pick" onclick="handlePhotoPickClick()">
+      <div class="post-pick-hint">📷</div>
+      <div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>
+    </div>
+    <textarea class="post-caption-input" id="post-caption-input" placeholder="Напиши что-нибудь..."></textarea>
+    <div class="post-feed-toggle" id="post-feed-toggle-wrap">
+      <input type="checkbox" id="post-also-feed">
+      <label for="post-also-feed">Опубликовать также в ленте</label>
+    </div>
+    <div class="post-upload-progress" id="post-upload-progress">
+      <div class="post-upload-bar" id="post-upload-bar"></div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="profile-post-file" accept="image/*,video/*" onchange="handleProfilePostPhoto(this)" style="display:none">
+
+
+<div class="bottombar">
+  <button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span>Лента</span></button>
+  <button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span>Знакомства</span></button>
+  <button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span>Лайки</span></button>
+  <button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span>Чаты</span></button>
+  <button class="bottom-btn active"><span class="ico">👤</span><span>Профиль</span></button>
+</div>
+
+<div class="viewer-overlay" id="viewer-overlay">
+  <button class="viewer-close" onclick="closeViewer()">✕</button>
+  <div class="viewer-content" id="viewer-content">
+    <img id="viewer-img" src="" alt="" style="display:none">
+    <video id="viewer-video" src="" controls playsinline style="display:none"></video>
+  </div>
+</div>
+
+<div class="list-sheet-overlay" id="list-sheet-overlay" onclick="if(event.target===this) closeListSheet()">
+  <div class="list-sheet">
+    <div class="list-sheet-title" id="list-sheet-title">Подписчики</div>
+    <div class="list-sheet-body" id="list-sheet-body"></div>
+  </div>
+</div>
+
+<div class="delete-sheet-overlay" id="delete-account-overlay">
+  <div class="delete-sheet">
+    <div class="delete-sheet-title">⚠️ Удалить аккаунт навсегда?</div>
+    <div class="delete-sheet-text">Будут удалены: анкета, фото, посты, лайки, чаты и сообщения. Это действие нельзя отменить.</div>
+    <div class="delete-sheet-actions">
+      <button class="btn btn-outline" onclick="closeDeleteAccountSheet()">Отмена</button>
+      <button class="btn" style="background:var(--accent)" onclick="confirmDeleteAccount()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<script src="theme.js"></script>
+<script src="config.js"></script>
+<script src="photo-viewer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="push-notifications.js"></script>
+<script>
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var currentUser = null;
+var myPosts = [];
+
+async function init() {
+  var r = await db.auth.getSession();
+  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  currentUser = r.data.session.user;
+
+  var { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (profile) {
+    document.getElementById('profile-name').textContent = profile.name || 'Пользователь';
+    document.getElementById('profile-meta').textContent = (profile.age ? profile.age + ' лет' : '') + (profile.city ? ' · ' + profile.city : '');
+    if (profile.photo_url) showAvatar(profile.photo_url);
+    document.getElementById('posts_visibility').value = profile.posts_visibility || 'all';
+  }
+
+  await loadMyPosts();
+  await loadFollowCounts();
+  updateThemeButtons();
+}
+
+async function loadFollowCounts() {
+  var { count: followersCount, error: e1 } = await db.from('follows')
+    .select('id', { count: 'exact', head: true })
+    .eq('following_id', currentUser.id);
+  if (e1) console.error('followers count error:', e1);
+  document.getElementById('followers-count').textContent = followersCount || 0;
+
+  var { count: followingCount, error: e2 } = await db.from('follows')
+    .select('id', { count: 'exact', head: true })
+    .eq('follower_id', currentUser.id);
+  if (e2) console.error('following count error:', e2);
+  document.getElementById('following-count').textContent = followingCount || 0;
+}
+
 async function openListSheet(type) {
   var title = document.getElementById('list-sheet-title');
   var body = document.getElementById('list-sheet-body');
@@ -23,7 +326,6 @@ async function openListSheet(type) {
   (profs || []).forEach(function(p) {
     var row = document.createElement('div');
     row.className = 'list-row';
-    row.style.cursor = 'pointer';
     row.onclick = function() {
       window.location.href = 'view-profile.html?user=' + p.id;
     };
@@ -33,3 +335,379 @@ async function openListSheet(type) {
     body.appendChild(row);
   });
 }
+
+function closeListSheet() {
+  document.getElementById('list-sheet-overlay').classList.remove('show');
+}
+
+function updateThemeButtons() {
+  var mode = window.BlizkoTheme.getMode();
+  var color = window.BlizkoTheme.getColor();
+
+  document.getElementById('mode-dark-btn').classList.toggle('active', mode === 'dark');
+  document.getElementById('mode-light-btn').classList.toggle('active', mode === 'light');
+
+  document.getElementById('color-pink-btn').classList.toggle('active', color === 'pink');
+  document.getElementById('color-tiffany-btn').classList.toggle('active', color === 'tiffany');
+  document.getElementById('color-green-btn').classList.toggle('active', color === 'green');
+}
+
+function selectMode(mode) {
+  window.BlizkoTheme.setMode(mode);
+  updateThemeButtons();
+}
+
+function selectColor(color) {
+  window.BlizkoTheme.setColor(color);
+  updateThemeButtons();
+}
+
+function showAvatar(url) {
+  document.getElementById('avatar-img').src = url;
+  document.getElementById('avatar-img').style.display = 'block';
+  document.getElementById('avatar-placeholder').style.display = 'none';
+  document.getElementById('avatar-delete-btn').style.display = 'inline-block';
+}
+
+async function deleteAvatar() {
+  if (!confirm('Удалить фото профиля?')) return;
+  document.getElementById('avatar-img').style.display = 'none';
+  document.getElementById('avatar-placeholder').style.display = 'block';
+  document.getElementById('avatar-delete-btn').style.display = 'none';
+  await db.from('profiles').update({ photo_url: null }).eq('id', currentUser.id);
+}
+
+async function handleAvatarUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
+
+  document.getElementById('avatar-upload-progress').style.display = 'block';
+  document.getElementById('avatar-upload-bar').style.width = '40%';
+
+  var ext = file.name.split('.').pop();
+  var fileName = currentUser.id + '_' + Date.now() + '.' + ext;
+  try {
+    var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
+    document.getElementById('avatar-upload-bar').style.width = '100%';
+    setTimeout(function() { document.getElementById('avatar-upload-progress').style.display = 'none'; }, 500);
+    if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
+    var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+    showAvatar(url);
+    await db.from('profiles').update({ photo_url: url }).eq('id', currentUser.id);
+    input.value = '';
+  } catch (e) {
+    document.getElementById('avatar-upload-progress').style.display = 'none';
+    document.getElementById('avatar-upload-bar').style.width = '0%';
+    alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой).\n\n' + (e && e.message ? e.message : e));
+  }
+}
+
+async function savePostsVisibility() {
+  var val = document.getElementById('posts_visibility').value;
+  await db.from('profiles').update({ posts_visibility: val }).eq('id', currentUser.id);
+}
+
+async function loadMyPosts() {
+  var wrap = document.getElementById('posts-grid-wrap');
+  var { data, error } = await db.from('profile_photos')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('position', { ascending: true });
+
+  if (error) { wrap.innerHTML = '<div class="loading">Ошибка загрузки</div>'; return; }
+
+  myPosts = data || [];
+  document.getElementById('posts-count').textContent = myPosts.length;
+
+  var photoIds = myPosts.map(function(p) { return p.id; });
+  var viewCounts = {};
+  if (photoIds.length > 0) {
+    var { data: viewsData } = await db.from('media_views')
+      .select('item_id')
+      .eq('item_type', 'profile_photo')
+      .in('item_id', photoIds);
+    (viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
+  }
+
+  var grid = document.createElement('div');
+  grid.className = 'grid';
+
+  myPosts.forEach(function(post, idx) {
+    var item = document.createElement('div');
+    item.className = 'grid-item';
+    var viewsCount = viewCounts[post.id] || 0;
+    var sendBtn = '<button class="send-mini" title="Опубликовать в ленту" onclick="event.stopPropagation();publishExistingToFeed(' + idx + ')">📤</button>';
+    if (post.media_type === 'video') {
+      item.innerHTML = '<video src="' + post.photo_url + '" muted preload="metadata" playsinline></video>' +
+        '<div class="grid-item-views">👁 ' + viewsCount + '</div>' + sendBtn +
+        '<button class="del-mini" onclick="event.stopPropagation();deletePost(\'' + post.id + '\')">✕</button>';
+    } else {
+      item.innerHTML = '<img src="' + post.photo_url + '" loading="lazy">' +
+        '<div class="grid-item-views">👁 ' + viewsCount + '</div>' + sendBtn +
+        '<button class="del-mini" onclick="event.stopPropagation();deletePost(\'' + post.id + '\')">✕</button>';
+    }
+    item.querySelector('img,video') && (item.querySelector('img,video').onclick = function() { openViewer(idx); });
+    grid.appendChild(item);
+  });
+
+  {
+    var addEl = document.createElement('div');
+    addEl.className = 'grid-item grid-add';
+    addEl.textContent = '+';
+    addEl.onclick = function() { openPostUpload(); };
+    grid.appendChild(addEl);
+  }
+
+  wrap.innerHTML = '';
+  if (myPosts.length === 0) {
+    wrap.innerHTML = '<div class="empty-posts"><div class="icon">📸</div><p>У тебя пока нет фото в профиле.<br>Нажми "+" чтобы добавить!</p></div>';
+  }
+  wrap.appendChild(grid);
+}
+
+var galleryViewerAttached = false;
+function ensureGalleryViewerAttached() {
+  if (galleryViewerAttached) return;
+  galleryViewerAttached = true;
+  var img = document.getElementById('viewer-img');
+  BlizkoPhotoViewer.attach(img, {
+    onImmersiveChange: function (level) {
+      document.getElementById('viewer-overlay').classList.toggle('immersive', level > 0);
+    }
+  });
+}
+
+function openViewer(idx) {
+  var post = myPosts[idx];
+  if (!post) return;
+  ensureGalleryViewerAttached();
+
+  var img = document.getElementById('viewer-img');
+  var video = document.getElementById('viewer-video');
+  BlizkoPhotoViewer.reset(img);
+  document.getElementById('viewer-overlay').classList.remove('immersive');
+
+  if (post.media_type === 'video') {
+    video.src = post.photo_url;
+    video.style.display = 'block';
+    img.style.display = 'none';
+    img.src = '';
+    video.play().catch(function() {});
+  } else {
+    img.src = post.photo_url;
+    img.style.display = 'block';
+    video.style.display = 'none';
+    video.src = '';
+  }
+
+  document.getElementById('viewer-overlay').classList.add('show');
+}
+
+function closeViewer() {
+  document.getElementById('viewer-overlay').classList.remove('show');
+  document.getElementById('viewer-overlay').classList.remove('immersive');
+  document.getElementById('viewer-video').pause();
+  document.getElementById('viewer-video').src = '';
+  document.getElementById('viewer-img').src = '';
+}
+
+async function deletePost(postId) {
+  if (!confirm('Удалить это фото?')) return;
+  var { error } = await db.from('profile_photos').delete().eq('id', postId);
+  if (error) { alert('Ошибка удаления: ' + error.message); return; }
+  await loadMyPosts();
+}
+
+var pendingProfilePhotoUrl = null;
+var pendingProfileMediaType = 'photo';
+var existingProfilePhotoId = null;
+
+function openPostUpload() {
+  existingProfilePhotoId = null;
+  document.getElementById('post-upload-title').textContent = 'Новый пост';
+  document.getElementById('post-feed-toggle-wrap').style.display = 'flex';
+  document.getElementById('post-photo-pick').innerHTML = '<div class="post-pick-hint">📷</div><div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>';
+  document.getElementById('post-publish-btn').disabled = true;
+  document.getElementById('post-upload-modal').classList.add('show');
+}
+
+function handlePhotoPickClick() {
+  if (existingProfilePhotoId) return;
+  document.getElementById('profile-post-file').click();
+}
+
+function publishExistingToFeed(idx) {
+  var post = myPosts[idx];
+  if (!post) return;
+
+  existingProfilePhotoId = post.id;
+  pendingProfilePhotoUrl = post.photo_url;
+  pendingProfileMediaType = post.media_type;
+
+  document.getElementById('post-upload-title').textContent = 'Опубликовать в ленту';
+  document.getElementById('post-feed-toggle-wrap').style.display = 'none';
+
+  var preview = post.media_type === 'video'
+    ? '<video src="' + post.photo_url + '" muted style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover"></video>'
+    : '<img src="' + post.photo_url + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover">';
+  document.getElementById('post-photo-pick').innerHTML = preview;
+  document.getElementById('post-publish-btn').disabled = false;
+
+  document.getElementById('post-upload-modal').classList.add('show');
+}
+
+function closePostUpload() {
+  document.getElementById('post-upload-modal').classList.remove('show');
+  pendingProfilePhotoUrl = null;
+  pendingProfileMediaType = 'photo';
+  existingProfilePhotoId = null;
+  document.getElementById('post-photo-pick').innerHTML = '<div class="post-pick-hint">📷</div><div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>';
+  document.getElementById('post-caption-input').value = '';
+  document.getElementById('post-also-feed').checked = false;
+  document.getElementById('post-publish-btn').disabled = true;
+  document.getElementById('post-publish-btn').textContent = 'Опубликовать';
+  document.getElementById('post-upload-bar').style.width = '0%';
+  document.getElementById('profile-post-file').value = '';
+}
+
+async function handleProfilePostPhoto(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var isVideo = file.type.startsWith('video');
+  pendingProfileMediaType = isVideo ? 'video' : 'photo';
+
+  if (isVideo && file.size > 20 * 1024 * 1024) { alert('Видео не более 20MB'); return; }
+  if (!isVideo && file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    if (isVideo) {
+      document.getElementById('post-photo-pick').innerHTML = '<video src="' + e.target.result + '" muted style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover"></video>';
+    } else {
+      document.getElementById('post-photo-pick').innerHTML = '<img src="' + e.target.result + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover">';
+    }
+  };
+  reader.readAsDataURL(file);
+
+  document.getElementById('post-upload-progress').style.display = 'block';
+  document.getElementById('post-upload-bar').style.width = '30%';
+  var ext = file.name.split('.').pop();
+  var fileName = 'posts/' + currentUser.id + '_' + Date.now() + '.' + ext;
+
+  try {
+    var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
+    document.getElementById('post-upload-bar').style.width = '100%';
+    setTimeout(function() { document.getElementById('post-upload-progress').style.display = 'none'; }, 600);
+    if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
+    pendingProfilePhotoUrl = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+    document.getElementById('post-publish-btn').disabled = false;
+  } catch (e) {
+    document.getElementById('post-upload-progress').style.display = 'none';
+    document.getElementById('post-upload-bar').style.width = '0%';
+    alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой).\n\n' + (e && e.message ? e.message : e));
+  }
+}
+
+async function publishFromProfile() {
+  if (!pendingProfilePhotoUrl) return;
+  var caption = document.getElementById('post-caption-input').value.trim();
+  var btn = document.getElementById('post-publish-btn');
+  btn.disabled = true; btn.textContent = '...';
+
+  if (existingProfilePhotoId) {
+    var { error: postErr } = await db.from('posts').insert({
+      user_id: currentUser.id,
+      photo_url: pendingProfilePhotoUrl,
+      caption: caption,
+      media_type: pendingProfileMediaType,
+      profile_photo_id: existingProfilePhotoId
+    });
+    if (postErr) { alert('Ошибка: ' + postErr.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
+    closePostUpload();
+    await loadMyPosts();
+    return;
+  }
+
+  var { data: profPhoto, error: profErr } = await db.from('profile_photos').insert({
+    user_id: currentUser.id,
+    photo_url: pendingProfilePhotoUrl,
+    media_type: pendingProfileMediaType,
+    position: myPosts.length
+  }).select().single();
+
+  if (profErr) { alert('Ошибка: ' + profErr.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
+
+  var alsoFeed = document.getElementById('post-also-feed').checked;
+  if (alsoFeed) {
+    await db.from('posts').insert({
+      user_id: currentUser.id,
+      photo_url: pendingProfilePhotoUrl,
+      caption: caption,
+      media_type: pendingProfileMediaType,
+      profile_photo_id: profPhoto.id
+    });
+  }
+
+  closePostUpload();
+  await loadMyPosts();
+}
+
+async function enablePushNotifications() {
+  toggleSettingsMenu();
+  var ok = await BlizkoPush.init(db, currentUser.id);
+  if (ok) {
+    alert('Уведомления включены! Теперь звонки и сообщения будут приходить даже когда сайт закрыт.');
+  } else {
+    alert('Не удалось включить уведомления. Проверь, что разрешение на уведомления для сайта дано в настройках браузера.');
+  }
+}
+
+function toggleSettingsMenu() {
+  document.getElementById('settings-menu').classList.toggle('show');
+}
+
+document.addEventListener('click', function(e) {
+  var wrap = document.querySelector('.settings-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('settings-menu').classList.remove('show');
+  }
+});
+
+async function logout() {
+  await db.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+function openDeleteAccountSheet() {
+  toggleSettingsMenu();
+  document.getElementById('delete-account-overlay').classList.add('show');
+}
+
+function closeDeleteAccountSheet() {
+  document.getElementById('delete-account-overlay').classList.remove('show');
+}
+
+async function confirmDeleteAccount() {
+  closeDeleteAccountSheet();
+
+  try {
+    await db.from('messages').delete().eq('sender_id', currentUser.id);
+    await db.from('likes').delete().or('from_user.eq.' + currentUser.id + ',to_user.eq.' + currentUser.id);
+    await db.from('follows').delete().or('follower_id.eq.' + currentUser.id + ',following_id.eq.' + currentUser.id);
+    await db.from('matches').delete().or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id);
+    await db.from('posts').delete().eq('user_id', currentUser.id);
+    await db.from('profile_photos').delete().eq('user_id', currentUser.id);
+    await db.from('profiles').delete().eq('id', currentUser.id);
+    await db.auth.signOut();
+    alert('Аккаунт удалён.');
+    window.location.href = 'index.html';
+  } catch (e) {
+    alert('Ошибка при удалении: ' + e.message);
+  }
+}
+
+init();
+</script>
+</body>
+      </html>
