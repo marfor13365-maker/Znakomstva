@@ -31,11 +31,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .modal.show{display:flex}
 .modal-topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;flex-shrink:0}
 .modal-back{background:none;border:none;color:white;font-size:24px;cursor:pointer;padding:4px 8px 4px 0;line-height:1}
-.modal-user{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.modal-user{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer}
+.modal-user:hover .modal-name{color:var(--accent)}
 .modal-avatar{width:38px;height:38px;border-radius:50%;background:var(--input-bg);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;flex-shrink:0}
 .modal-avatar img{width:100%;height:100%;object-fit:cover}
-.modal-name{font-weight:600;font-size:14px}
+.modal-name{font-weight:600;font-size:14px;transition:color 0.2s}
 .modal-city{font-size:12px;color:var(--muted)}
+.profile-link-btn{background:var(--accent);border:none;color:white;font-size:11px;font-weight:600;padding:6px 12px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;flex-shrink:0;transition:opacity 0.2s}
+.profile-link-btn:active{opacity:0.7}
 .modal-photo{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0 2px;position:relative}
 .modal-photo img{max-width:100%;max-height:100%;object-fit:contain;touch-action:none;-webkit-user-drag:none;-webkit-user-select:none;user-select:none;will-change:transform}
 .modal-footer{padding:16px 20px;flex-shrink:0}
@@ -142,13 +145,14 @@ input[type="file"]{display:none}
 <div class="modal" id="view-modal">
   <div class="modal-topbar">
     <button class="modal-back" onclick="closeModal()">←</button>
-    <div class="modal-user">
+    <div class="modal-user" onclick="openUserProfile()">
       <div class="modal-avatar" id="modal-avatar">👤</div>
       <div>
         <div class="modal-name" id="modal-name"></div>
         <div class="modal-city" id="modal-city"></div>
       </div>
     </div>
+    <button class="profile-link-btn" onclick="openUserProfile()">👤 Анкета</button>
     <button class="follow-btn" id="follow-btn" onclick="toggleFollow()" style="display:none">Подписаться</button>
   </div>
   <div class="modal-photo" id="modal-photo-wrap"><img id="modal-img" src="" alt=""><video id="modal-video" src="" controls playsinline style="display:none;max-width:100%;max-height:100%" onerror="console.error('Видео не загрузилось:', this.src, this.error)"></video><div class="immersive-caption-overlay" id="immersive-caption-overlay"></div></div>
@@ -250,19 +254,15 @@ async function init() {
 }
 
 async function loadSeenData() {
-  // Загружаем из БД
   var { data: seen } = await db.from('profile_seen').select('target_user_id, last_seen_at').eq('viewer_id', currentUser.id);
   lastSeenMap = {};
   (seen || []).forEach(function(s) { lastSeenMap[s.target_user_id] = s.last_seen_at; });
   
-  // Проверяем localStorage (резерв)
   var keys = Object.keys(localStorage);
   keys.forEach(function(key) {
     if (key.startsWith('profile_seen_')) {
       var userId = key.replace('profile_seen_', '');
       var seenAt = localStorage.getItem(key);
-      
-      // Если в БД нет записи или она старше, используем из localStorage
       if (!lastSeenMap[userId] || new Date(lastSeenMap[userId]) < new Date(seenAt)) {
         lastSeenMap[userId] = seenAt;
       }
@@ -271,9 +271,7 @@ async function loadSeenData() {
 }
 
 function hasNewPost(userId, postCreatedAt) {
-  // Свои посты без метки
   if (userId === currentUser.id) return false;
-  
   var seenAt = lastSeenMap[userId];
   if (!seenAt) return true;
   return new Date(postCreatedAt) > new Date(seenAt);
@@ -281,19 +279,10 @@ function hasNewPost(userId, postCreatedAt) {
 
 async function markAuthorSeen(authorId) {
   if (!authorId || authorId === currentUser.id) return;
-  
   var now = new Date().toISOString();
-  
-  // Обновляем локальный кэш
   lastSeenMap[authorId] = now;
-  
-  // Сохраняем в localStorage
   localStorage.setItem('profile_seen_' + authorId, now);
-  
-  // Обновляем все метки этого пользователя
   updateDotsForUser(authorId);
-  
-  // Сохраняем в БД
   await db.from('profile_seen').upsert({
     viewer_id: currentUser.id,
     target_user_id: authorId,
@@ -363,7 +352,6 @@ function updateDotsForUser(userId) {
     var createdAt = item.getAttribute('data-created-at');
     var dot = item.querySelector('.grid-new-dot');
     if (!dot || !createdAt) return;
-    
     var hasNew = hasNewPost(userId, createdAt);
     dot.style.display = hasNew ? 'block' : 'none';
   });
@@ -372,6 +360,39 @@ function updateDotsForUser(userId) {
 var currentViewedAuthorId = null;
 var myLikesGiven = {};
 var currentViewedPostId = null;
+
+async function openUserProfile() {
+  var userId = currentViewedAuthorId;
+  if (!userId) return;
+  if (userId === currentUser.id) {
+    window.location.href = 'profile.html';
+    return;
+  }
+  
+  var { data: profile } = await db.from('profiles').select('profile_visibility').eq('id', userId).single();
+  if (!profile) { alert('Профиль не найден'); return; }
+  
+  var visibility = profile.profile_visibility || 'matches';
+  
+  if (visibility === 'none') {
+    alert('🔒 Этот пользователь закрыл свою анкету для всех.');
+    return;
+  }
+  
+  if (visibility === 'matches') {
+    var { data: match } = await db.from('matches')
+      .select('id')
+      .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + userId + '),and(user1.eq.' + userId + ',user2.eq.' + currentUser.id + ')')
+      .maybeSingle();
+    
+    if (!match) {
+      alert('🔒 Анкета доступна только для мэтчей. Лайкни этого пользователя, чтобы открыть анкету.');
+      return;
+    }
+  }
+  
+  window.location.href = 'view-profile.html?user=' + userId;
+}
 
 function openPost(idx) {
   var post = posts[idx];
