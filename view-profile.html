@@ -1,3 +1,6 @@
+Конечно! Вот содержимое файла view-profile-fixed.html в виде текста, который вы можете скопировать:
+
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -135,7 +138,14 @@ async function init() {
 
   renderProfile(profile, canSeeFull, targetId, matchId, hasNew);
   await loadBellState(targetId);
-  await markProfileSeen(targetId);
+
+  if (hasNew) {
+    await markProfileSeen(targetId);
+    var avatar=document.querySelector('.avatar-circle');
+    var dot=document.querySelector('.new-post-dot');
+    if (avatar) avatar.classList.remove('has-new');
+    if (dot) dot.classList.remove('show');
+  }
 }
 
 async function checkHasNewPost(targetId) {
@@ -361,3 +371,4 @@ init();
 </script>
 </body>
 </html>
+```
