@@ -21,8 +21,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .grid-item .overlay{position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.75))}
 .overlay-row{display:flex;align-items:center;justify-content:space-between;gap:6px}
 .grid-views{font-size:10px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:2px;flex-shrink:0}
-.grid-new-dot{position:absolute;top:6px;right:6px;width:12px;height:12px;background:var(--accent);border:2px solid rgba(0,0,0,0.6);border-radius:50%;z-index:2}
-.grid-item .user-name{font-size:11px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid-new-dot{position:absolute;top:6px;right:6px;width:12px;height:12px;background:var(--accent);border:2px solid rgba(0,0,0,0.6);border-radius:50%;z-index:2;display:none}
+.grid-new-dot.show{display:block}
+.grid-item .user-name{font-size:11px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(0,0,0,0.4);padding:2px 8px;border-radius:10px;backdrop-filter:blur(4px)}
 .no-photo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--input-bg)}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
@@ -33,11 +34,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .modal-back{background:none;border:none;color:white;font-size:24px;cursor:pointer;padding:4px 8px 4px 0;line-height:1}
 .modal-user{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer}
 .modal-user:hover .modal-name{color:var(--accent)}
-.modal-avatar{width:38px;height:38px;border-radius:50%;background:var(--input-bg);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;flex-shrink:0}
+.modal-avatar{width:38px;height:38px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;border:1px solid var(--border)}
 .modal-avatar img{width:100%;height:100%;object-fit:cover}
+.modal-avatar .initials{font-family:'Inter',sans-serif;font-size:16px;font-weight:600;color:var(--text)}
 .modal-name{font-weight:600;font-size:14px;transition:color 0.2s}
 .modal-city{font-size:12px;color:var(--muted)}
-.follow-btn{background:var(--accent);border:none;color:white;font-size:11px;font-weight:600;padding:6px 12px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;flex-shrink:0;white-space:nowrap}
+.follow-btn{background:var(--accent);border:none;color:white;font-size:11px;font-weight:600;padding:6px 12px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;flex-shrink:0;white-space:nowrap;min-width:80px;text-align:center}
 .follow-btn.following{background:transparent;border:1px solid var(--border);color:var(--muted)}
 .modal-photo{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0 2px;position:relative}
 .modal-photo img{max-width:100%;max-height:100%;object-fit:contain;touch-action:none;-webkit-user-drag:none;-webkit-user-select:none;user-select:none;will-change:transform}
@@ -62,8 +64,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .comments-section{margin-top:16px;border-top:1px solid var(--border);padding-top:14px}
 .comments-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:500}
 .comment-item{display:flex;gap:8px;margin-bottom:10px;align-items:flex-start}
-.comment-avatar{width:28px;height:28px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px}
+.comment-avatar{width:28px;height:28px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border:1px solid var(--border)}
 .comment-avatar img{width:100%;height:100%;object-fit:cover}
+.comment-avatar .initials{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--text)}
 .comment-body{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
 .comment-name{font-size:12px;font-weight:600;margin-bottom:2px}
 .comment-text{font-size:13px;line-height:1.4}
@@ -229,6 +232,8 @@ var pendingPhotoUrl = null;
 var pendingMediaType = 'photo';
 var posts = [];
 var lastSeenMap = {};
+var followedIds = {};
+var matchIds = {};
 
 function timeAgo(dateStr) {
   var d = new Date(dateStr);
@@ -249,8 +254,26 @@ async function init() {
   var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
   (myLikes || []).forEach(function(l) { if (l.is_like) myLikesGiven[l.to_user] = true; });
 
+  await loadFollowedAndMatches();
   await loadSeenData();
   await loadFeed();
+}
+
+async function loadFollowedAndMatches() {
+  // Загружаем подписки
+  var { data: follows } = await db.from('follows').select('following_id').eq('follower_id', currentUser.id);
+  followedIds = {};
+  (follows || []).forEach(function(f) { followedIds[f.following_id] = true; });
+
+  // Загружаем мэтчи
+  var { data: matches } = await db.from('matches')
+    .select('user1, user2')
+    .or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id);
+  matchIds = {};
+  (matches || []).forEach(function(m) {
+    var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
+    matchIds[otherId] = true;
+  });
 }
 
 async function loadSeenData() {
@@ -271,7 +294,14 @@ async function loadSeenData() {
 }
 
 function hasNewPost(userId, postCreatedAt) {
+  // Свои посты без метки
   if (userId === currentUser.id) return false;
+  
+  // Метка только для подписок и мэтчей
+  var isFollowed = followedIds[userId] || false;
+  var isMatch = matchIds[userId] || false;
+  if (!isFollowed && !isMatch) return false;
+  
   var seenAt = lastSeenMap[userId];
   if (!seenAt) return true;
   return new Date(postCreatedAt) > new Date(seenAt);
@@ -331,11 +361,14 @@ async function loadFeed() {
         : '<img src="' + post.photo_url + '" loading="lazy">';
       
       var hasNew = hasNewPost(post.user_id, post.created_at);
-      var dotHtml = hasNew ? '<div class="grid-new-dot"></div>' : '';
+      var dotHtml = hasNew ? '<div class="grid-new-dot show"></div>' : '';
       var viewsCount = viewCounts[post.id] || 0;
       
+      var userName = (post.profiles && post.profiles.name) ? post.profiles.name : 'Пользователь';
+      
       item.innerHTML = mediaHtml + dotHtml +
-        '<div class="overlay"><div class="overlay-row"><div class="user-name">' + ((post.profiles && post.profiles.name) ? post.profiles.name : '') + '</div>' +
+        '<div class="overlay"><div class="overlay-row">' +
+        '<div class="user-name">' + userName + '</div>' +
         '<div class="grid-views">👁 ' + viewsCount + '</div></div></div>';
     } else {
       item.innerHTML = '<div class="no-photo">📷</div>';
@@ -354,6 +387,7 @@ function updateDotsForUser(userId) {
     if (!dot || !createdAt) return;
     var hasNew = hasNewPost(userId, createdAt);
     dot.style.display = hasNew ? 'block' : 'none';
+    if (hasNew) dot.classList.add('show');
   });
 }
 
@@ -405,8 +439,12 @@ function openPost(idx) {
   markAuthorSeen(post.user_id);
   updateDotsForUser(post.user_id);
   
-  document.getElementById('modal-name').textContent = p.name || 'Пользователь';
+  var userName = p.name || 'Пользователь';
+  var initials = userName.charAt(0).toUpperCase();
+  
+  document.getElementById('modal-name').textContent = userName;
   document.getElementById('modal-city').textContent = p.city || '';
+  
   var modalImg = document.getElementById('modal-img');
   var modalVideo = document.getElementById('modal-video');
   if (post.media_type === 'video') {
@@ -423,8 +461,13 @@ function openPost(idx) {
   document.getElementById('modal-caption').textContent = post.caption || '';
   document.getElementById('immersive-caption-overlay').textContent = post.caption || '';
   document.getElementById('modal-time').textContent = timeAgo(post.created_at);
+  
   var av = document.getElementById('modal-avatar');
-  av.innerHTML = p.photo_url ? '<img src="' + p.photo_url + '">' : '👤';
+  if (p.photo_url) {
+    av.innerHTML = '<img src="' + p.photo_url + '">';
+  } else {
+    av.innerHTML = '<span class="initials">' + initials + '</span>';
+  }
 
   var matchBtn = document.getElementById('match-btn');
   var matchSent = document.getElementById('match-sent');
@@ -432,25 +475,24 @@ function openPost(idx) {
   var followBtn = document.getElementById('follow-btn');
   var profileLink = document.getElementById('profile-link-bottom');
 
-  // Показываем кнопку "Анкета" только для чужих постов
   if (post.user_id === currentUser.id) {
     matchBtn.style.display = 'none';
     matchSent.style.display = 'none';
     actionsRow.style.display = 'flex';
     followBtn.style.display = 'none';
-    profileLink.style.display = 'none';
+    if (profileLink) profileLink.style.display = 'none';
   } else if (myLikesGiven[post.user_id]) {
     matchBtn.style.display = 'none';
     matchSent.style.display = 'block';
     actionsRow.style.display = 'none';
     followBtn.style.display = 'block';
-    profileLink.style.display = 'block';
+    if (profileLink) profileLink.style.display = 'block';
   } else {
     matchBtn.style.display = 'block';
     matchSent.style.display = 'none';
     actionsRow.style.display = 'none';
     followBtn.style.display = 'block';
-    profileLink.style.display = 'block';
+    if (profileLink) profileLink.style.display = 'block';
   }
 
   var img = document.getElementById('modal-img');
@@ -499,10 +541,16 @@ async function recordAndShowViews(postId) {
 
 async function loadFollowStatus(authorId) {
   var followBtn = document.getElementById('follow-btn');
+  if (!followBtn) return;
+  
   var { data } = await db.from('follows').select('id').eq('follower_id', currentUser.id).eq('following_id', authorId).maybeSingle();
-  if (followBtn) {
-    followBtn.classList.toggle('following', !!data);
-    followBtn.textContent = data ? '✓ Подписан' : 'Подписаться';
+  
+  if (data) {
+    followBtn.classList.add('following');
+    followBtn.textContent = '✓ Подписан';
+  } else {
+    followBtn.classList.remove('following');
+    followBtn.textContent = 'Подписаться';
   }
 }
 
@@ -599,11 +647,13 @@ async function loadComments(postId, commentsEnabled, isOwner) {
   comments.forEach(function(c) {
     var cp = profilesMap[c.user_id] || {};
     var canDelete = c.user_id === currentUser.id || isOwner;
+    var cName = cp.name || 'Пользователь';
+    var cInitials = cName.charAt(0).toUpperCase();
     var item = document.createElement('div');
     item.className = 'comment-item';
     item.innerHTML =
-      '<div class="comment-avatar">' + (cp.photo_url ? '<img src="' + cp.photo_url + '">' : '👤') + '</div>' +
-      '<div class="comment-body"><div class="comment-name">' + (cp.name || 'Пользователь') + '</div><div class="comment-text">' + escapeHtmlComment(c.text) + '</div></div>' +
+      '<div class="comment-avatar">' + (cp.photo_url ? '<img src="' + cp.photo_url + '">' : '<span class="initials">' + cInitials + '</span>') + '</div>' +
+      '<div class="comment-body"><div class="comment-name">' + cName + '</div><div class="comment-text">' + escapeHtmlComment(c.text) + '</div></div>' +
       (canDelete ? '<button class="comment-del" onclick="deleteComment(\'' + c.id + '\')">✕</button>' : '');
     list.appendChild(item);
   });
