@@ -79,9 +79,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ============================================================
-// КЛЮЧ ПОДСТАВЛЯЕТСЯ АВТОМАТИЧЕСКИ ПРИ СБОРКЕ (через sed)
+// КЛЮЧ ПОДСТАВЛЯЕТСЯ АВТОМАТИЧЕСКИ ЧЕРЕЗ SED (ИЗ ПЕРЕМЕННОЙ ОКРУЖЕНИЯ)
 // ============================================================
-
 const SERVICE_KEY = '{{SUPABASE_SERVICE_KEY}}';
 
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
