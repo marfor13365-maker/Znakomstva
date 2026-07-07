@@ -91,203 +91,221 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="photo-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-var currentUser = null;
-var galleryItems = [];
-var currentTargetId = null;
-var currentMatchId = null;
+// Проверка загрузки config.js
+if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
+  document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">❌ Ошибка: config.js не загружен. Проверьте файл.</div>';
+  console.error('config.js не загружен или переменные не определены.');
+} else {
+  var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var currentUser = null;
+  var galleryItems = [];
+  var currentTargetId = null;
+  var currentMatchId = null;
 
-function getTargetUserId() {
-  var params = new URLSearchParams(window.location.search);
-  return params.get('user');
-}
-
-async function getMatchId(otherUserId) {
-  var { data } = await db.from('matches').select('id')
-    .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
-    .maybeSingle();
-  return data ? data.id : null;
-}
-
-window.deleteMatch = async function(matchId) {
-  if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
-  try {
-    await db.from('messages').delete().eq('match_id', matchId);
-    await db.from('matches').delete().eq('id', matchId);
-    alert('Чат удалён.');
-    window.location.href = 'matches.html';
-  } catch(e) {
-    alert('Ошибка при удалении: ' + e.message);
+  function getTargetUserId() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get('user');
   }
-};
 
-async function init() {
-  try {
-    var r = await db.auth.getSession();
-    if (!r.data.session) { window.location.href = 'index.html'; return; }
-    currentUser = r.data.session.user;
-    var targetId = getTargetUserId();
-    if (!targetId) { window.location.href = 'feed.html'; return; }
-    currentTargetId = targetId;
+  async function getMatchId(otherUserId) {
+    var { data } = await db.from('matches').select('id')
+      .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
+      .maybeSingle();
+    return data ? data.id : null;
+  }
 
-    var { data: profile } = await db.from('profiles').select('*').eq('id', targetId).single();
-    if (!profile) {
-      document.getElementById('content').innerHTML = '<div class="loading">Анкета не найдена</div>';
-      return;
+  window.deleteMatch = async function(matchId) {
+    if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
+    try {
+      await db.from('messages').delete().eq('match_id', matchId);
+      await db.from('matches').delete().eq('id', matchId);
+      alert('Чат удалён.');
+      window.location.href = 'matches.html';
+    } catch(e) {
+      alert('Ошибка при удалении: ' + e.message);
     }
+  };
 
-    currentMatchId = await getMatchId(targetId);
-    renderProfile(profile);
-    BlizkoTheme.applyTheme();
-    BlizkoTheme.applyLang();
-  } catch(e) {
-    console.error('Ошибка загрузки анкеты:', e);
-    document.getElementById('content').innerHTML = '<div class="loading">⚠️ Ошибка загрузки</div>';
-  }
-}
-
-function renderProfile(profile) {
-  var content = document.getElementById('content');
-
-  var html =
-    '<div class="avatar-block">' +
-      '<div class="avatar-wrap">' +
-        '<div class="avatar-circle">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
-      '</div>' +
-      '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
-      '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
-      '<div class="actions-row">';
-
-  if (currentMatchId) {
-    html += '<button class="btn message-btn" onclick="window.location.href=\'chat.html?match=' + currentMatchId + '\'" data-i18n="write_message">💬 Написать сообщение</button>';
-    html += '<button class="btn delete-match-btn" onclick="deleteMatch(\'' + currentMatchId + '\')" data-i18n="delete_match">🗑 Удалить матч</button>';
-  } else {
-    // Если нет матча, просто кнопка "Написать сообщение" ведёт на страницу матчей
-    html += '<button class="btn message-btn" onclick="window.location.href=\'matches.html\'" data-i18n="write_message">💬 Написать сообщение</button>';
-  }
-
-  html += '</div></div>';
-
-  html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text">' +
-    (profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
-    '</div></div>';
-
-  html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
-  html += '<div class="gallery-grid" id="gallery-grid"></div>';
-
-  content.innerHTML = html;
-  loadGallery(profile.id);
-  BlizkoTheme.applyLang();
-}
-
-function escapeHtml(str) {
-  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-async function loadGallery(targetId) {
-  try {
-    var { data } = await db.from('profile_photos').select('*').eq('user_id', targetId).order('position', { ascending: true });
-    galleryItems = data || [];
-    var grid = document.getElementById('gallery-grid');
-    if (!grid) return;
-    if (galleryItems.length === 0) {
-      grid.innerHTML = '<div style="padding:0 4px;color:var(--muted);font-size:13px">Галерея пуста</div>';
-      return;
-    }
-    var photoIds = galleryItems.map(function(p) { return p.id; });
-    var viewCounts = {};
-    var { data: viewsData } = await db.from('media_views')
-      .select('item_id')
-      .eq('item_type', 'profile_photo')
-      .in('item_id', photoIds);
-    (viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
-
-    grid.innerHTML = '';
-    galleryItems.forEach(function(item, idx) {
-      var el = document.createElement('div');
-      el.className = 'gallery-item';
-      el.setAttribute('data-photo-id', item.id);
-      el.onclick = function() { openViewer(idx); };
-      var mediaHtml = item.media_type === 'video'
-        ? '<video src="' + item.photo_url + '" muted></video>'
-        : '<img src="' + item.photo_url + '">';
-      el.innerHTML = mediaHtml + '<div class="gallery-item-views">👁 ' + (viewCounts[item.id] || 0) + '</div>';
-      grid.appendChild(el);
-    });
-  } catch(e) {
-    console.error('Ошибка загрузки галереи:', e);
-  }
-}
-
-var galleryViewerAttached = false;
-function ensureGalleryViewerAttached() {
-  if (galleryViewerAttached) return;
-  galleryViewerAttached = true;
-  var img = document.getElementById('viewer-img');
-  if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.attach) {
-    BlizkoPhotoViewer.attach(img, {
-      onImmersiveChange: function (level) {
-        document.getElementById('viewer-overlay').classList.toggle('immersive', level > 0);
+  async function init() {
+    try {
+      var r = await db.auth.getSession();
+      if (!r.data.session) {
+        window.location.href = 'index.html';
+        return;
       }
-    });
-  }
-}
+      currentUser = r.data.session.user;
+      var targetId = getTargetUserId();
+      if (!targetId) {
+        window.location.href = 'feed.html';
+        return;
+      }
+      currentTargetId = targetId;
 
-function openViewer(idx) {
-  var item = galleryItems[idx];
-  if (!item) return;
-  ensureGalleryViewerAttached();
-  var img = document.getElementById('viewer-img');
-  var video = document.getElementById('viewer-video');
-  if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.reset) {
-    BlizkoPhotoViewer.reset(img);
-  }
-  document.getElementById('viewer-overlay').classList.remove('immersive');
-  if (item.media_type === 'video') {
-    video.src = item.photo_url;
-    video.style.display = 'block';
-    img.style.display = 'none';
-    img.src = '';
-    video.play().catch(function() {});
-  } else {
-    img.src = item.photo_url;
-    img.style.display = 'block';
-    video.style.display = 'none';
-    video.src = '';
-  }
-  document.getElementById('viewer-overlay').classList.add('show');
-  recordAndShowProfilePhotoViews(item.id);
-}
+      var { data: profile, error } = await db.from('profiles').select('*').eq('id', targetId).single();
+      if (error || !profile) {
+        document.getElementById('content').innerHTML = '<div class="loading">⚠️ Анкета не найдена</div>';
+        console.error('Ошибка загрузки профиля:', error);
+        return;
+      }
 
-async function recordAndShowProfilePhotoViews(photoId) {
-  try {
-    await db.from('media_views').insert({
-      item_type: 'profile_photo',
-      item_id: photoId,
-      viewer_id: currentUser.id
-    });
-    var { count } = await db.from('media_views')
-      .select('id', { count: 'exact', head: true })
-      .eq('item_type', 'profile_photo')
-      .eq('item_id', photoId);
-    var el = document.getElementById('viewer-views-count');
-    if (el) el.textContent = count || 0;
-    var gridBadge = document.querySelector('.gallery-item[data-photo-id="' + photoId + '"] .gallery-item-views');
-    if (gridBadge) gridBadge.textContent = '👁 ' + (count || 0);
-  } catch(e) {
-    console.error('Ошибка записи просмотра:', e);
+      currentMatchId = await getMatchId(targetId);
+      renderProfile(profile);
+      if (typeof BlizkoTheme !== 'undefined') {
+        BlizkoTheme.applyTheme();
+        BlizkoTheme.applyLang();
+      } else {
+        console.warn('BlizkoTheme не загружен');
+      }
+    } catch(e) {
+      console.error('Ошибка инициализации:', e);
+      document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">⚠️ Ошибка загрузки: ' + e.message + '</div>';
+    }
   }
-}
 
-function closeViewer() {
-  document.getElementById('viewer-overlay').classList.remove('show');
-  document.getElementById('viewer-overlay').classList.remove('immersive');
-  document.getElementById('viewer-video').pause();
-  document.getElementById('viewer-video').src = '';
-  document.getElementById('viewer-img').src = '';
-}
+  function renderProfile(profile) {
+    var content = document.getElementById('content');
 
-init();
+    var html =
+      '<div class="avatar-block">' +
+        '<div class="avatar-wrap">' +
+          '<div class="avatar-circle">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
+        '</div>' +
+        '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
+        '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
+        '<div class="actions-row">';
+
+    if (currentMatchId) {
+      html += '<button class="btn message-btn" onclick="window.location.href=\'chat.html?match=' + currentMatchId + '\'" data-i18n="write_message">💬 Написать сообщение</button>';
+      html += '<button class="btn delete-match-btn" onclick="deleteMatch(\'' + currentMatchId + '\')" data-i18n="delete_match">🗑 Удалить матч</button>';
+    } else {
+      html += '<button class="btn message-btn" onclick="window.location.href=\'matches.html\'" data-i18n="write_message">💬 Написать сообщение</button>';
+    }
+
+    html += '</div></div>';
+
+    html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text">' +
+      (profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
+      '</div></div>';
+
+    html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
+    html += '<div class="gallery-grid" id="gallery-grid"></div>';
+
+    content.innerHTML = html;
+    loadGallery(profile.id);
+    if (typeof BlizkoTheme !== 'undefined') BlizkoTheme.applyLang();
+  }
+
+  function escapeHtml(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  async function loadGallery(targetId) {
+    try {
+      var { data } = await db.from('profile_photos').select('*').eq('user_id', targetId).order('position', { ascending: true });
+      galleryItems = data || [];
+      var grid = document.getElementById('gallery-grid');
+      if (!grid) return;
+      if (galleryItems.length === 0) {
+        grid.innerHTML = '<div style="padding:0 4px;color:var(--muted);font-size:13px">Галерея пуста</div>';
+        return;
+      }
+      var photoIds = galleryItems.map(function(p) { return p.id; });
+      var viewCounts = {};
+      var { data: viewsData } = await db.from('media_views')
+        .select('item_id')
+        .eq('item_type', 'profile_photo')
+        .in('item_id', photoIds);
+      (viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
+
+      grid.innerHTML = '';
+      galleryItems.forEach(function(item, idx) {
+        var el = document.createElement('div');
+        el.className = 'gallery-item';
+        el.setAttribute('data-photo-id', item.id);
+        el.onclick = function() { openViewer(idx); };
+        var mediaHtml = item.media_type === 'video'
+          ? '<video src="' + item.photo_url + '" muted></video>'
+          : '<img src="' + item.photo_url + '">';
+        el.innerHTML = mediaHtml + '<div class="gallery-item-views">👁 ' + (viewCounts[item.id] || 0) + '</div>';
+        grid.appendChild(el);
+      });
+    } catch(e) {
+      console.error('Ошибка загрузки галереи:', e);
+    }
+  }
+
+  var galleryViewerAttached = false;
+  function ensureGalleryViewerAttached() {
+    if (galleryViewerAttached) return;
+    galleryViewerAttached = true;
+    var img = document.getElementById('viewer-img');
+    if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.attach) {
+      BlizkoPhotoViewer.attach(img, {
+        onImmersiveChange: function (level) {
+          document.getElementById('viewer-overlay').classList.toggle('immersive', level > 0);
+        }
+      });
+    } else {
+      console.warn('BlizkoPhotoViewer не загружен');
+    }
+  }
+
+  function openViewer(idx) {
+    var item = galleryItems[idx];
+    if (!item) return;
+    ensureGalleryViewerAttached();
+    var img = document.getElementById('viewer-img');
+    var video = document.getElementById('viewer-video');
+    if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.reset) {
+      BlizkoPhotoViewer.reset(img);
+    }
+    document.getElementById('viewer-overlay').classList.remove('immersive');
+    if (item.media_type === 'video') {
+      video.src = item.photo_url;
+      video.style.display = 'block';
+      img.style.display = 'none';
+      img.src = '';
+      video.play().catch(function() {});
+    } else {
+      img.src = item.photo_url;
+      img.style.display = 'block';
+      video.style.display = 'none';
+      video.src = '';
+    }
+    document.getElementById('viewer-overlay').classList.add('show');
+    recordAndShowProfilePhotoViews(item.id);
+  }
+
+  async function recordAndShowProfilePhotoViews(photoId) {
+    try {
+      await db.from('media_views').insert({
+        item_type: 'profile_photo',
+        item_id: photoId,
+        viewer_id: currentUser.id
+      });
+      var { count } = await db.from('media_views')
+        .select('id', { count: 'exact', head: true })
+        .eq('item_type', 'profile_photo')
+        .eq('item_id', photoId);
+      var el = document.getElementById('viewer-views-count');
+      if (el) el.textContent = count || 0;
+      var gridBadge = document.querySelector('.gallery-item[data-photo-id="' + photoId + '"] .gallery-item-views');
+      if (gridBadge) gridBadge.textContent = '👁 ' + (count || 0);
+    } catch(e) {
+      console.error('Ошибка записи просмотра:', e);
+    }
+  }
+
+  function closeViewer() {
+    document.getElementById('viewer-overlay').classList.remove('show');
+    document.getElementById('viewer-overlay').classList.remove('immersive');
+    document.getElementById('viewer-video').pause();
+    document.getElementById('viewer-video').src = '';
+    document.getElementById('viewer-img').src = '';
+  }
+
+  init();
+}
 </script>
 </body>
 </html>
