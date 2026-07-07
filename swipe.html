@@ -9,8 +9,11 @@
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;position:relative}
-.topbar{display:flex;align-items:center;justify-content:center;padding:16px 20px;position:absolute;top:0;left:0;right:0;background:linear-gradient(rgba(13,13,13,0.85),transparent);z-index:15}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;position:absolute;top:0;left:0;right:0;background:linear-gradient(rgba(13,13,13,0.85),transparent);z-index:15}
 .logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.lang-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;min-width:40px;text-align:center}
+.lang-btn:active{opacity:0.7}
 .feed-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
 .card-stack{position:relative;width:100%;max-width:360px;height:480px}
 .profile-card{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:24px;overflow:hidden;cursor:grab;user-select:none;transition:transform 0.1s;box-shadow:0 8px 40px rgba(0,0,0,0.5)}
@@ -65,11 +68,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </head>
 <body>
 <div class="topbar">
-  <div class="logo">Знакомства</div>
+  <div class="logo" data-i18n="swipe">Знакомства</div>
+  <div class="topbar-right">
+    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
+  </div>
 </div>
 
 <div class="feed-wrap" id="feed-wrap">
-  <div style="color:var(--muted);font-size:14px">⏳ Загрузка...</div>
+  <div style="color:var(--muted);font-size:14px" data-i18n="loading">⏳ Загрузка...</div>
 </div>
 
 <div class="actions">
@@ -79,40 +85,40 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 
 <div class="bottombar">
   <button class="bottom-btn" onclick="window.location.href='feed.html'">
-    <span class="ico">🏠</span><span>Лента</span>
+    <span class="ico">🏠</span><span data-i18n="feed">Лента</span>
   </button>
   <button class="bottom-btn active" onclick="window.location.href='swipe.html'">
-    <span class="ico">😍</span><span>Знакомства</span>
+    <span class="ico">😍</span><span data-i18n="swipe">Знакомства</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='likes.html'">
-    <span class="ico">💖</span><span>Лайки</span>
+    <span class="ico">💖</span><span data-i18n="likes">Лайки</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='matches.html'">
-    <span class="ico">💬</span><span>Чаты</span>
+    <span class="ico">💬</span><span data-i18n="chats">Чаты</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='profile.html'">
-    <span class="ico">👤</span><span>Профиль</span>
+    <span class="ico">👤</span><span data-i18n="profile">Профиль</span>
   </button>
 </div>
 
 <!-- Окно лайка с комментарием -->
 <div class="like-modal" id="like-modal">
   <div class="like-sheet">
-    <div class="like-sheet-title">❤️ Понравился(ась)?</div>
-    <textarea class="like-comment-input" id="like-comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
+    <div class="like-sheet-title" data-i18n="match">❤️ Понравился(ась)?</div>
+    <textarea class="like-comment-input" id="like-comment" data-i18n-placeholder="write_comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
     <div class="like-sheet-actions">
-      <button class="btn btn-outline" onclick="closeLikeModal()">Отмена</button>
-      <button class="btn" onclick="confirmLike()">Лайкнуть</button>
+      <button class="btn btn-outline" onclick="closeLikeModal()" data-i18n="cancel">Отмена</button>
+      <button class="btn" onclick="confirmLike()" data-i18n="match">Лайкнуть</button>
     </div>
   </div>
 </div>
 
 <div class="match-popup" id="match-popup">
   <div class="match-title">🎉 Match!</div>
-  <div class="match-sub">Вы понравились друг другу!</div>
+  <div class="match-sub" data-i18n="match">Вы понравились друг другу!</div>
   <div class="match-photos" id="match-photos"></div>
-  <button class="btn" onclick="goToChat()">Написать сообщение</button>
-  <button class="btn btn-outline" onclick="closeMatch()">Продолжить смотреть</button>
+  <button class="btn" onclick="goToChat()" data-i18n="chats">Написать сообщение</button>
+  <button class="btn btn-outline" onclick="closeMatch()" data-i18n="swipe">Продолжить смотреть</button>
 </div>
 
 <div class="debug-bar" id="debug-bar"></div>
@@ -141,6 +147,7 @@ async function init() {
     var { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
     currentProfile = profile;
     await loadProfiles();
+    BlizkoTheme.applyLang();
   } catch(e) { debug('Ошибка: ' + e.message); }
 }
 
@@ -170,7 +177,8 @@ function renderFeed() {
   var wrap = document.getElementById('feed-wrap');
   wrap.innerHTML = '';
   if (profiles.length === 0) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p>Пока нет анкет.<br>Загляни позже!</p></div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_photos">Пока нет анкет.<br>Загляни позже!</p></div>';
+    BlizkoTheme.applyLang();
     return;
   }
   if (currentIndex >= profiles.length) currentIndex = 0;
@@ -211,6 +219,7 @@ function renderFeed() {
   stack.appendChild(card);
   wrap.appendChild(stack);
   setupDrag(card);
+  BlizkoTheme.applyLang();
 }
 
 function setupDrag(card) {
