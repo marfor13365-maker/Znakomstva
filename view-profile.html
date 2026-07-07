@@ -13,6 +13,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center;transition:color 0.2s}
 .back-btn:active{color:var(--text)}
 .page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600;color:var(--text);flex:1}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.lang-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;min-width:40px;text-align:center}
+.lang-btn:active{opacity:0.7}
 .content{flex:1;padding-bottom:40px}
 .loading{padding:60px 20px;text-align:center;color:var(--muted);font-size:14px}
 .avatar-block{display:flex;flex-direction:column;align-items:center;padding:30px 20px}
@@ -25,8 +28,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .profile-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-top:14px}
 .profile-meta{font-size:13px;color:var(--muted);margin-top:6px}
 .actions-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
-.message-btn{padding:10px 20px;background:var(--accent);border:none;border-radius:14px;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:opacity 0.2s}
-.message-btn:active{opacity:0.7}
+.actions-row .btn{flex:0 1 auto;min-width:140px;padding:10px 20px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;border:none;transition:opacity 0.2s;white-space:nowrap}
+.actions-row .btn:active{opacity:0.7}
+.message-btn{background:var(--accent);color:white}
+.delete-match-btn{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.bell-btn{width:38px;height:38px;border-radius:50%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bell-btn.active{background:rgba(255,77,109,0.15);border-color:var(--accent)}
 .section{padding:0 20px;margin-bottom:20px}
 .section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:10px}
 .about-text{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px;line-height:1.6}
@@ -55,7 +62,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <body>
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">&#8592;</button>
-  <div class="page-title">Анкета</div>
+  <div class="page-title" data-i18n="profile">Анкета</div>
+  <div class="topbar-right">
+    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
+  </div>
 </div>
 <div class="content" id="content">
   <div class="loading">⏳ Загрузка...</div>
@@ -69,24 +79,47 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <div class="viewer-views" id="viewer-views">👁 <span id="viewer-views-count">0</span></div>
 </div>
 <div class="bottombar">
-  <button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span>Лента</span></button>
-  <button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span>Знакомства</span></button>
-  <button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span>Лайки</span></button>
-  <button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span>Чаты</span></button>
-  <button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">👤</span><span>Профиль</span></button>
+  <button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span data-i18n="feed">Лента</span></button>
+  <button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span data-i18n="swipe">Знакомства</span></button>
+  <button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span data-i18n="likes">Лайки</span></button>
+  <button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span data-i18n="chats">Чаты</span></button>
+  <button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">👤</span><span data-i18n="profile">Профиль</span></button>
 </div>
 
+<script src="theme.js"></script>
 <script src="config.js"></script>
+<script src="photo-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 var galleryItems = [];
+var currentTargetId = null;
+var currentMatchId = null;
 
 function getTargetUserId() {
   var params = new URLSearchParams(window.location.search);
   return params.get('user');
 }
+
+async function getMatchId(otherUserId) {
+  var { data } = await db.from('matches').select('id')
+    .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
+    .maybeSingle();
+  return data ? data.id : null;
+}
+
+window.deleteMatch = async function(matchId) {
+  if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
+  try {
+    await db.from('messages').delete().eq('match_id', matchId);
+    await db.from('matches').delete().eq('id', matchId);
+    alert('Чат удалён.');
+    window.location.href = 'matches.html';
+  } catch(e) {
+    alert('Ошибка при удалении: ' + e.message);
+  }
+};
 
 async function init() {
   try {
@@ -95,13 +128,18 @@ async function init() {
     currentUser = r.data.session.user;
     var targetId = getTargetUserId();
     if (!targetId) { window.location.href = 'feed.html'; return; }
+    currentTargetId = targetId;
 
-    var { data: profile, error } = await db.from('profiles').select('*').eq('id', targetId).single();
-    if (error || !profile) {
+    var { data: profile } = await db.from('profiles').select('*').eq('id', targetId).single();
+    if (!profile) {
       document.getElementById('content').innerHTML = '<div class="loading">Анкета не найдена</div>';
       return;
     }
+
+    currentMatchId = await getMatchId(targetId);
     renderProfile(profile);
+    BlizkoTheme.applyTheme();
+    BlizkoTheme.applyLang();
   } catch(e) {
     console.error('Ошибка загрузки анкеты:', e);
     document.getElementById('content').innerHTML = '<div class="loading">⚠️ Ошибка загрузки</div>';
@@ -110,6 +148,7 @@ async function init() {
 
 function renderProfile(profile) {
   var content = document.getElementById('content');
+
   var html =
     '<div class="avatar-block">' +
       '<div class="avatar-wrap">' +
@@ -117,20 +156,28 @@ function renderProfile(profile) {
       '</div>' +
       '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
       '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
-      '<div class="actions-row">' +
-        '<button class="message-btn" onclick="window.location.href=\'matches.html\'">💬 Написать сообщение</button>' +
-      '</div>' +
-    '</div>';
+      '<div class="actions-row">';
 
-  html += '<div class="section"><div class="section-title">О себе</div><div class="about-text">' +
+  if (currentMatchId) {
+    html += '<button class="btn message-btn" onclick="window.location.href=\'chat.html?match=' + currentMatchId + '\'" data-i18n="write_message">💬 Написать сообщение</button>';
+    html += '<button class="btn delete-match-btn" onclick="deleteMatch(\'' + currentMatchId + '\')" data-i18n="delete_match">🗑 Удалить матч</button>';
+  } else {
+    // Если нет матча, просто кнопка "Написать сообщение" ведёт на страницу матчей
+    html += '<button class="btn message-btn" onclick="window.location.href=\'matches.html\'" data-i18n="write_message">💬 Написать сообщение</button>';
+  }
+
+  html += '</div></div>';
+
+  html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text">' +
     (profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
     '</div></div>';
 
-  html += '<div class="section"><div class="section-title">Галерея</div></div>';
+  html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
   html += '<div class="gallery-grid" id="gallery-grid"></div>';
 
   content.innerHTML = html;
   loadGallery(profile.id);
+  BlizkoTheme.applyLang();
 }
 
 function escapeHtml(str) {
