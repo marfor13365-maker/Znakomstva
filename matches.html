@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blizko - Матчи (отладка)</title>
+<title>Blizko - Матчи</title>
 <style>
 body{background:#0d0d0d;color:#f0f0f0;font-family:Arial,sans-serif;padding:20px}
 .match-item{background:#161616;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer}
@@ -17,126 +17,129 @@ body{background:#0d0d0d;color:#f0f0f0;font-family:Arial,sans-serif;padding:20px}
 .time{font-size:12px;color:#888}
 .delete-btn{background:none;border:none;color:#888;font-size:20px;cursor:pointer}
 .delete-btn:active{color:#ff4d6d}
-.error{color:#ff4d6d;padding:20px;border:1px solid #ff4d6d;border-radius:8px;margin:20px 0}
+.error{color:#ff4d6d;padding:20px;border:1px solid #ff4d6d;border-radius:8px;margin:20px 0;white-space:pre-wrap}
 .loading{color:#888;text-align:center;padding:40px}
 </style>
 </head>
 <body>
 
-<h2>📋 Мои матчи (отладка)</h2>
-<div id="debug-info" style="background:#1a1a1a;padding:10px;border-radius:8px;margin-bottom:20px;font-size:13px;color:#4cff9f;"></div>
-<div id="match-list"></div>
+<h2>💬 Мои матчи</h2>
+<div id="status" style="background:#1a1a1a;padding:10px;border-radius:8px;margin-bottom:20px;font-size:13px;color:#4cff9f;"></div>
+<div id="match-list"><div class="loading">⏳ Загрузка...</div></div>
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ========== ПРЯМОЕ ПОДКЛЮЧЕНИЕ ==========
-var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-var currentUser = null;
-var debugEl = document.getElementById('debug-info');
+if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
+  document.getElementById('status').innerHTML = '❌ Ошибка: config.js не загружен.';
+  document.getElementById('match-list').innerHTML = '<div class="error">⚠️ config.js не найден.</div>';
+} else {
+  var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var currentUser = null;
+  var statusEl = document.getElementById('status');
+  var listEl = document.getElementById('match-list');
 
-function log(msg) {
-  console.log(msg);
-  debugEl.innerHTML += msg + '<br>';
-}
+  function log(msg) {
+    console.log(msg);
+    statusEl.innerHTML += msg + '<br>';
+  }
 
-async function init() {
-  try {
-    log('🔐 Проверка сессии...');
-    var { data: { session }, error } = await db.auth.getSession();
-    if (error) throw error;
-    if (!session) {
-      log('❌ Нет сессии, перенаправление на index.html');
-      window.location.href = 'index.html';
-      return;
-    }
-    currentUser = session.user;
-    log('✅ Пользователь: ' + currentUser.email);
+  async function init() {
+    try {
+      log('🔐 Проверка сессии...');
+      var { data: { session }, error } = await db.auth.getSession();
+      if (error) throw error;
+      if (!session) {
+        log('❌ Нет сессии');
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUser = session.user;
+      log('✅ Пользователь: ' + currentUser.email);
 
-    log('📡 Запрос матчей...');
-    var { data: matches, error: matchError } = await db.from('matches')
-      .select('*')
-      .or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id)
-      .order('created_at', { ascending: false });
+      log('📡 Запрос матчей...');
+      var { data: matches, error: matchError } = await db.from('matches')
+        .select('*')
+        .or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id)
+        .order('created_at', { ascending: false });
 
-    if (matchError) throw matchError;
-    log('📊 Найдено матчей: ' + (matches ? matches.length : 0));
+      if (matchError) throw matchError;
+      log('📊 Найдено матчей: ' + (matches ? matches.length : 0));
 
-    var container = document.getElementById('match-list');
-
-    if (!matches || matches.length === 0) {
-      container.innerHTML = '<div class="loading">💕 Нет совпадений. Листай анкеты!</div>';
-      return;
-    }
-
-    // Загружаем профили для каждого матча
-    for (var i = 0; i < matches.length; i++) {
-      var m = matches[i];
-      var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
-      log('🔄 Загружаем профиль для userId: ' + otherId);
-
-      var { data: profile, error: profError } = await db.from('profiles')
-        .select('name, city, photo_url')
-        .eq('id', otherId)
-        .single();
-
-      if (profError) {
-        log('⚠️ Ошибка профиля: ' + profError.message);
-        // создаём заглушку
-        var p = { name: 'Пользователь', city: '', photo_url: null };
-      } else {
-        var p = profile;
-        log('✅ Профиль загружен: ' + p.name);
+      if (!matches || matches.length === 0) {
+        listEl.innerHTML = '<div class="loading">💕 Нет совпадений.</div>';
+        return;
       }
 
-      var time = new Date(m.created_at);
-      var timeStr = time.toLocaleDateString('ru-RU') + ' ' + time.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+      listEl.innerHTML = '';
 
-      var item = document.createElement('div');
-      item.className = 'match-item';
-      item.onclick = function() { window.location.href = 'chat.html?match=' + m.id; };
+      for (var i = 0; i < matches.length; i++) {
+        var m = matches[i];
+        var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
+        log('🔄 Загружаем профиль userId: ' + otherId);
 
-      var avatarHtml = p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤';
+        var { data: profile, error: profError } = await db.from('profiles')
+          .select('name, city, photo_url')
+          .eq('id', otherId)
+          .single();
 
-      item.innerHTML = `
-        <div class="avatar" onclick="event.stopPropagation(); window.location.href='view-profile.html?user=${otherId}'">
-          ${avatarHtml}
-        </div>
-        <div class="info">
-          <div class="name">${p.name || 'Пользователь'}</div>
-          <div class="city">${p.city || ''}</div>
-        </div>
-        <div class="meta">
-          <div class="time">${timeStr}</div>
-          <button class="delete-btn" onclick="event.stopPropagation(); deleteMatch('${m.id}')">🗑</button>
-        </div>
-      `;
+        if (profError) {
+          log('⚠️ Ошибка профиля: ' + profError.message);
+          var p = { name: 'Пользователь', city: '', photo_url: null };
+        } else {
+          var p = profile;
+          log('✅ Профиль загружен: ' + p.name);
+        }
 
-      container.appendChild(item);
+        var time = new Date(m.created_at);
+        var timeStr = time.toLocaleDateString('ru-RU') + ' ' + time.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+
+        var item = document.createElement('div');
+        item.className = 'match-item';
+        item.onclick = function(matchId) {
+          return function() { window.location.href = 'chat.html?match=' + matchId; };
+        }(m.id);
+
+        var avatarHtml = p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤';
+
+        item.innerHTML = `
+          <div class="avatar" onclick="event.stopPropagation(); window.location.href='view-profile.html?user=${otherId}'">
+            ${avatarHtml}
+          </div>
+          <div class="info">
+            <div class="name">${p.name || 'Пользователь'}</div>
+            <div class="city">${p.city || ''}</div>
+          </div>
+          <div class="meta">
+            <div class="time">${timeStr}</div>
+            <button class="delete-btn" onclick="event.stopPropagation(); deleteMatch('${m.id}')">🗑</button>
+          </div>
+        `;
+
+        listEl.appendChild(item);
+      }
+
+      log('✅ Готово!');
+
+    } catch (e) {
+      log('❌ ОШИБКА: ' + e.message);
+      listEl.innerHTML = '<div class="error">⚠️ ' + e.message + '\n\nПроверьте консоль (F12).</div>';
     }
-
-    log('✅ Все матчи отображены');
-
-  } catch (e) {
-    log('❌ ОШИБКА: ' + e.message);
-    document.getElementById('match-list').innerHTML = `<div class="error">⚠️ Ошибка: ${e.message}</div>`;
   }
+
+  window.deleteMatch = async function(matchId) {
+    if (!confirm('Удалить этот чат?')) return;
+    try {
+      await db.from('messages').delete().eq('match_id', matchId);
+      await db.from('matches').delete().eq('id', matchId);
+      location.reload();
+    } catch(e) {
+      alert('Ошибка: ' + e.message);
+    }
+  };
+
+  init();
 }
-
-// ========== УДАЛЕНИЕ ==========
-window.deleteMatch = async function(matchId) {
-  if (!confirm('Удалить этот чат?')) return;
-  try {
-    await db.from('messages').delete().eq('match_id', matchId);
-    await db.from('matches').delete().eq('id', matchId);
-    location.reload(); // просто перезагружаем страницу
-  } catch(e) {
-    alert('Ошибка: ' + e.message);
-  }
-};
-
-// ЗАПУСК
-init();
 </script>
 </body>
 </html>
