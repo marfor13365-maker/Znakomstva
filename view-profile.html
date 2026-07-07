@@ -12,6 +12,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
 .back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center}
 .page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.lang-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;min-width:40px;text-align:center}
+.lang-btn:active{opacity:0.7}
 .content{flex:1;padding-bottom:40px}
 .loading{padding:60px 20px;text-align:center;color:var(--muted);font-size:14px}
 .avatar-block{display:flex;flex-direction:column;align-items:center;padding:30px 20px}
@@ -23,8 +26,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .new-post-dot.show{display:block}
 .profile-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-top:14px}
 .profile-meta{font-size:13px;color:var(--muted);margin-top:6px}
-.actions-row{display:flex;gap:10px;margin-top:14px}
+.actions-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
 .message-btn{padding:10px 20px;background:var(--accent);border:none;border-radius:14px;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.delete-match-btn{padding:10px 20px;background:transparent;border:1px solid var(--accent);border-radius:14px;color:var(--accent);font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.delete-match-btn:active{background:rgba(255,77,109,0.15)}
 .bell-btn{width:38px;height:38px;border-radius:50%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .bell-btn.active{background:rgba(255,77,109,0.15);border-color:var(--accent)}
 .section{padding:0 20px;margin-bottom:20px}
@@ -45,12 +50,20 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .viewer-content img{touch-action:none;-webkit-user-drag:none;-webkit-user-select:none;user-select:none;will-change:transform}
 .viewer-views{position:absolute;bottom:20px;left:0;right:0;text-align:center;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px}
 .viewer-overlay.immersive .viewer-close,.viewer-overlay.immersive .viewer-views{display:none}
+.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:transparent;z-index:10;gap:6px}
+.bottom-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:rgba(255,255,255,0.85);cursor:pointer;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:opacity 0.2s;flex:1;border-radius:16px;box-shadow:0 2px 10px rgba(255,77,109,0.4)}
+.bottom-btn.active{color:white;font-weight:600;opacity:1}
+.bottom-btn:not(.active){opacity:0.85}
+.bottom-btn .ico{font-size:22px}
 </style>
 </head>
 <body>
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">&#8592;</button>
-  <div class="page-title">Анкета</div>
+  <div class="page-title" data-i18n="profile">Анкета</div>
+  <div class="topbar-right">
+    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
+  </div>
 </div>
 <div class="content" id="content">
   <div class="loading">⏳ Загрузка...</div>
@@ -63,6 +76,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   </div>
   <div class="viewer-views" id="viewer-views">👁 <span id="viewer-views-count">0</span></div>
 </div>
+<div class="bottombar">
+  <button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span data-i18n="feed">Лента</span></button>
+  <button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span data-i18n="swipe">Знакомства</span></button>
+  <button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span data-i18n="likes">Лайки</span></button>
+  <button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span data-i18n="chats">Чаты</span></button>
+  <button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">👤</span><span data-i18n="profile">Профиль</span></button>
+</div>
+
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="photo-viewer.js"></script>
@@ -73,17 +94,20 @@ var currentUser = null;
 var galleryItems = [];
 var bellActive = false;
 var currentTargetId = null;
+var currentMatchId = null;
 
 function getTargetUserId() {
   var params = new URLSearchParams(window.location.search);
   return params.get('user');
 }
+
 async function getMatchId(otherUserId) {
   var { data } = await db.from('matches').select('id')
     .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
-    .single();
+    .maybeSingle();
   return data ? data.id : null;
 }
+
 async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) { window.location.href = 'index.html'; return; }
@@ -91,30 +115,34 @@ async function init() {
   var targetId = getTargetUserId();
   if (!targetId) { window.location.href = 'feed.html'; return; }
   currentTargetId = targetId;
+
   var { data: profile } = await db.from('profiles').select('*').eq('id', targetId).single();
   if (!profile) {
     document.getElementById('content').innerHTML = '<div class="loading">Анкета не найдена</div>';
     return;
   }
-  var matchId = await getMatchId(targetId);
+
+  currentMatchId = await getMatchId(targetId);
   var visibility = profile.profile_visibility || 'matches';
   var canSeeFull = true;
-  if (visibility === 'none') {
-    canSeeFull = false;
-  } else if (visibility === 'matches') {
-    canSeeFull = !!matchId;
-  }
+
+  if (visibility === 'none') canSeeFull = false;
+  else if (visibility === 'matches') canSeeFull = !!currentMatchId;
+
   var hasNew = await checkHasNewPost(targetId);
-  renderProfile(profile, canSeeFull, targetId, matchId, hasNew);
+  renderProfile(profile, canSeeFull, targetId, hasNew);
   await loadBellState(targetId);
+
   if (hasNew) {
     await markProfileSeen(targetId);
-    var avatar=document.querySelector('.avatar-circle');
-    var dot=document.querySelector('.new-post-dot');
+    var avatar = document.querySelector('.avatar-circle');
+    var dot = document.querySelector('.new-post-dot');
     if (avatar) avatar.classList.remove('has-new');
     if (dot) dot.classList.remove('show');
   }
+  BlizkoTheme.applyLang();
 }
+
 async function checkHasNewPost(targetId) {
   var { data: lastPhoto } = await db.from('profile_photos')
     .select('created_at')
@@ -123,14 +151,10 @@ async function checkHasNewPost(targetId) {
     .limit(1)
     .maybeSingle();
   if (!lastPhoto) return false;
-  
+
   var seenFromStorage = localStorage.getItem('profile_seen_' + targetId);
-  if (seenFromStorage) {
-    if (new Date(lastPhoto.created_at) <= new Date(seenFromStorage)) {
-      return false;
-    }
-  }
-  
+  if (seenFromStorage && new Date(lastPhoto.created_at) <= new Date(seenFromStorage)) return false;
+
   var { data: seen } = await db.from('profile_seen')
     .select('last_seen_at')
     .eq('viewer_id', currentUser.id)
@@ -139,6 +163,7 @@ async function checkHasNewPost(targetId) {
   if (!seen) return true;
   return new Date(lastPhoto.created_at) > new Date(seen.last_seen_at);
 }
+
 async function markProfileSeen(targetId) {
   var now = new Date().toISOString();
   localStorage.setItem('profile_seen_' + targetId, now);
@@ -148,6 +173,7 @@ async function markProfileSeen(targetId) {
     last_seen_at: now
   }, { onConflict: 'viewer_id,target_user_id' });
 }
+
 async function loadBellState(targetId) {
   var { data } = await db.from('post_notify_subs')
     .select('id')
@@ -157,6 +183,7 @@ async function loadBellState(targetId) {
   bellActive = !!data;
   updateBellButton();
 }
+
 function updateBellButton() {
   var btn = document.getElementById('bell-btn');
   if (!btn) return;
@@ -164,11 +191,11 @@ function updateBellButton() {
   btn.textContent = bellActive ? '🔔' : '🔕';
   btn.title = bellActive ? 'Уведомления о новых постах включены' : 'Уведомлять о новых постах';
 }
+
 async function toggleBell() {
   if (!currentTargetId) return;
   if (bellActive) {
-    await db.from('post_notify_subs')
-      .delete()
+    await db.from('post_notify_subs').delete()
       .eq('subscriber_id', currentUser.id)
       .eq('target_user_id', currentTargetId);
     bellActive = false;
@@ -181,8 +208,10 @@ async function toggleBell() {
   }
   updateBellButton();
 }
-function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
+
+function renderProfile(profile, canSeeFull, targetId, hasNew) {
   var content = document.getElementById('content');
+
   var html =
     '<div class="avatar-block">' +
       '<div class="avatar-wrap">' +
@@ -193,30 +222,39 @@ function renderProfile(profile, canSeeFull, targetId, matchId, hasNew) {
       '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
       '<div class="actions-row">' +
         '<button class="bell-btn" id="bell-btn" onclick="toggleBell()">🔕</button>';
-  if (matchId) {
-    html += '<button class="message-btn" onclick="window.location.href=\'chat.html?match=' + matchId + '\'">💬 Написать сообщение</button>';
+
+  if (currentMatchId) {
+    html += '<button class="message-btn" onclick="window.location.href=\'chat.html?match=' + currentMatchId + '\'">💬 Написать сообщение</button>';
+    html += '<button class="delete-match-btn" onclick="deleteMatch(\'' + currentMatchId + '\')">🗑 Удалить матч</button>';
   }
+
   html += '</div></div>';
+
   if (!canSeeFull) {
-    var visibility = profile.profile_visibility || 'matches';
-    var reason = visibility === 'none'
+    var reason = profile.profile_visibility === 'none'
       ? 'Этот человек закрыл анкету для всех.'
       : 'Анкета открыта только для тех, с кем есть взаимный лайк (мэтч).';
     html += '<div class="locked-state"><div class="icon">🔒</div><p>' + reason + '<br>Информация "о себе" и галерея недоступны.</p></div>';
     content.innerHTML = html;
     return;
   }
+
   html += '<div class="section"><div class="section-title">О себе</div><div class="about-text">' +
     (profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
     '</div></div>';
+
   html += '<div class="section"><div class="section-title">Галерея</div></div>';
   html += '<div class="gallery-grid" id="gallery-grid"></div>';
+
   content.innerHTML = html;
   loadGallery(targetId);
+  BlizkoTheme.applyLang();
 }
+
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
 async function loadGallery(targetId) {
   var { data } = await db.from('profile_photos').select('*').eq('user_id', targetId).order('position', { ascending: true });
   galleryItems = data || [];
@@ -233,6 +271,7 @@ async function loadGallery(targetId) {
     .eq('item_type', 'profile_photo')
     .in('item_id', photoIds);
   (viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
+
   grid.innerHTML = '';
   galleryItems.forEach(function(item, idx) {
     var el = document.createElement('div');
@@ -246,6 +285,7 @@ async function loadGallery(targetId) {
     grid.appendChild(el);
   });
 }
+
 var galleryViewerAttached = false;
 function ensureGalleryViewerAttached() {
   if (galleryViewerAttached) return;
@@ -257,6 +297,7 @@ function ensureGalleryViewerAttached() {
     }
   });
 }
+
 function openViewer(idx) {
   var item = galleryItems[idx];
   if (!item) return;
@@ -280,6 +321,7 @@ function openViewer(idx) {
   document.getElementById('viewer-overlay').classList.add('show');
   recordAndShowProfilePhotoViews(item.id);
 }
+
 async function recordAndShowProfilePhotoViews(photoId) {
   await db.from('media_views').insert({
     item_type: 'profile_photo',
@@ -295,6 +337,7 @@ async function recordAndShowProfilePhotoViews(photoId) {
   var gridBadge = document.querySelector('.gallery-item[data-photo-id="' + photoId + '"] .gallery-item-views');
   if (gridBadge) gridBadge.textContent = '👁 ' + (count || 0);
 }
+
 function closeViewer() {
   document.getElementById('viewer-overlay').classList.remove('show');
   document.getElementById('viewer-overlay').classList.remove('immersive');
@@ -302,6 +345,20 @@ function closeViewer() {
   document.getElementById('viewer-video').src = '';
   document.getElementById('viewer-img').src = '';
 }
+
+// Глобальная функция удаления матча
+window.deleteMatch = async function(matchId) {
+  if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
+  try {
+    await db.from('messages').delete().eq('match_id', matchId);
+    await db.from('matches').delete().eq('id', matchId);
+    alert('Чат удалён.');
+    window.location.href = 'matches.html';
+  } catch(e) {
+    alert('Ошибка при удалении: ' + e.message);
+  }
+};
+
 init();
 </script>
 </body>
