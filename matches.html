@@ -78,216 +78,165 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Глобальный перехват ошибок (чтобы белый экран не появлялся)
-window.onerror = function(message, source, lineno, colno, error) {
-  console.error('Глобальная ошибка:', message, error);
-  alert('Произошла ошибка: ' + message);
-  return true; // предотвращает стандартное поведение
+// ============================================================
+// ВАРИАНТ: ЛОКАЛЬНОЕ УДАЛЕНИЕ (без отправки запроса в Supabase)
+// Чат скрывается из списка до перезагрузки страницы.
+// ============================================================
+
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var currentUser = null;
+var allMatches = []; // храним все загруженные матчи
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr);
+  var now = new Date();
+  var diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return BlizkoTheme.getText('just_now');
+  if (diff < 3600) return Math.floor(diff/60) + ' ' + BlizkoTheme.getText('min');
+  if (diff < 86400) return Math.floor(diff/3600) + ' ' + BlizkoTheme.getText('h');
+  var day = d.getDate().toString().padStart(2,'0');
+  var mon = (d.getMonth()+1).toString().padStart(2,'0');
+  return day + '.' + mon;
+}
+
+// Функция удаления — просто удаляет элемент из DOM и из массива allMatches
+window.deleteMatch = function(matchId, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+
+  if (!matchId) {
+    alert('Ошибка: нет ID матча');
+    return;
+  }
+
+  if (!confirm('Удалить этот чат из списка? (Данные в базе сохранятся)')) return;
+
+  // Находим индекс в allMatches
+  var index = allMatches.findIndex(function(item) {
+    return item.match.id === matchId;
+  });
+  if (index !== -1) {
+    allMatches.splice(index, 1); // удаляем из массива
+  }
+
+  // Удаляем элемент из DOM
+  var items = document.querySelectorAll('.match-item');
+  for (var i = 0; i < items.length; i++) {
+    var btn = items[i].querySelector('.match-delete-btn');
+    if (btn && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf(matchId) !== -1) {
+      items[i].remove();
+      break;
+    }
+  }
+
+  // Если список стал пустым, показываем пустое состояние
+  var remaining = document.querySelectorAll('.match-item');
+  if (remaining.length === 0) {
+    var wrap = document.getElementById('match-list-wrap');
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
+    if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
+      BlizkoTheme.applyLang();
+    }
+  }
+
+  console.log('✅ Чат локально удалён (ID:', matchId, ')');
 };
 
-// Основной код
-(function() {
-  'use strict';
-
-  var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  var currentUser = null;
-
-  function timeAgo(dateStr) {
-    if (!dateStr) return '';
-    var d = new Date(dateStr);
-    var now = new Date();
-    var diff = Math.floor((now - d) / 1000);
-    if (diff < 60) return BlizkoTheme.getText('just_now');
-    if (diff < 3600) return Math.floor(diff/60) + ' ' + BlizkoTheme.getText('min');
-    if (diff < 86400) return Math.floor(diff/3600) + ' ' + BlizkoTheme.getText('h');
-    var day = d.getDate().toString().padStart(2,'0');
-    var mon = (d.getMonth()+1).toString().padStart(2,'0');
-    return day + '.' + mon;
-  }
-
-  // ========== ФУНКЦИЯ УДАЛЕНИЯ С ПОЛНОЙ ЗАЩИТОЙ ==========
-  window.deleteMatch = async function(matchId, event) {
-    try {
-      if (event) {
-        event.stopPropagation();
-        event.preventDefault();
-      }
-
-      console.log('🔍 deleteMatch вызван с matchId:', matchId);
-
-      if (!matchId) {
-        alert('Ошибка: идентификатор матча не передан');
-        return;
-      }
-
-      if (!currentUser) {
-        alert('Ошибка: пользователь не авторизован');
-        return;
-      }
-
-      // Проверяем, принадлежит ли матч текущему пользователю
-      const { data: matchData, error: fetchError } = await db
-        .from('matches')
-        .select('*')
-        .eq('id', matchId)
-        .single();
-
-      if (fetchError) {
-        console.error('❌ Ошибка поиска матча:', fetchError);
-        alert('Матч не найден или уже удалён');
-        return;
-      }
-
-      if (matchData.user1 !== currentUser.id && matchData.user2 !== currentUser.id) {
-        alert('Этот матч не принадлежит вам');
-        return;
-      }
-
-      if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) {
-        return;
-      }
-
-      // 1. Удаляем сообщения
-      try {
-        const { error: msgError } = await db
-          .from('messages')
-          .delete()
-          .eq('match_id', matchId);
-        if (msgError) {
-          console.warn('⚠️ Ошибка при удалении сообщений:', msgError);
-          // не прерываем
-        } else {
-          console.log('✅ Сообщения удалены');
-        }
-      } catch (e) {
-        console.warn('⚠️ Исключение при удалении сообщений:', e);
-      }
-
-      // 2. Удаляем матч
-      const { error: matchError } = await db
-        .from('matches')
-        .delete()
-        .eq('id', matchId);
-
-      if (matchError) {
-        console.error('❌ Ошибка удаления матча:', matchError);
-        alert('Не удалось удалить матч: ' + matchError.message);
-        return;
-      }
-
-      console.log('✅ Матч удалён');
-      // Обновляем список
-      await loadMatches();
-      console.log('🔄 Список обновлён');
-
-    } catch (err) {
-      console.error('❌ Непредвиденная ошибка в deleteMatch:', err);
-      alert('Произошла ошибка при удалении: ' + err.message);
+async function init() {
+  try {
+    var r = await db.auth.getSession();
+    if (!r.data.session) {
+      window.location.href = 'index.html';
+      return;
     }
-  };
-  // ==================================================
+    currentUser = r.data.session.user;
+    await loadMatches();
+    if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
+      BlizkoTheme.applyLang();
+    }
+  } catch(e) {
+    console.error('Init error:', e);
+    document.getElementById('match-list-wrap').innerHTML = '<div class="error-state">⚠️ Ошибка загрузки: ' + e.message + '</div>';
+  }
+}
 
-  async function init() {
-    try {
-      var r = await db.auth.getSession();
-      if (!r.data.session) {
-        window.location.href = 'index.html';
-        return;
-      }
-      currentUser = r.data.session.user;
-      console.log('✅ Авторизован как:', currentUser.id);
-      await loadMatches();
+async function loadMatches() {
+  var wrap = document.getElementById('match-list-wrap');
+  try {
+    if (!currentUser) {
+      wrap.innerHTML = '<div class="error-state">⚠️ Пользователь не авторизован</div>';
+      return;
+    }
+
+    var { data: matches, error } = await db.from('matches').select('*')
+      .or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!matches || matches.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
       if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
         BlizkoTheme.applyLang();
       }
-    } catch(e) {
-      console.error('Init error:', e);
-      var wrap = document.getElementById('match-list-wrap');
-      if (wrap) {
-        wrap.innerHTML = '<div class="error-state">⚠️ Ошибка загрузки: ' + e.message + '</div>';
-      }
+      return;
     }
-  }
 
-  async function loadMatches() {
-    var wrap = document.getElementById('match-list-wrap');
-    if (!wrap) return;
+    // Загружаем профили для каждого матча
+    var items = [];
+    for (var i = 0; i < matches.length; i++) {
+      var m = matches[i];
+      var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
+      var { data: otherProfile, error: profErr } = await db.from('profiles').select('name,city,photo_url').eq('id', otherId).single();
+      if (profErr) console.warn('Profile not found for user:', otherId);
+      items.push({ match: m, profile: otherProfile || {}, otherId: otherId });
+    }
 
-    try {
-      if (!currentUser) {
-        wrap.innerHTML = '<div class="error-state">⚠️ Пользователь не авторизован</div>';
-        return;
-      }
+    // Сохраняем в глобальный массив
+    allMatches = items;
 
-      var { data: matches, error } = await db.from('matches').select('*')
-        .or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id)
-        .order('created_at', { ascending: false });
+    var html = '';
+    items.forEach(function(item) {
+      var p = item.profile || {};
+      var matchTime = timeAgo(item.match.created_at);
+      var avatarHtml = p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤';
+      var name = p.name || 'Пользователь';
+      var city = p.city || '';
+      var matchId = item.match.id;
+      var otherId = item.otherId;
 
-      if (error) throw error;
-
-      if (!matches || matches.length === 0) {
-        wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
-        if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
-          BlizkoTheme.applyLang();
-        }
-        return;
-      }
-
-      var items = [];
-      for (var i = 0; i < matches.length; i++) {
-        var m = matches[i];
-        var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
-        var { data: otherProfile, error: profErr } = await db.from('profiles').select('name,city,photo_url').eq('id', otherId).single();
-        if (profErr) console.warn('Profile not found for user:', otherId);
-        items.push({ match: m, profile: otherProfile || {}, otherId: otherId });
-      }
-
-      var html = '';
-      items.forEach(function(item) {
-        var p = item.profile || {};
-        var matchTime = timeAgo(item.match.created_at);
-        var avatarHtml = p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤';
-        var name = p.name || 'Пользователь';
-        var city = p.city || '';
-        var matchId = item.match.id;
-        var otherId = item.otherId;
-
-        html += `
-          <div class="match-item" onclick="window.location.href='chat.html?match=${matchId}'">
-            <div class="avatar" onclick="event.stopPropagation(); window.location.href='view-profile.html?user=${otherId}'">
-              ${avatarHtml}
-            </div>
-            <div class="match-info">
-              <div class="match-name">${name}</div>
-              <div class="match-city">${city}</div>
-            </div>
-            <div class="match-meta">
-              <div class="match-time">${matchTime}</div>
-              <button class="match-delete-btn" onclick="deleteMatch('${matchId}', event)">🗑</button>
-            </div>
+      html += `
+        <div class="match-item" onclick="window.location.href='chat.html?match=${matchId}'">
+          <div class="avatar" onclick="event.stopPropagation(); window.location.href='view-profile.html?user=${otherId}'">
+            ${avatarHtml}
           </div>
-        `;
-      });
+          <div class="match-info">
+            <div class="match-name">${name}</div>
+            <div class="match-city">${city}</div>
+          </div>
+          <div class="match-meta">
+            <div class="match-time">${matchTime}</div>
+            <button class="match-delete-btn" onclick="deleteMatch('${matchId}', event)">🗑</button>
+          </div>
+        </div>
+      `;
+    });
 
-      wrap.innerHTML = html;
-      if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
-        BlizkoTheme.applyLang();
-      }
-
-    } catch(e) {
-      console.error('loadMatches error:', e);
-      wrap.innerHTML = '<div class="error-state">⚠️ Ошибка загрузки матчей: ' + e.message + '</div>';
+    wrap.innerHTML = html;
+    if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
+      BlizkoTheme.applyLang();
     }
-  }
 
-  // Запуск после загрузки DOM
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  } catch(e) {
+    console.error('loadMatches error:', e);
+    wrap.innerHTML = '<div class="error-state">⚠️ Ошибка загрузки матчей: ' + e.message + '</div>';
   }
+}
 
-})();
+init();
 </script>
 </body>
 </html>
