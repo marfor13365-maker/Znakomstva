@@ -15,6 +15,7 @@
     likes: 'Лайки',
     chats: 'Чаты',
     profile: 'Профиль',
+    matches: 'Матчи',    // <--- добавлено
     add_post: '+',
     loading: '⏳ Загрузка...',
     no_photos: 'Пока нет фото. Будь первым — добавь своё!',
@@ -67,7 +68,23 @@
     delete_account_warning: 'Будут удалены: анкета, фото, посты, лайки, чаты и сообщения. Это действие нельзя отменить.',
     cancel: 'Отмена',
     loading_users: '⏳ Загрузка...',
-    profile: 'Профиль'
+    profile: 'Профиль',
+    just_now: 'только что',
+    min: 'мин',
+    h: 'ч',
+    you: 'Вы',
+    write_first: 'Напишите первым!',
+    no_matches: 'Пока нет совпадений.\nЛистай анкеты и находи людей!',
+    go_swipe: 'Найти людей',
+    match_like: '❤️ Понравился(ась)?',
+    like: 'Лайкнуть',
+    match_text: 'Вы понравились друг другу!',
+    go_feed: 'Перейти в ленту',
+    no_profiles: 'Пока нет анкет.\nЗагляни позже!',
+    chat: 'Чат',
+    no_messages: 'Нет сообщений. Напиши первым!',
+    write_message: 'Написать сообщение...',
+    confirm_delete_chat: 'Точно удалить этот чат? Все сообщения будут удалены.'
   };
 
   var LANG_EN = {
@@ -76,6 +93,7 @@
     likes: 'Likes',
     chats: 'Chats',
     profile: 'Profile',
+    matches: 'Matches',   // <--- добавлено
     add_post: '+',
     loading: '⏳ Loading...',
     no_photos: 'No photos yet. Be the first to add yours!',
@@ -128,7 +146,23 @@
     delete_account_warning: 'Will be deleted: profile, photos, posts, likes, chats and messages. This action cannot be undone.',
     cancel: 'Cancel',
     loading_users: '⏳ Loading...',
-    profile: 'Profile'
+    profile: 'Profile',
+    just_now: 'just now',
+    min: 'min',
+    h: 'h',
+    you: 'You',
+    write_first: 'Write first!',
+    no_matches: 'No matches yet.\nSwipe to find people!',
+    go_swipe: 'Find people',
+    match_like: '❤️ Liked?',
+    like: 'Like',
+    match_text: 'You liked each other!',
+    go_feed: 'Go to feed',
+    no_profiles: 'No profiles yet.\nCheck back later!',
+    chat: 'Chat',
+    no_messages: 'No messages yet. Write first!',
+    write_message: 'Write a message...',
+    confirm_delete_chat: 'Delete this chat? All messages will be lost.'
   };
 
   function getLang() {
@@ -160,7 +194,6 @@
     return 'ru';
   }
 
-  // Применяем язык ко всем элементам с data-i18n
   function applyLang() {
     var lang = getLang();
     var dict = lang === 'en' ? LANG_EN : LANG_RU;
@@ -179,13 +212,11 @@
       }
     });
 
-    // Обновляем кнопку переключения языка
     var langBtn = document.getElementById('lang-toggle-btn');
     if (langBtn) {
       langBtn.textContent = lang === 'ru' ? 'EN' : 'RU';
     }
 
-    // Обновляем html lang
     document.documentElement.lang = lang;
   }
 
@@ -239,17 +270,14 @@
 
   // ============ INIT ============
   function init() {
-    // Если язык не установлен — определяем из браузера
     if (!localStorage.getItem('blizko_lang')) {
       var detected = detectBrowserLang();
       setLang(detected);
     }
-    
     applyTheme();
     applyLang();
   }
 
-  // Применяем тему и язык сразу
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
@@ -262,7 +290,6 @@
     setColor: setColor,
     getMode: getMode,
     getColor: getColor,
-    // Язык
     getLang: getLang,
     setLang: setLang,
     toggleLang: toggleLang,
