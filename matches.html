@@ -74,10 +74,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   </button>
 </div>
 
-<!-- Подключаем env.js (в нём будет заменён плейсхолдер) -->
-<script src="env.js"></script>
-<script src="theme.js"></script>
-<script src="config.js"></script>
+<!-- Подключаем env.js из корня (на уровень выше) -->
+<script src="../env.js"></script>
+<script src="../theme.js"></script>
+<script src="../config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ============================================================
@@ -173,7 +173,7 @@ async function init() {
   try {
     var r = await db.auth.getSession();
     if (!r.data.session) {
-      window.location.href = 'index.html';
+      window.location.href = '../index.html';
       return;
     }
     currentUser = r.data.session.user;
@@ -203,7 +203,7 @@ async function loadMatches() {
     if (error) throw error;
 
     if (!matches || matches.length === 0) {
-      wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
+      wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'../swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
       if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
         BlizkoTheme.applyLang();
       }
@@ -230,8 +230,8 @@ async function loadMatches() {
       var otherId = item.otherId;
 
       html += `
-        <div class="match-item" onclick="window.location.href='chat.html?match=${matchId}'">
-          <div class="avatar" onclick="event.stopPropagation(); window.location.href='view-profile.html?user=${otherId}'">
+        <div class="match-item" onclick="window.location.href='../chat.html?match=${matchId}'">
+          <div class="avatar" onclick="event.stopPropagation(); window.location.href='../view-profile.html?user=${otherId}'">
             ${avatarHtml}
           </div>
           <div class="match-info">
