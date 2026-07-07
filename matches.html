@@ -57,44 +57,31 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 
 <div class="bottombar">
-  <button class="bottom-btn" onclick="window.location.href='feed.html'">
+  <button class="bottom-btn" onclick="window.location.href='../feed.html'">
     <span class="ico">🏠</span><span data-i18n="feed">Лента</span>
   </button>
-  <button class="bottom-btn" onclick="window.location.href='swipe.html'">
+  <button class="bottom-btn" onclick="window.location.href='../swipe.html'">
     <span class="ico">😍</span><span data-i18n="swipe">Знакомства</span>
   </button>
-  <button class="bottom-btn" onclick="window.location.href='likes.html'">
+  <button class="bottom-btn" onclick="window.location.href='../likes.html'">
     <span class="ico">💖</span><span data-i18n="likes">Лайки</span>
   </button>
   <button class="bottom-btn active">
     <span class="ico">💬</span><span data-i18n="matches">Матчи</span>
   </button>
-  <button class="bottom-btn" onclick="window.location.href='profile.html'">
+  <button class="bottom-btn" onclick="window.location.href='../profile.html'">
     <span class="ico">👤</span><span data-i18n="profile">Профиль</span>
   </button>
 </div>
 
-<!-- Подключаем env.js из корня (на уровень выше) -->
-<script src="../env.js"></script>
 <script src="../theme.js"></script>
 <script src="../config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ============================================================
-// КЛЮЧ БЕРЁТСЯ ИЗ env.js (подставляется через Build Command)
+// УДАЛЕНИЕ ЧЕРЕЗ ОБЫЧНЫЙ КЛИЕНТ (RLS настроен в Supabase)
 // ============================================================
-const SERVICE_KEY = SUPABASE_SERVICE_KEY;
-
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-var dbAdmin = null;
-
-if (SERVICE_KEY && SERVICE_KEY !== '{{SUPABASE_SERVICE_KEY}}' && SERVICE_KEY.startsWith('sb_secret')) {
-  dbAdmin = supabase.createClient(SUPABASE_URL, SERVICE_KEY);
-  console.log('✅ Сервисный ключ загружен из env.js');
-} else {
-  console.error('❌ Ключ не подставлен в env.js');
-}
-
 var currentUser = null;
 
 function timeAgo(dateStr) {
@@ -126,29 +113,24 @@ window.deleteMatch = async function(matchId, event) {
     return;
   }
 
-  if (!dbAdmin) {
-    alert('Ошибка: сервисный ключ не загружен. Удаление невозможно.');
-    return;
-  }
-
-  if (!confirm('Удалить этот чат? Все сообщения будут удалены безвозвратно.')) return;
+  if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
 
   try {
     console.log('🔍 Удаляем матч с ID:', matchId);
 
     // 1. Удаляем сообщения
-    const { error: msgError } = await dbAdmin
+    const { error: msgError } = await db
       .from('messages')
       .delete()
       .eq('match_id', matchId);
     if (msgError) {
       console.warn('⚠️ Ошибка при удалении сообщений:', msgError);
-    } else {
-      console.log('✅ Сообщения удалены');
+      alert('Не удалось удалить сообщения: ' + msgError.message);
+      return;
     }
 
     // 2. Удаляем сам матч
-    const { error: matchError } = await dbAdmin
+    const { error: matchError } = await db
       .from('matches')
       .delete()
       .eq('id', matchId);
@@ -161,7 +143,6 @@ window.deleteMatch = async function(matchId, event) {
 
     console.log('✅ Матч удалён из базы');
     await loadMatches();
-    console.log('🔄 Список обновлён');
 
   } catch (err) {
     console.error('❌ Непредвиденная ошибка:', err);
