@@ -170,30 +170,16 @@ async function loadMatches() {
   BlizkoTheme.applyLang();
 }
 
-// Глобальная функция удаления
 async function deleteMatch(matchId) {
-  console.log('deleteMatch called for matchId:', matchId);
-  if (!confirm('Удалить этот чат?')) {
-    console.log('delete cancelled');
-    return;
-  }
+  if (!confirm('Удалить этот чат?')) return;
   try {
-    console.log('Deleting messages for matchId:', matchId);
     await db.from('messages').delete().eq('match_id', matchId);
-    console.log('Messages deleted');
-    console.log('Deleting match:', matchId);
     await db.from('matches').delete().eq('id', matchId);
-    console.log('Match deleted');
     await loadMatches();
-    console.log('List refreshed');
   } catch(e) {
-    console.error('Delete error:', e);
     alert('Ошибка при удалении: ' + e.message);
   }
 }
-
-// Делаем функцию доступной глобально
-window.deleteMatch = deleteMatch;
 
 init();
 </script>
