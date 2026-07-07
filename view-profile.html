@@ -64,7 +64,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <button class="back-btn" onclick="history.back()">&#8592;</button>
   <div class="page-title" data-i18n="profile">Анкета</div>
   <div class="topbar-right">
-    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
+    <button class="lang-btn" id="lang-toggle-btn" onclick="toggleLanguage()">EN</button>
   </div>
 </div>
 <div class="content" id="content">
@@ -93,14 +93,29 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script>
 // Проверка загрузки config.js
 if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
-  document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">❌ Ошибка: config.js не загружен. Проверьте файл.</div>';
-  console.error('config.js не загружен или переменные не определены.');
+  document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">❌ Ошибка: config.js не загружен.</div>';
+  console.error('config.js не загружен.');
 } else {
   var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   var currentUser = null;
   var galleryItems = [];
   var currentTargetId = null;
   var currentMatchId = null;
+
+  // Функция переключения языка
+  window.toggleLanguage = function() {
+    if (typeof BlizkoTheme !== 'undefined' && typeof BlizkoTheme.toggleLang === 'function') {
+      BlizkoTheme.toggleLang();
+    } else {
+      // fallback: просто меняем текст на кнопке
+      var btn = document.getElementById('lang-toggle-btn');
+      if (btn) {
+        btn.textContent = btn.textContent === 'EN' ? 'RU' : 'EN';
+        // перезагружаем страницу чтобы применить язык (если нет полной поддержки)
+        location.reload();
+      }
+    }
+  };
 
   function getTargetUserId() {
     var params = new URLSearchParams(window.location.search);
@@ -150,11 +165,11 @@ if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') 
 
       currentMatchId = await getMatchId(targetId);
       renderProfile(profile);
+
+      // Применяем тему и язык (если доступно)
       if (typeof BlizkoTheme !== 'undefined') {
-        BlizkoTheme.applyTheme();
-        BlizkoTheme.applyLang();
-      } else {
-        console.warn('BlizkoTheme не загружен');
+        if (typeof BlizkoTheme.apply === 'function') BlizkoTheme.apply();
+        if (typeof BlizkoTheme.applyLang === 'function') BlizkoTheme.applyLang();
       }
     } catch(e) {
       console.error('Ошибка инициализации:', e);
@@ -192,7 +207,9 @@ if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') 
 
     content.innerHTML = html;
     loadGallery(profile.id);
-    if (typeof BlizkoTheme !== 'undefined') BlizkoTheme.applyLang();
+    if (typeof BlizkoTheme !== 'undefined' && typeof BlizkoTheme.applyLang === 'function') {
+      BlizkoTheme.applyLang();
+    }
   }
 
   function escapeHtml(str) {
