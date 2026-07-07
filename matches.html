@@ -93,6 +93,18 @@ function timeAgo(dateStr) {
   return day + '.' + mon;
 }
 
+// Глобальная функция удаления матча
+window.deleteMatch = async function(matchId) {
+  if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
+  try {
+    await db.from('messages').delete().eq('match_id', matchId);
+    await db.from('matches').delete().eq('id', matchId);
+    await loadMatches(); // обновляем список
+  } catch(e) {
+    alert('Ошибка при удалении: ' + e.message);
+  }
+};
+
 async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) { window.location.href = 'index.html'; return; }
@@ -118,67 +130,40 @@ async function loadMatches() {
   for (var i = 0; i < matches.length; i++) {
     var m = matches[i];
     var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
-
     var { data: otherProfile } = await db.from('profiles').select('name,city,photo_url').eq('id', otherId).single();
-
     items.push({ match: m, profile: otherProfile, otherId: otherId });
   }
 
-  wrap.innerHTML = '';
+  // Формируем HTML через строки, чтобы onclick работал гарантированно
+  var html = '';
   items.forEach(function(item) {
     var p = item.profile || {};
     var matchTime = timeAgo(item.match.created_at);
+    var avatarHtml = p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤';
+    var name = p.name || 'Пользователь';
+    var city = p.city || '';
+    var matchId = item.match.id;
+    var otherId = item.otherId;
 
-    var el = document.createElement('div');
-    el.className = 'match-item';
-    el.onclick = function(e) {
-      if (!e.target.closest('.match-delete-btn')) {
-        window.location.href = 'chat.html?match=' + item.match.id;
-      }
-    };
-
-    var avatarDiv = document.createElement('div');
-    avatarDiv.className = 'avatar';
-    avatarDiv.onclick = function(e) {
-      e.stopPropagation();
-      window.location.href = 'view-profile.html?user=' + item.otherId;
-    };
-    avatarDiv.innerHTML = p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤';
-
-    var infoDiv = document.createElement('div');
-    infoDiv.className = 'match-info';
-    infoDiv.innerHTML = '<div class="match-name">' + (p.name || 'Пользователь') + '</div><div class="match-city">' + (p.city || '') + '</div>';
-
-    var metaDiv = document.createElement('div');
-    metaDiv.className = 'match-meta';
-    metaDiv.innerHTML = '<div class="match-time">' + matchTime + '</div>';
-
-    var deleteBtn = document.createElement('button');
-    deleteBtn.className = 'match-delete-btn';
-    deleteBtn.textContent = '🗑';
-    deleteBtn.onclick = function(e) {
-      e.stopPropagation();
-      deleteMatch(item.match.id);
-    };
-    metaDiv.appendChild(deleteBtn);
-
-    el.appendChild(avatarDiv);
-    el.appendChild(infoDiv);
-    el.appendChild(metaDiv);
-    wrap.appendChild(el);
+    html += `
+      <div class="match-item" onclick="window.location.href='chat.html?match=${matchId}'">
+        <div class="avatar" onclick="event.stopPropagation(); window.location.href='view-profile.html?user=${otherId}'">
+          ${avatarHtml}
+        </div>
+        <div class="match-info">
+          <div class="match-name">${name}</div>
+          <div class="match-city">${city}</div>
+        </div>
+        <div class="match-meta">
+          <div class="match-time">${matchTime}</div>
+          <button class="match-delete-btn" onclick="event.stopPropagation(); deleteMatch('${matchId}')">🗑</button>
+        </div>
+      </div>
+    `;
   });
-  BlizkoTheme.applyLang();
-}
 
-async function deleteMatch(matchId) {
-  if (!confirm('Удалить этот чат?')) return;
-  try {
-    await db.from('messages').delete().eq('match_id', matchId);
-    await db.from('matches').delete().eq('id', matchId);
-    await loadMatches();
-  } catch(e) {
-    alert('Ошибка при удалении: ' + e.message);
-  }
+  wrap.innerHTML = html;
+  BlizkoTheme.applyLang();
 }
 
 init();
