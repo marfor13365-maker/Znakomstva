@@ -74,23 +74,25 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   </button>
 </div>
 
+<!-- Подключаем env.js (в нём будет заменён плейсхолдер) -->
+<script src="env.js"></script>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ============================================================
-// КЛЮЧ ПОДСТАВЛЯЕТСЯ АВТОМАТИЧЕСКИ ЧЕРЕЗ SED (ИЗ ПЕРЕМЕННОЙ ОКРУЖЕНИЯ)
+// КЛЮЧ БЕРЁТСЯ ИЗ env.js (подставляется через Build Command)
 // ============================================================
-const SERVICE_KEY = '{{SUPABASE_SERVICE_KEY}}';
+const SERVICE_KEY = SUPABASE_SERVICE_KEY;
 
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var dbAdmin = null;
 
-if (SERVICE_KEY && SERVICE_KEY !== '{{SUPABASE_SERVICE_KEY}}') {
+if (SERVICE_KEY && SERVICE_KEY !== '{{SUPABASE_SERVICE_KEY}}' && SERVICE_KEY.startsWith('sb_secret')) {
   dbAdmin = supabase.createClient(SUPABASE_URL, SERVICE_KEY);
-  console.log('✅ Сервисный ключ загружен из переменной окружения');
+  console.log('✅ Сервисный ключ загружен из env.js');
 } else {
-  console.error('❌ Сервисный ключ не подставлен! Проверьте Build Command на Render.');
+  console.error('❌ Ключ не подставлен в env.js');
 }
 
 var currentUser = null;
