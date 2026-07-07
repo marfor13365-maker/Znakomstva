@@ -79,13 +79,22 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ============================================================
-// ВАРИАНТ: ЛОКАЛЬНОЕ УДАЛЕНИЕ (без отправки запроса в Supabase)
-// Чат скрывается из списка до перезагрузки страницы.
+// КЛЮЧ ПОДСТАВЛЯЕТСЯ АВТОМАТИЧЕСКИ ПРИ СБОРКЕ (через sed)
 // ============================================================
 
+const SERVICE_KEY = '{{SUPABASE_SERVICE_KEY}}';
+
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var dbAdmin = null;
+
+if (SERVICE_KEY && SERVICE_KEY !== '{{SUPABASE_SERVICE_KEY}}') {
+  dbAdmin = supabase.createClient(SUPABASE_URL, SERVICE_KEY);
+  console.log('✅ Сервисный ключ загружен из переменной окружения');
+} else {
+  console.error('❌ Сервисный ключ не подставлен! Проверьте Build Command на Render.');
+}
+
 var currentUser = null;
-var allMatches = []; // храним все загруженные матчи
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -100,49 +109,63 @@ function timeAgo(dateStr) {
   return day + '.' + mon;
 }
 
-// Функция удаления — просто удаляет элемент из DOM и из массива allMatches
-window.deleteMatch = function(matchId, event) {
+window.deleteMatch = async function(matchId, event) {
   if (event) {
     event.stopPropagation();
     event.preventDefault();
   }
 
   if (!matchId) {
-    alert('Ошибка: нет ID матча');
+    alert('Ошибка: идентификатор матча не передан');
     return;
   }
 
-  if (!confirm('Удалить этот чат из списка? (Данные в базе сохранятся)')) return;
-
-  // Находим индекс в allMatches
-  var index = allMatches.findIndex(function(item) {
-    return item.match.id === matchId;
-  });
-  if (index !== -1) {
-    allMatches.splice(index, 1); // удаляем из массива
+  if (!currentUser) {
+    alert('Ошибка: пользователь не авторизован');
+    return;
   }
 
-  // Удаляем элемент из DOM
-  var items = document.querySelectorAll('.match-item');
-  for (var i = 0; i < items.length; i++) {
-    var btn = items[i].querySelector('.match-delete-btn');
-    if (btn && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf(matchId) !== -1) {
-      items[i].remove();
-      break;
+  if (!dbAdmin) {
+    alert('Ошибка: сервисный ключ не загружен. Удаление невозможно.');
+    return;
+  }
+
+  if (!confirm('Удалить этот чат? Все сообщения будут удалены безвозвратно.')) return;
+
+  try {
+    console.log('🔍 Удаляем матч с ID:', matchId);
+
+    // 1. Удаляем сообщения
+    const { error: msgError } = await dbAdmin
+      .from('messages')
+      .delete()
+      .eq('match_id', matchId);
+    if (msgError) {
+      console.warn('⚠️ Ошибка при удалении сообщений:', msgError);
+    } else {
+      console.log('✅ Сообщения удалены');
     }
-  }
 
-  // Если список стал пустым, показываем пустое состояние
-  var remaining = document.querySelectorAll('.match-item');
-  if (remaining.length === 0) {
-    var wrap = document.getElementById('match-list-wrap');
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
-    if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
-      BlizkoTheme.applyLang();
+    // 2. Удаляем сам матч
+    const { error: matchError } = await dbAdmin
+      .from('matches')
+      .delete()
+      .eq('id', matchId);
+
+    if (matchError) {
+      console.error('❌ Ошибка удаления матча:', matchError);
+      alert('Не удалось удалить матч: ' + matchError.message);
+      return;
     }
-  }
 
-  console.log('✅ Чат локально удалён (ID:', matchId, ')');
+    console.log('✅ Матч удалён из базы');
+    await loadMatches();
+    console.log('🔄 Список обновлён');
+
+  } catch (err) {
+    console.error('❌ Непредвиденная ошибка:', err);
+    alert('Ошибка: ' + err.message);
+  }
 };
 
 async function init() {
@@ -153,6 +176,7 @@ async function init() {
       return;
     }
     currentUser = r.data.session.user;
+    console.log('✅ Авторизован как:', currentUser.id);
     await loadMatches();
     if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
       BlizkoTheme.applyLang();
@@ -185,7 +209,6 @@ async function loadMatches() {
       return;
     }
 
-    // Загружаем профили для каждого матча
     var items = [];
     for (var i = 0; i < matches.length; i++) {
       var m = matches[i];
@@ -194,9 +217,6 @@ async function loadMatches() {
       if (profErr) console.warn('Profile not found for user:', otherId);
       items.push({ match: m, profile: otherProfile || {}, otherId: otherId });
     }
-
-    // Сохраняем в глобальный массив
-    allMatches = items;
 
     var html = '';
     items.forEach(function(item) {
