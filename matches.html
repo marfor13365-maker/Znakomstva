@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Blizko - Чаты</title>
+<title>Blizko - Матчи</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
@@ -12,19 +12,22 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
 .back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center;transition:color 0.2s}
 .back-btn:active{color:var(--text)}
-.logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600;color:var(--text)}
-.chat-list{flex:1;overflow-y:auto}
-.chat-item{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;text-decoration:none;color:inherit}
-.chat-item:active{background:var(--card)}
-.avatar{width:54px;height:54px;border-radius:50%;background:var(--input-bg);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid var(--border)}
+.page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600;color:var(--text);flex:1}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.lang-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;min-width:40px;text-align:center}
+.lang-btn:active{opacity:0.7}
+.match-list{flex:1;overflow-y:auto}
+.match-item{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;text-decoration:none;color:inherit}
+.match-item:active{background:var(--card)}
+.avatar{width:54px;height:54px;border-radius:50%;background:var(--input-bg);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid var(--border);cursor:pointer;transition:border-color 0.2s}
+.avatar:active{border-color:var(--accent)}
 .avatar img{width:100%;height:100%;object-fit:cover}
-.chat-info{flex:1;min-width:0}
-.chat-name{font-weight:600;font-size:15px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-last{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
-.chat-time{font-size:11px;color:var(--muted)}
-.chat-badge{background:var(--accent);color:white;font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
+.match-info{flex:1;min-width:0}
+.match-name{font-weight:600;font-size:15px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.match-city{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.match-meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.match-time{font-size:11px;color:var(--muted)}
+.match-badge{background:var(--accent);color:white;font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
 .empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
@@ -41,28 +44,31 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">&#8592;</button>
-  <div class="page-title">Чаты</div>
+  <div class="page-title" data-i18n="matches">Матчи</div>
+  <div class="topbar-right">
+    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
+  </div>
 </div>
 
-<div id="chat-list-wrap" class="chat-list">
-  <div class="loading">⏳ Загрузка...</div>
+<div id="match-list-wrap" class="match-list">
+  <div class="loading" data-i18n="loading">⏳ Загрузка...</div>
 </div>
 
 <div class="bottombar">
   <button class="bottom-btn" onclick="window.location.href='feed.html'">
-    <span class="ico">🏠</span><span>Лента</span>
+    <span class="ico">🏠</span><span data-i18n="feed">Лента</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='swipe.html'">
-    <span class="ico">😍</span><span>Знакомства</span>
+    <span class="ico">😍</span><span data-i18n="swipe">Знакомства</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='likes.html'">
-    <span class="ico">💖</span><span>Лайки</span>
+    <span class="ico">💖</span><span data-i18n="likes">Лайки</span>
   </button>
   <button class="bottom-btn active">
-    <span class="ico">💬</span><span>Чаты</span>
+    <span class="ico">💬</span><span data-i18n="matches">Матчи</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='profile.html'">
-    <span class="ico">👤</span><span>Профиль</span>
+    <span class="ico">👤</span><span data-i18n="profile">Профиль</span>
   </button>
 </div>
 
@@ -78,9 +84,9 @@ function timeAgo(dateStr) {
   var d = new Date(dateStr);
   var now = new Date();
   var diff = Math.floor((now - d) / 1000);
-  if (diff < 60) return 'только что';
-  if (diff < 3600) return Math.floor(diff/60) + ' мин';
-  if (diff < 86400) return Math.floor(diff/3600) + ' ч';
+  if (diff < 60) return BlizkoTheme.getText('just_now');
+  if (diff < 3600) return Math.floor(diff/60) + ' ' + BlizkoTheme.getText('min');
+  if (diff < 86400) return Math.floor(diff/3600) + ' ' + BlizkoTheme.getText('h');
   var day = d.getDate().toString().padStart(2,'0');
   var mon = (d.getMonth()+1).toString().padStart(2,'0');
   return day + '.' + mon;
@@ -90,11 +96,12 @@ async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) { window.location.href = 'index.html'; return; }
   currentUser = r.data.session.user;
-  await loadChats();
+  await loadMatches();
+  BlizkoTheme.applyLang();
 }
 
-async function loadChats() {
-  var wrap = document.getElementById('chat-list-wrap');
+async function loadMatches() {
+  var wrap = document.getElementById('match-list-wrap');
 
   // Загружаем матчи где участвует текущий пользователь
   var { data: matches, error } = await db.from('matches').select('*')
@@ -102,60 +109,51 @@ async function loadChats() {
     .order('created_at', { ascending: false });
 
   if (error || !matches || matches.length === 0) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'feed.html\'">Перейти в ленту</button></div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
+    BlizkoTheme.applyLang();
     return;
   }
 
-  // Для каждого матча загружаем профиль собеседника и последнее сообщение
   var items = [];
   for (var i = 0; i < matches.length; i++) {
     var m = matches[i];
     var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
 
-    var { data: otherProfile } = await db.from('profiles').select('name,photo_url').eq('id', otherId).single();
+    var { data: otherProfile } = await db.from('profiles').select('name,city,photo_url').eq('id', otherId).single();
 
-    var { data: messages } = await db.from('messages').select('text,created_at,sender_id')
-      .eq('match_id', m.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    var lastMsg = messages && messages.length > 0 ? messages[0] : null;
-
-    items.push({ match: m, profile: otherProfile, lastMsg, otherId: otherId });
+    items.push({ match: m, profile: otherProfile, otherId: otherId });
   }
 
   if (items.length === 0) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>Пока нет совпадений.</p></div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p data-i18n="no_matches">Пока нет совпадений.</p></div>';
+    BlizkoTheme.applyLang();
     return;
   }
 
   wrap.innerHTML = '';
   items.forEach(function(item) {
     var p = item.profile || {};
-    var lastText = item.lastMsg
-      ? (item.lastMsg.sender_id === currentUser.id ? 'Вы: ' : '') + item.lastMsg.text
-      : 'Напишите первым!';
-    var lastTime = item.lastMsg ? timeAgo(item.lastMsg.created_at) : '';
+    var matchTime = timeAgo(item.match.created_at);
 
     var el = document.createElement('div');
-    el.className = 'chat-item';
+    el.className = 'match-item';
     el.onclick = function() { window.location.href = 'chat.html?match=' + item.match.id; };
 
     el.innerHTML =
       '<div class="avatar" onclick="event.stopPropagation();window.location.href=\'view-profile.html?user=' + item.otherId + '\'">' +
         (p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤') +
       '</div>' +
-      '<div class="chat-info">' +
-        '<div class="chat-name">' + (p.name || 'Пользователь') + '</div>' +
-        '<div class="chat-last">' + lastText + '</div>' +
+      '<div class="match-info">' +
+        '<div class="match-name">' + (p.name || 'Пользователь') + '</div>' +
+        '<div class="match-city">' + (p.city || '') + '</div>' +
       '</div>' +
-      '<div class="chat-meta">' +
-        '<div class="chat-time">' + lastTime + '</div>' +
-        '' +
+      '<div class="match-meta">' +
+        '<div class="match-time">' + matchTime + '</div>' +
       '</div>';
 
     wrap.appendChild(el);
   });
+  BlizkoTheme.applyLang();
 }
 
 init();
