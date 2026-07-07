@@ -36,15 +36,13 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .empty-state .icon{font-size:60px;margin-bottom:16px}
 .empty-state p{font-size:14px;line-height:1.6}
 /* Кнопки на карточке */
-.card-actions{position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;gap:16px;padding:0 16px;z-index:10;pointer-events:none}
+.card-actions{position:absolute;top:16px;left:0;right:0;display:flex;justify-content:space-between;padding:0 16px;z-index:10;pointer-events:none}
 .card-action-btn{width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.5);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;pointer-events:auto;backdrop-filter:blur(4px);color:white}
 .card-action-btn:active{transform:scale(0.85)}
 .card-action-btn.dislike{border-color:var(--accent);color:var(--accent)}
 .card-action-btn.like{border-color:var(--green);color:var(--green)}
-.card-action-btn.skip{border-color:var(--muted);color:var(--muted);font-size:18px}
 .card-action-btn.dislike:hover{background:rgba(255,77,109,0.2)}
 .card-action-btn.like:hover{background:rgba(76,255,159,0.2)}
-.card-action-btn.skip:hover{background:rgba(255,255,255,0.1)}
 .match-popup{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;padding:20px}
 .match-popup.show{display:flex}
 .match-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;text-align:center}
@@ -218,12 +216,11 @@ function renderFeed() {
     (profile.about ? '<div class="card-about">' + profile.about + '</div>' : '');
   card.appendChild(overlay);
 
-  // Кнопки на карточке
+  // Кнопки на карточке — только ❌ и ❤️
   var actionsDiv = document.createElement('div');
   actionsDiv.className = 'card-actions';
   actionsDiv.innerHTML = `
     <button class="card-action-btn dislike" onclick="event.stopPropagation(); swipe('left')">✕</button>
-    <button class="card-action-btn skip" onclick="event.stopPropagation(); nextProfile()">→</button>
     <button class="card-action-btn like" onclick="event.stopPropagation(); openLikeModal()">❤️</button>
   `;
   card.appendChild(actionsDiv);
