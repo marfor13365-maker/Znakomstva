@@ -97,11 +97,8 @@ function timeAgo(dateStr) {
 window.deleteMatch = async function(matchId) {
   if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
   try {
-    // Удаляем все сообщения
     await db.from('messages').delete().eq('match_id', matchId);
-    // Удаляем сам матч
     await db.from('matches').delete().eq('id', matchId);
-    // Перезагружаем список
     await loadMatches();
   } catch(e) {
     alert('Ошибка при удалении: ' + e.message);
