@@ -33,4 +33,151 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .empty-state .icon{font-size:60px;margin-bottom:16px}
 .empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
 .empty-state .go-btn{margin-top:20px;padding:14px 28px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.error-state{color:var(--accent);padding:40px 20px;text-align:center;font-size:14px}
 .bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:transparent;z-index:10;gap:6px}
+.bottom-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:rgba(255,255,255,0.85);cursor:pointer;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:opacity 0.2s;flex:1;border-radius:16px;box-shadow:0 2px 10px rgba(255,77,109,0.4)}
+.bottom-btn.active{color:white;font-weight:600;opacity:1}
+.bottom-btn:not(.active){opacity:0.85}
+.bottom-btn .ico{font-size:22px}
+.loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">&#8592;</button>
+  <div class="page-title" data-i18n="matches">Матчи</div>
+  <div class="topbar-right">
+    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
+  </div>
+</div>
+
+<div id="match-list-wrap" class="match-list">
+  <div class="loading" data-i18n="loading">⏳ Загрузка...</div>
+</div>
+
+<div class="bottombar">
+  <button class="bottom-btn" onclick="window.location.href='feed.html'">
+    <span class="ico">🏠</span><span data-i18n="feed">Лента</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='swipe.html'">
+    <span class="ico">😍</span><span data-i18n="swipe">Знакомства</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='likes.html'">
+    <span class="ico">💖</span><span data-i18n="likes">Лайки</span>
+  </button>
+  <button class="bottom-btn active">
+    <span class="ico">💬</span><span data-i18n="matches">Матчи</span>
+  </button>
+  <button class="bottom-btn" onclick="window.location.href='profile.html'">
+    <span class="ico">👤</span><span data-i18n="profile">Профиль</span>
+  </button>
+</div>
+
+<script src="theme.js"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var currentUser = null;
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr);
+  var now = new Date();
+  var diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return BlizkoTheme.getText('just_now');
+  if (diff < 3600) return Math.floor(diff/60) + ' ' + BlizkoTheme.getText('min');
+  if (diff < 86400) return Math.floor(diff/3600) + ' ' + BlizkoTheme.getText('h');
+  var day = d.getDate().toString().padStart(2,'0');
+  var mon = (d.getMonth()+1).toString().padStart(2,'0');
+  return day + '.' + mon;
+}
+
+window.deleteMatch = async function(matchId) {
+  if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
+  try {
+    await db.from('messages').delete().eq('match_id', matchId);
+    await db.from('matches').delete().eq('id', matchId);
+    await loadMatches();
+  } catch(e) {
+    alert('Ошибка при удалении: ' + e.message);
+  }
+};
+
+async function init() {
+  try {
+    var r = await db.auth.getSession();
+    if (!r.data.session) { window.location.href = 'index.html'; return; }
+    currentUser = r.data.session.user;
+    await loadMatches();
+    BlizkoTheme.applyLang();
+  } catch(e) {
+    console.error('Init error:', e);
+    document.getElementById('match-list-wrap').innerHTML = '<div class="error-state">⚠️ Ошибка загрузки: ' + e.message + '</div>';
+  }
+}
+
+async function loadMatches() {
+  var wrap = document.getElementById('match-list-wrap');
+  try {
+    var { data: matches, error } = await db.from('matches').select('*')
+      .or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!matches || matches.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
+      BlizkoTheme.applyLang();
+      return;
+    }
+
+    var items = [];
+    for (var i = 0; i < matches.length; i++) {
+      var m = matches[i];
+      var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
+      var { data: otherProfile, error: profErr } = await db.from('profiles').select('name,city,photo_url').eq('id', otherId).single();
+      if (profErr) console.warn('Profile not found for user:', otherId);
+      items.push({ match: m, profile: otherProfile || {}, otherId: otherId });
+    }
+
+    var html = '';
+    items.forEach(function(item) {
+      var p = item.profile || {};
+      var matchTime = timeAgo(item.match.created_at);
+      var avatarHtml = p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤';
+      var name = p.name || 'Пользователь';
+      var city = p.city || '';
+      var matchId = item.match.id;
+      var otherId = item.otherId;
+
+      html += `
+        <div class="match-item" onclick="window.location.href='chat.html?match=${matchId}'">
+          <div class="avatar" onclick="event.stopPropagation(); window.location.href='view-profile.html?user=${otherId}'">
+            ${avatarHtml}
+          </div>
+          <div class="match-info">
+            <div class="match-name">${name}</div>
+            <div class="match-city">${city}</div>
+          </div>
+          <div class="match-meta">
+            <div class="match-time">${matchTime}</div>
+            <button class="match-delete-btn" onclick="event.stopPropagation(); deleteMatch('${matchId}')">🗑</button>
+          </div>
+        </div>
+      `;
+    });
+
+    wrap.innerHTML = html;
+    BlizkoTheme.applyLang();
+  } catch(e) {
+    console.error('loadMatches error:', e);
+    wrap.innerHTML = '<div class="error-state">⚠️ Ошибка загрузки матчей: ' + e.message + '</div>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
