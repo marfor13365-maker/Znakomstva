@@ -34,11 +34,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .empty-state{text-align:center;color:var(--muted);padding:40px 20px}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
 .empty-state p{font-size:14px;line-height:1.6}
-.actions{display:flex;justify-content:center;gap:24px;padding:20px}
-.action-btn{width:60px;height:60px;border-radius:50%;border:2px solid var(--border);background:var(--card);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
-.action-btn:active{transform:scale(0.9)}
-.action-btn.dislike:active{border-color:var(--accent);background:#2a1016}
-.action-btn.like:active{border-color:var(--green);background:#0a2a1a}
+/* Кнопки на карточке */
+.card-actions{position:absolute;top:16px;left:0;right:0;display:flex;justify-content:space-between;padding:0 16px;z-index:10;pointer-events:none}
+.card-action-btn{width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.4);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;pointer-events:auto;backdrop-filter:blur(4px);color:white}
+.card-action-btn:active{transform:scale(0.9)}
+.card-action-btn.dislike:hover{border-color:var(--accent);background:rgba(255,77,109,0.3)}
+.card-action-btn.like:hover{border-color:var(--green);background:rgba(76,255,159,0.3)}
 .match-popup{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;padding:20px}
 .match-popup.show{display:flex}
 .match-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;text-align:center}
@@ -78,11 +79,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <div style="color:var(--muted);font-size:14px" data-i18n="loading">⏳ Загрузка...</div>
 </div>
 
-<div class="actions">
-  <button class="action-btn dislike" onclick="swipe('left')">❌</button>
-  <button class="action-btn like" onclick="openLikeModal()">❤️</button>
-</div>
-
 <div class="bottombar">
   <button class="bottom-btn" onclick="window.location.href='feed.html'">
     <span class="ico">🏠</span><span data-i18n="feed">Лента</span>
@@ -104,18 +100,18 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <!-- Окно лайка с комментарием -->
 <div class="like-modal" id="like-modal">
   <div class="like-sheet">
-    <div class="like-sheet-title" data-i18n="match">❤️ Понравился(ась)?</div>
+    <div class="like-sheet-title" data-i18n="match_like">❤️ Понравился(ась)?</div>
     <textarea class="like-comment-input" id="like-comment" data-i18n-placeholder="write_comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
     <div class="like-sheet-actions">
       <button class="btn btn-outline" onclick="closeLikeModal()" data-i18n="cancel">Отмена</button>
-      <button class="btn" onclick="confirmLike()" data-i18n="match">Лайкнуть</button>
+      <button class="btn" onclick="confirmLike()" data-i18n="like">Лайкнуть</button>
     </div>
   </div>
 </div>
 
 <div class="match-popup" id="match-popup">
   <div class="match-title">🎉 Match!</div>
-  <div class="match-sub" data-i18n="match">Вы понравились друг другу!</div>
+  <div class="match-sub" data-i18n="match_text">Вы понравились друг другу!</div>
   <div class="match-photos" id="match-photos"></div>
   <button class="btn" onclick="goToChat()" data-i18n="chats">Написать сообщение</button>
   <button class="btn btn-outline" onclick="closeMatch()" data-i18n="swipe">Продолжить смотреть</button>
@@ -177,7 +173,7 @@ function renderFeed() {
   var wrap = document.getElementById('feed-wrap');
   wrap.innerHTML = '';
   if (profiles.length === 0) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_photos">Пока нет анкет.<br>Загляни позже!</p></div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_profiles">Пока нет анкет.<br>Загляни позже!</p></div>';
     BlizkoTheme.applyLang();
     return;
   }
@@ -216,6 +212,16 @@ function renderFeed() {
     (profile.city ? '<div class="card-info">📍 ' + profile.city + '</div>' : '') +
     (profile.about ? '<div class="card-about">' + profile.about + '</div>' : '');
   card.appendChild(overlay);
+
+  // Кнопки на карточке
+  var actionsDiv = document.createElement('div');
+  actionsDiv.className = 'card-actions';
+  actionsDiv.innerHTML = `
+    <button class="card-action-btn dislike" onclick="event.stopPropagation(); swipe('left')">✕</button>
+    <button class="card-action-btn like" onclick="event.stopPropagation(); openLikeModal()">❤️</button>
+  `;
+  card.appendChild(actionsDiv);
+
   stack.appendChild(card);
   wrap.appendChild(stack);
   setupDrag(card);
