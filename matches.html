@@ -94,52 +94,53 @@ function timeAgo(dateStr) {
   return day + '.' + mon;
 }
 
-// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ УДАЛЕНИЯ ==========
+// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ УДАЛЕНИЯ (с проверкой ошибок) ==========
 window.deleteMatch = async function(matchId, event) {
-  // Предотвращаем всплытие и переход по ссылке, если event передан
   if (event) {
     event.stopPropagation();
     event.preventDefault();
   }
 
   if (!matchId) {
-    console.error('deleteMatch: matchId не передан');
     alert('Ошибка: идентификатор матча не найден');
     return;
   }
 
   if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
 
-  console.log('Удаление матча с ID:', matchId);
+  console.log('➡️ Начинаем удаление матча:', matchId);
 
   try {
-    // 1. Пытаемся удалить сообщения (если таблица существует)
+    // 1. Сначала удаляем сам матч (это главное)
+    const { error: matchError } = await db.from('matches').delete().eq('id', matchId);
+    if (matchError) {
+      console.error('❌ Ошибка удаления матча:', matchError);
+      alert('Не удалось удалить матч: ' + matchError.message + '\n\nВозможно, у вас нет прав на удаление (проверьте RLS).');
+      return; // прерываем, чтобы не удалять сообщения без матча
+    }
+    console.log('✅ Матч удалён');
+
+    // 2. Пытаемся удалить сообщения (если таблица существует)
     try {
       const { error: msgError } = await db.from('messages').delete().eq('match_id', matchId);
       if (msgError) {
-        console.warn('Ошибка при удалении сообщений (возможно таблица отсутствует):', msgError.message);
-        // Не прерываем выполнение, пробуем удалить сам матч
+        console.warn('⚠️ Ошибка при удалении сообщений (возможно таблица отсутствует или нет прав):', msgError.message);
+        // Не прерываем выполнение, так как матч уже удалён
       } else {
-        console.log('Сообщения удалены');
+        console.log('✅ Сообщения удалены');
       }
     } catch (msgErr) {
-      console.warn('Исключение при удалении сообщений:', msgErr.message);
-      // Продолжаем
+      console.warn('⚠️ Исключение при удалении сообщений:', msgErr.message);
+      // Игнорируем
     }
 
-    // 2. Удаляем сам матч
-    const { error: matchError } = await db.from('matches').delete().eq('id', matchId);
-    if (matchError) {
-      console.error('Ошибка удаления матча:', matchError);
-      alert('Не удалось удалить матч: ' + matchError.message);
-      return;
-    }
+    // 3. Перезагружаем список
+    await loadMatches();
+    console.log('🔄 Список обновлён');
 
-    console.log('Матч удалён, перезагружаем список');
-    await loadMatches(); // принудительно обновляем список
   } catch (e) {
-    console.error('deleteMatch общая ошибка:', e);
-    alert('Ошибка при удалении: ' + e.message);
+    console.error('❌ Общая ошибка:', e);
+    alert('Произошла непредвиденная ошибка: ' + e.message);
   }
 };
 // ==================================================
