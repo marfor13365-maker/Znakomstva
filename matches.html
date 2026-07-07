@@ -2,144 +2,157 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blizko - Матчи</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Blizko - Чат</title>
 <style>
-body{background:#0d0d0d;color:#f0f0f0;font-family:Arial,sans-serif;padding:20px}
-.match-item{background:#161616;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer}
-.match-item:hover{background:#222}
-.avatar{width:48px;height:48px;border-radius:50%;background:#1e1e1e;display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden}
-.avatar img{width:100%;height:100%;object-fit:cover}
-.info{flex:1}
-.name{font-weight:600;font-size:16px}
-.city{font-size:13px;color:#888}
-.meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
-.time{font-size:12px;color:#888}
-.delete-btn{background:none;border:none;color:#888;font-size:20px;cursor:pointer}
-.delete-btn:active{color:#ff4d6d}
-.error{color:#ff4d6d;padding:20px;border:1px solid #ff4d6d;border-radius:8px;margin:20px 0;white-space:pre-wrap}
-.loading{color:#888;text-align:center;padding:40px}
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
+.back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center;transition:color 0.2s}
+.back-btn:active{color:var(--text)}
+.page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600;color:var(--text);flex:1}
+.chat-messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+.message{max-width:75%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.4;word-wrap:break-word}
+.message.sent{background:var(--accent);color:white;align-self:flex-end;border-bottom-right-radius:4px}
+.message.received{background:var(--card);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px}
+.message .time{font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
+.chat-input-wrap{display:flex;gap:10px;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg)}
+.chat-input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:10px 16px;color:var(--text);font-size:14px;outline:none;font-family:'Inter',sans-serif}
+.chat-input:focus{border-color:var(--accent)}
+.send-btn{background:var(--accent);border:none;border-radius:50%;width:42px;height:42px;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.send-btn:active{opacity:0.7}
+.empty-chat{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;padding:20px}
+.loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:transparent;z-index:10;gap:6px}
+.bottom-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:rgba(255,255,255,0.85);cursor:pointer;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:opacity 0.2s;flex:1;border-radius:16px;box-shadow:0 2px 10px rgba(255,77,109,0.4)}
+.bottom-btn.active{color:white;font-weight:600;opacity:1}
+.bottom-btn:not(.active){opacity:0.85}
+.bottom-btn .ico{font-size:22px}
 </style>
 </head>
 <body>
 
-<h2>💬 Мои матчи</h2>
-<div id="status" style="background:#1a1a1a;padding:10px;border-radius:8px;margin-bottom:20px;font-size:13px;color:#4cff9f;"></div>
-<div id="match-list"><div class="loading">⏳ Загрузка...</div></div>
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">&#8592;</button>
+  <div class="page-title" id="chat-title">Чат</div>
+</div>
+
+<div class="chat-messages" id="chat-messages">
+  <div class="loading">⏳ Загрузка...</div>
+</div>
+
+<div class="chat-input-wrap">
+  <input class="chat-input" id="chat-input" type="text" placeholder="Написать сообщение..." maxlength="500">
+  <button class="send-btn" onclick="sendMessage()">➤</button>
+</div>
+
+<div class="bottombar">
+  <button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span>Лента</span></button>
+  <button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span>Знакомства</span></button>
+  <button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span>Лайки</span></button>
+  <button class="bottom-btn active" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span>Чаты</span></button>
+  <button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">👤</span><span>Профиль</span></button>
+</div>
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
-  document.getElementById('status').innerHTML = '❌ Ошибка: config.js не загружен.';
-  document.getElementById('match-list').innerHTML = '<div class="error">⚠️ config.js не найден.</div>';
-} else {
-  var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  var currentUser = null;
-  var statusEl = document.getElementById('status');
-  var listEl = document.getElementById('match-list');
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var currentUser = null;
+var matchId = null;
+var otherUserId = null;
 
-  function log(msg) {
-    console.log(msg);
-    statusEl.innerHTML += msg + '<br>';
+async function init() {
+  try {
+    var r = await db.auth.getSession();
+    if (!r.data.session) { window.location.href = 'index.html'; return; }
+    currentUser = r.data.session.user;
+
+    var params = new URLSearchParams(window.location.search);
+    matchId = params.get('match');
+    if (!matchId) { window.location.href = 'matches.html'; return; }
+
+    // Загружаем данные матча, чтобы узнать имя собеседника
+    var { data: match, error: matchErr } = await db.from('matches').select('*').eq('id', matchId).single();
+    if (matchErr || !match) { window.location.href = 'matches.html'; return; }
+    otherUserId = match.user1 === currentUser.id ? match.user2 : match.user1;
+
+    // Загружаем профиль собеседника
+    var { data: profile } = await db.from('profiles').select('name').eq('id', otherUserId).single();
+    var title = document.getElementById('chat-title');
+    title.textContent = (profile && profile.name) ? profile.name : 'Чат';
+
+    loadMessages();
+
+    // Подписка на новые сообщения (в реальном времени)
+    db.channel('chat-' + matchId)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'match_id=eq.' + matchId }, function() {
+        loadMessages();
+      })
+      .subscribe();
+  } catch(e) {
+    console.error('Ошибка инициализации чата:', e);
+    document.getElementById('chat-messages').innerHTML = '<div class="empty-chat">⚠️ Ошибка загрузки чата</div>';
   }
-
-  async function init() {
-    try {
-      log('🔐 Проверка сессии...');
-      var { data: { session }, error } = await db.auth.getSession();
-      if (error) throw error;
-      if (!session) {
-        log('❌ Нет сессии');
-        window.location.href = 'index.html';
-        return;
-      }
-      currentUser = session.user;
-      log('✅ Пользователь: ' + currentUser.email);
-
-      log('📡 Запрос матчей...');
-      var { data: matches, error: matchError } = await db.from('matches')
-        .select('*')
-        .or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id)
-        .order('created_at', { ascending: false });
-
-      if (matchError) throw matchError;
-      log('📊 Найдено матчей: ' + (matches ? matches.length : 0));
-
-      if (!matches || matches.length === 0) {
-        listEl.innerHTML = '<div class="loading">💕 Нет совпадений.</div>';
-        return;
-      }
-
-      listEl.innerHTML = '';
-
-      for (var i = 0; i < matches.length; i++) {
-        var m = matches[i];
-        var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
-        log('🔄 Загружаем профиль userId: ' + otherId);
-
-        var { data: profile, error: profError } = await db.from('profiles')
-          .select('name, city, photo_url')
-          .eq('id', otherId)
-          .single();
-
-        if (profError) {
-          log('⚠️ Ошибка профиля: ' + profError.message);
-          var p = { name: 'Пользователь', city: '', photo_url: null };
-        } else {
-          var p = profile;
-          log('✅ Профиль загружен: ' + p.name);
-        }
-
-        var time = new Date(m.created_at);
-        var timeStr = time.toLocaleDateString('ru-RU') + ' ' + time.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
-
-        var item = document.createElement('div');
-        item.className = 'match-item';
-        item.onclick = function(matchId) {
-          return function() { window.location.href = 'chat.html?match=' + matchId; };
-        }(m.id);
-
-        var avatarHtml = p.photo_url ? '<img src="' + p.photo_url + '" onerror="this.parentNode.textContent=\'👤\'">' : '👤';
-
-        item.innerHTML = `
-          <div class="avatar" onclick="event.stopPropagation(); window.location.href='view-profile.html?user=${otherId}'">
-            ${avatarHtml}
-          </div>
-          <div class="info">
-            <div class="name">${p.name || 'Пользователь'}</div>
-            <div class="city">${p.city || ''}</div>
-          </div>
-          <div class="meta">
-            <div class="time">${timeStr}</div>
-            <button class="delete-btn" onclick="event.stopPropagation(); deleteMatch('${m.id}')">🗑</button>
-          </div>
-        `;
-
-        listEl.appendChild(item);
-      }
-
-      log('✅ Готово!');
-
-    } catch (e) {
-      log('❌ ОШИБКА: ' + e.message);
-      listEl.innerHTML = '<div class="error">⚠️ ' + e.message + '\n\nПроверьте консоль (F12).</div>';
-    }
-  }
-
-  window.deleteMatch = async function(matchId) {
-    if (!confirm('Удалить этот чат?')) return;
-    try {
-      await db.from('messages').delete().eq('match_id', matchId);
-      await db.from('matches').delete().eq('id', matchId);
-      location.reload();
-    } catch(e) {
-      alert('Ошибка: ' + e.message);
-    }
-  };
-
-  init();
 }
+
+async function loadMessages() {
+  var container = document.getElementById('chat-messages');
+  try {
+    var { data: messages, error } = await db.from('messages')
+      .select('*')
+      .eq('match_id', matchId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    if (!messages || messages.length === 0) {
+      container.innerHTML = '<div class="empty-chat">💬 Нет сообщений. Напишите первым!</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    messages.forEach(function(msg) {
+      var div = document.createElement('div');
+      div.className = 'message ' + (msg.sender_id === currentUser.id ? 'sent' : 'received');
+      var time = new Date(msg.created_at);
+      var timeStr = time.getHours().toString().padStart(2,'0') + ':' + time.getMinutes().toString().padStart(2,'0');
+      div.innerHTML = msg.text + '<div class="time">' + timeStr + '</div>';
+      container.appendChild(div);
+    });
+    container.scrollTop = container.scrollHeight;
+  } catch(e) {
+    console.error('Ошибка загрузки сообщений:', e);
+    container.innerHTML = '<div class="empty-chat">⚠️ Ошибка загрузки</div>';
+  }
+}
+
+async function sendMessage() {
+  var input = document.getElementById('chat-input');
+  var text = input.value.trim();
+  if (!text || !matchId) return;
+
+  try {
+    await db.from('messages').insert({
+      match_id: matchId,
+      sender_id: currentUser.id,
+      text: text
+    });
+    input.value = '';
+    loadMessages(); // обновляем сразу
+  } catch(e) {
+    alert('Не удалось отправить сообщение: ' + e.message);
+  }
+}
+
+// Отправка по Enter
+document.getElementById('chat-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') sendMessage();
+});
+
+init();
 </script>
 </body>
 </html>
