@@ -13,12 +13,17 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center;transition:color 0.2s}
 .back-btn:active{color:var(--text)}
 .page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600;color:var(--text);flex:1}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.lang-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;min-width:40px;text-align:center}
+.lang-btn:active{opacity:0.7}
+.delete-chat-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;transition:color 0.2s}
+.delete-chat-btn:active{color:var(--accent)}
 .chat-messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
 .message{max-width:75%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.4;word-wrap:break-word}
 .message.sent{background:var(--accent);color:white;align-self:flex-end;border-bottom-right-radius:4px}
 .message.received{background:var(--card);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px}
 .message .time{font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
-.chat-input-wrap{display:flex;gap:10px;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg)}
+.chat-input-wrap{display:flex;gap:10px;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;position:relative;z-index:5}
 .chat-input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:10px 16px;color:var(--text);font-size:14px;outline:none;font-family:'Inter',sans-serif}
 .chat-input:focus{border-color:var(--accent)}
 .send-btn{background:var(--accent);border:none;border-radius:50%;width:42px;height:42px;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -37,6 +42,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">&#8592;</button>
   <div class="page-title" id="chat-title">Чат</div>
+  <div class="topbar-right">
+    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
+    <button class="delete-chat-btn" onclick="deleteChat()" title="Удалить чат">🗑</button>
+  </div>
 </div>
 
 <div class="chat-messages" id="chat-messages">
@@ -44,18 +53,19 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 
 <div class="chat-input-wrap">
-  <input class="chat-input" id="chat-input" type="text" placeholder="Написать сообщение..." maxlength="500">
+  <input class="chat-input" id="chat-input" type="text" data-i18n-placeholder="write_message" placeholder="Написать сообщение..." maxlength="500">
   <button class="send-btn" onclick="sendMessage()">➤</button>
 </div>
 
 <div class="bottombar">
-  <button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span>Лента</span></button>
-  <button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span>Знакомства</span></button>
-  <button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span>Лайки</span></button>
-  <button class="bottom-btn active" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span>Чаты</span></button>
-  <button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">👤</span><span>Профиль</span></button>
+  <button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span data-i18n="feed">Лента</span></button>
+  <button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span data-i18n="swipe">Знакомства</span></button>
+  <button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span data-i18n="likes">Лайки</span></button>
+  <button class="bottom-btn active" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span data-i18n="chats">Чаты</span></button>
+  <button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">👤</span><span data-i18n="profile">Профиль</span></button>
 </div>
 
+<script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -63,6 +73,18 @@ var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 var matchId = null;
 var otherUserId = null;
+
+window.deleteChat = async function() {
+  if (!matchId) return;
+  if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
+  try {
+    await db.from('messages').delete().eq('match_id', matchId);
+    await db.from('matches').delete().eq('id', matchId);
+    window.location.href = 'matches.html';
+  } catch(e) {
+    alert('Ошибка при удалении: ' + e.message);
+  }
+};
 
 async function init() {
   try {
@@ -74,24 +96,23 @@ async function init() {
     matchId = params.get('match');
     if (!matchId) { window.location.href = 'matches.html'; return; }
 
-    // Загружаем данные матча, чтобы узнать имя собеседника
     var { data: match, error: matchErr } = await db.from('matches').select('*').eq('id', matchId).single();
     if (matchErr || !match) { window.location.href = 'matches.html'; return; }
     otherUserId = match.user1 === currentUser.id ? match.user2 : match.user1;
 
-    // Загружаем профиль собеседника
     var { data: profile } = await db.from('profiles').select('name').eq('id', otherUserId).single();
     var title = document.getElementById('chat-title');
     title.textContent = (profile && profile.name) ? profile.name : 'Чат';
 
     loadMessages();
 
-    // Подписка на новые сообщения (в реальном времени)
     db.channel('chat-' + matchId)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'match_id=eq.' + matchId }, function() {
         loadMessages();
       })
       .subscribe();
+
+    BlizkoTheme.applyLang();
   } catch(e) {
     console.error('Ошибка инициализации чата:', e);
     document.getElementById('chat-messages').innerHTML = '<div class="empty-chat">⚠️ Ошибка загрузки чата</div>';
@@ -109,7 +130,8 @@ async function loadMessages() {
     if (error) throw error;
 
     if (!messages || messages.length === 0) {
-      container.innerHTML = '<div class="empty-chat">💬 Нет сообщений. Напишите первым!</div>';
+      container.innerHTML = '<div class="empty-chat" data-i18n="no_messages">💬 Нет сообщений. Напишите первым!</div>';
+      BlizkoTheme.applyLang();
       return;
     }
 
@@ -141,13 +163,12 @@ async function sendMessage() {
       text: text
     });
     input.value = '';
-    loadMessages(); // обновляем сразу
+    loadMessages();
   } catch(e) {
     alert('Не удалось отправить сообщение: ' + e.message);
   }
 }
 
-// Отправка по Enter
 document.getElementById('chat-input').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') sendMessage();
 });
