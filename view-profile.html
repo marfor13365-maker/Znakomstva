@@ -64,7 +64,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <button class="back-btn" onclick="history.back()">&#8592;</button>
   <div class="page-title" data-i18n="profile">Анкета</div>
   <div class="topbar-right">
-    <button class="lang-btn" id="lang-toggle-btn" onclick="toggleLanguage()">EN</button>
+    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
   </div>
 </div>
 <div class="content" id="content">
@@ -91,10 +91,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="photo-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Проверка загрузки config.js
 if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
   document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">❌ Ошибка: config.js не загружен.</div>';
-  console.error('config.js не загружен.');
 } else {
   var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   var currentUser = null;
@@ -102,16 +100,13 @@ if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') 
   var currentTargetId = null;
   var currentMatchId = null;
 
-  // Функция переключения языка
   window.toggleLanguage = function() {
     if (typeof BlizkoTheme !== 'undefined' && typeof BlizkoTheme.toggleLang === 'function') {
       BlizkoTheme.toggleLang();
     } else {
-      // fallback: просто меняем текст на кнопке
       var btn = document.getElementById('lang-toggle-btn');
       if (btn) {
         btn.textContent = btn.textContent === 'EN' ? 'RU' : 'EN';
-        // перезагружаем страницу чтобы применить язык (если нет полной поддержки)
         location.reload();
       }
     }
@@ -166,7 +161,6 @@ if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') 
       currentMatchId = await getMatchId(targetId);
       renderProfile(profile);
 
-      // Применяем тему и язык (если доступно)
       if (typeof BlizkoTheme !== 'undefined') {
         if (typeof BlizkoTheme.apply === 'function') BlizkoTheme.apply();
         if (typeof BlizkoTheme.applyLang === 'function') BlizkoTheme.applyLang();
@@ -262,8 +256,6 @@ if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') 
           document.getElementById('viewer-overlay').classList.toggle('immersive', level > 0);
         }
       });
-    } else {
-      console.warn('BlizkoPhotoViewer не загружен');
     }
   }
 
