@@ -57,29 +57,29 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 
 <div class="bottombar">
-  <button class="bottom-btn" onclick="window.location.href='../feed.html'">
+  <button class="bottom-btn" onclick="window.location.href='feed.html'">
     <span class="ico">🏠</span><span data-i18n="feed">Лента</span>
   </button>
-  <button class="bottom-btn" onclick="window.location.href='../swipe.html'">
+  <button class="bottom-btn" onclick="window.location.href='swipe.html'">
     <span class="ico">😍</span><span data-i18n="swipe">Знакомства</span>
   </button>
-  <button class="bottom-btn" onclick="window.location.href='../likes.html'">
+  <button class="bottom-btn" onclick="window.location.href='likes.html'">
     <span class="ico">💖</span><span data-i18n="likes">Лайки</span>
   </button>
   <button class="bottom-btn active">
     <span class="ico">💬</span><span data-i18n="matches">Матчи</span>
   </button>
-  <button class="bottom-btn" onclick="window.location.href='../profile.html'">
+  <button class="bottom-btn" onclick="window.location.href='profile.html'">
     <span class="ico">👤</span><span data-i18n="profile">Профиль</span>
   </button>
 </div>
 
-<script src="../theme.js"></script>
-<script src="../config.js"></script>
+<script src="theme.js"></script>
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ============================================================
-// УДАЛЕНИЕ ЧЕРЕЗ ОБЫЧНЫЙ КЛИЕНТ (RLS настроен в Supabase)
+// УДАЛЕНИЕ ЧЕРЕЗ ОБЫЧНЫЙ КЛИЕНТ (RLS уже настроен в Supabase)
 // ============================================================
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
@@ -154,7 +154,7 @@ async function init() {
   try {
     var r = await db.auth.getSession();
     if (!r.data.session) {
-      window.location.href = '../index.html';
+      window.location.href = 'index.html';
       return;
     }
     currentUser = r.data.session.user;
@@ -184,7 +184,7 @@ async function loadMatches() {
     if (error) throw error;
 
     if (!matches || matches.length === 0) {
-      wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'../swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
+      wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_matches">Пока нет совпадений.<br>Листай анкеты и находи людей!</p><button class="go-btn" onclick="window.location.href=\'swipe.html\'" data-i18n="go_swipe">Найти людей</button></div>';
       if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
         BlizkoTheme.applyLang();
       }
@@ -211,8 +211,8 @@ async function loadMatches() {
       var otherId = item.otherId;
 
       html += `
-        <div class="match-item" onclick="window.location.href='../chat.html?match=${matchId}'">
-          <div class="avatar" onclick="event.stopPropagation(); window.location.href='../view-profile.html?user=${otherId}'">
+        <div class="match-item" onclick="window.location.href='chat.html?match=${matchId}'">
+          <div class="avatar" onclick="event.stopPropagation(); window.location.href='view-profile.html?user=${otherId}'">
             ${avatarHtml}
           </div>
           <div class="match-info">
