@@ -127,6 +127,7 @@ input:focus{border-color:var(--accent)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var BLIZKO_API_URL = (typeof window.BLIZKO_API_URL !== 'undefined') ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
+var BLIZKO_BOT_USERNAME = 'Rezumeizi_bot';
 
 var T={ru:{
 tagline:'Настоящие знакомства рядом',
@@ -159,13 +160,9 @@ unlock_ok_unlock:'Аккаунт разблокирован! Временный 
 unlock_ok_unlock_hint:'Войди с этим паролем, а затем смени его в настройках профиля.',
 unlock_ok_extra:'Код принят! Теперь заполни форму регистрации ниже, чтобы создать дополнительный аккаунт на этом устройстве.',
 footer_by:'Сделано в Студии Вектор',
-start_hint:'Забыл пароль или хочешь ещё один аккаунт на этом устройстве? Вы можете снять блокировку аккаунта или купить дополнительный аккаунт через наш Telegram-бот @Rezumeizi_bot.',
+start_hint:'Забыл пароль или хочешь ещё один аккаунт на этом устройстве? Открой наш Telegram-бот @Rezumeizi_bot — там можно снять блокировку аккаунта или купить дополнительный аккаунт.',
 start_btn_unlock:'🔓 Забыл пароль — разблокировать аккаунт',
-start_btn_extra:'➕ Купить дополнительный аккаунт',
-start_submit:'Получить ссылку на оплату',
-start_open_bot:'Открыть в Telegram и оплатить',
-start_price_label:'Стоимость:',
-start_err_no_email:'Аккаунт с таким email не найден.'
+start_btn_extra:'➕ Купить дополнительный аккаунт'
 },en:{
 tagline:'Real connections near you',
 tab_login:'Sign in',tab_reg:'Register',
@@ -197,13 +194,9 @@ unlock_ok_unlock:'Account unlocked! Temporary sign-in password:',
 unlock_ok_unlock_hint:'Sign in with this password, then change it in your profile settings.',
 unlock_ok_extra:'Code accepted! Now fill in the registration form below to create an additional account on this device.',
 footer_by:'Made by Studio Vector',
-start_hint:'Forgot your password or want another account on this device? You can unlock your account or buy an additional account through our Telegram bot @Rezumeizi_bot.',
+start_hint:'Forgot your password or want another account on this device? Open our Telegram bot @Rezumeizi_bot — you can unlock your account or buy an additional account there.',
 start_btn_unlock:'🔓 Forgot password — unlock account',
-start_btn_extra:'➕ Buy an additional account',
-start_submit:'Get payment link',
-start_open_bot:'Open in Telegram and pay',
-start_price_label:'Price:',
-start_err_no_email:'No account found with this email.'
+start_btn_extra:'➕ Buy an additional account'
 }};
 
 var lang=localStorage.getItem('lang')||'ru';
@@ -271,23 +264,20 @@ box.style.display=open?'block':'none';
 document.getElementById('unlock-toggle-'+which).textContent=open?T[lang].unlock_toggle_close:T[lang].unlock_toggle_open;
 }
 
+/* Кнопки больше НЕ ходят на бэкенд за ссылкой/ценой — юридически продажу ведёт только бот.
+   Сайт лишь открывает Telegram с device_id в start-параметре. */
 function renderUnlockBox(which){
 var t=T[lang];
 var box=document.getElementById('unlock-box-'+which);
+var deviceId=getDeviceId();
+var unlockLink='https://t.me/'+BLIZKO_BOT_USERNAME+'?start=unlock_'+deviceId;
+var extraLink='https://t.me/'+BLIZKO_BOT_USERNAME+'?start=extra_'+deviceId;
+
 box.innerHTML=
 '<div class="unlock-hint">'+t.start_hint+'</div>'+
 
-'<button class="btn btn-secondary" onclick="toggleStartForm(\''+which+'\',\'unlock\')">'+t.start_btn_unlock+'</button>'+
-'<div id="start-form-unlock-'+which+'" style="display:none;margin-top:10px">'+
-'<div class="form-group"><label>Email</label><input type="email" id="start-email-'+which+'" autocomplete="email"></div>'+
-'<button class="btn" id="start-btn-unlock-'+which+'" onclick="startUnlockRequest(\''+which+'\')">'+t.start_submit+'</button>'+
-'<div class="msg" id="start-msg-unlock-'+which+'"></div>'+
-'<div id="start-result-unlock-'+which+'"></div>'+
-'</div>'+
-
-'<button class="btn btn-secondary" style="margin-top:10px" onclick="startExtraAccountRequest(\''+which+'\')" id="start-btn-extra-'+which+'">'+t.start_btn_extra+'</button>'+
-'<div class="msg" id="start-msg-extra-'+which+'"></div>'+
-'<div id="start-result-extra-'+which+'"></div>'+
+'<a class="btn btn-secondary" style="display:block;text-align:center;text-decoration:none" href="'+unlockLink+'" target="_blank" rel="noopener">'+t.start_btn_unlock+'</a>'+
+'<a class="btn btn-secondary" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="'+extraLink+'" target="_blank" rel="noopener">'+t.start_btn_extra+'</a>'+
 
 '<div style="height:1px;background:var(--border);margin:18px 0"></div>'+
 
@@ -296,76 +286,6 @@ box.innerHTML=
 '<button class="btn btn-secondary" id="unlock-btn-'+which+'" onclick="redeemUnlockCode(\''+which+'\')">'+t.unlock_submit+'</button>'+
 '<div class="msg" id="unlock-msg-'+which+'"></div>'+
 '<div id="unlock-result-'+which+'"></div>';
-}
-
-function toggleStartForm(which,kind){
-var form=document.getElementById('start-form-'+kind+'-'+which);
-form.style.display=form.style.display==='none'?'block':'none';
-}
-
-function renderTelegramLink(containerId,link,priceText){
-var t=T[lang];
-document.getElementById(containerId).innerHTML=
-'<div class="result-box">'+priceText+
-'<a class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="'+link+'" target="_blank" rel="noopener">'+t.start_open_bot+'</a></div>';
-}
-
-async function startUnlockRequest(which){
-var t=T[lang];
-var email=document.getElementById('start-email-'+which).value.trim();
-var msgId='start-msg-unlock-'+which;
-var resultId='start-result-unlock-'+which;
-document.getElementById(resultId).innerHTML='';
-if(!email){setMsg(msgId,t.err_fill,'error');return}
-setMsg(msgId,t.unlock_loading,'');
-document.getElementById('start-btn-unlock-'+which).disabled=true;
-try{
-var resp=await fetch(BLIZKO_API_URL+'/api/unlock/create-request',{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({type:'unlock',device_id:getDeviceId(),email:email})
-});
-var data=await resp.json();
-document.getElementById('start-btn-unlock-'+which).disabled=false;
-if(!resp.ok){
-var err=(data&&data.detail)||'unknown_error';
-var msgMap={user_not_found:t.start_err_no_email,email_required:t.err_fill};
-setMsg(msgId,msgMap[err]||t.unlock_err_generic,'error');
-return;
-}
-setMsg(msgId,'','');
-renderTelegramLink(resultId,data.telegram_link,t.start_price_label+' '+data.price+' ₽');
-}catch(e){
-setMsg(msgId,t.unlock_err_generic,'error');
-document.getElementById('start-btn-unlock-'+which).disabled=false;
-}
-}
-
-async function startExtraAccountRequest(which){
-var t=T[lang];
-var msgId='start-msg-extra-'+which;
-var resultId='start-result-extra-'+which;
-document.getElementById(resultId).innerHTML='';
-setMsg(msgId,t.unlock_loading,'');
-document.getElementById('start-btn-extra-'+which).disabled=true;
-try{
-var resp=await fetch(BLIZKO_API_URL+'/api/unlock/create-request',{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({type:'extra_account',device_id:getDeviceId()})
-});
-var data=await resp.json();
-document.getElementById('start-btn-extra-'+which).disabled=false;
-if(!resp.ok){
-setMsg(msgId,t.unlock_err_generic,'error');
-return;
-}
-setMsg(msgId,'','');
-renderTelegramLink(resultId,data.telegram_link,t.start_price_label+' '+data.price+' ₽');
-}catch(e){
-setMsg(msgId,t.unlock_err_generic,'error');
-document.getElementById('start-btn-extra-'+which).disabled=false;
-}
 }
 
 async function redeemUnlockCode(which){
