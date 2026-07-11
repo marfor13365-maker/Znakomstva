@@ -165,7 +165,7 @@ footer_by:'Сделано в Студии Вектор',
 start_hint:'Хочешь ещё один аккаунт на этом устройстве? Скопируй ссылку ниже и вставь её в резюме-боте, когда он попросит — там же пройдёт оплата.',
 start_btn_extra:'➕ Купить дополнительный аккаунт',
 start_submit:'Получить ссылку на оплату',
-start_copy:'📋 Скопировать ссылку',
+start_copy:'📋 Скопировать ссылку и перейти в бот для оплаты',
 start_copied:'Скопировано!',
 start_price_label:'Стоимость:',
 rules_link:'📜 Правила',
@@ -205,7 +205,7 @@ footer_by:'Made by Studio Vector',
 start_hint:'Want another account on this device? Copy the link below and paste it into the resume-bot when it asks — payment happens there.',
 start_btn_extra:'➕ Buy an additional account',
 start_submit:'Get payment link',
-start_copy:'📋 Copy link',
+start_copy:'📋 Copy link and open the bot to pay',
 start_copied:'Copied!',
 start_price_label:'Price:',
 rules_link:'📜 Rules',
@@ -298,21 +298,18 @@ box.innerHTML=
 '<div id="unlock-result-'+which+'"></div>';
 }
 
-function copyLink(link, btnEl){
+function copyAndOpenBot(link, btnEl){
 var t=T[lang];
-navigator.clipboard.writeText(link).then(function(){
-var original=btnEl.textContent;
-btnEl.textContent=t.start_copied;
-setTimeout(function(){btnEl.textContent=original},1500);
-}).catch(function(){});
+navigator.clipboard.writeText(link).then(function(){}).catch(function(){});
+window.open(link, '_blank');
 }
 
-function renderTelegramLink(containerId,link,priceText){
+function renderTelegramLink(containerId,link){
 var t=T[lang];
 document.getElementById(containerId).innerHTML=
-'<div class="result-box">'+priceText+
-'<a href="'+link+'" target="_blank" rel="noopener" style="display:block;margin-top:10px;word-break:break-all;background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--accent2);text-decoration:none">'+link+'</a>'+
-'<button type="button" class="btn btn-secondary" style="margin-top:10px" onclick="copyLink(\''+link+'\', this)">'+t.start_copy+'</button>'+
+'<div class="result-box">'+
+'<div style="word-break:break-all;background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted)">'+link+'</div>'+
+'<button type="button" class="btn" style="margin-top:10px" onclick="copyAndOpenBot(\''+link+'\', this)">'+t.start_copy+'</button>'+
 '</div>';
 }
 
@@ -336,7 +333,7 @@ setMsg(msgId,t.unlock_err_generic,'error');
 return;
 }
 setMsg(msgId,'','');
-renderTelegramLink(resultId,data.telegram_link,t.start_price_label+' '+data.price+' ₽');
+renderTelegramLink(resultId,data.telegram_link);
 }catch(e){
 setMsg(msgId,t.unlock_err_generic,'error');
 document.getElementById('start-btn-extra-'+which).disabled=false;
