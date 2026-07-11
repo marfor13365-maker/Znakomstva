@@ -122,7 +122,7 @@ input:focus{border-color:var(--accent)}
 <span id="footer_text"></span>
 </a>
 <div style="margin-top:8px">
-<a class="footer-link" id="rules_link" href="https://telegra.ph/Polzovatelskoe-soglashenie-08-15-10" target="_blank" rel="noopener"></a>
+<a class="footer-link" id="rules_link" href="rules.html"></a>
 </div>
 </div>
 <script src="theme.js"></script>
@@ -143,6 +143,7 @@ c2:'Мне исполнилось 18 лет',
 c3:'Я ознакомился(ась) с правилами сервиса',
 name_ph:'Как тебя зовут?',pass_ph:'Минимум 6 символов',
 err_fill:'Заполни все поля',err_pass:'Пароль минимум 6 символов',
+err_need_paid_code:'На этом устройстве уже есть аккаунт. Чтобы создать ещё один, сначала купи доп.аккаунт и введи полученный код выше.',
 err_login:'Неверный email или пароль',
 ok_welcome:'Добро пожаловать!',ok_created:'Аккаунт создан!',
 ok_check_email:'Почти готово! Мы отправили письмо со ссылкой подтверждения на твой email. Перейди по ней, чтобы завершить регистрацию, потом сможешь войти.',
@@ -184,6 +185,7 @@ c2:'I am 18 years of age or older',
 c3:'I have read the terms of service',
 name_ph:'What is your name?',pass_ph:'At least 6 characters',
 err_fill:'Please fill in all fields',err_pass:'Password must be at least 6 characters',
+err_need_paid_code:'This device already has an account. To create another one, buy an extra account first and enter the code above.',
 err_login:'Invalid email or password',
 ok_welcome:'Welcome!',ok_created:'Account created!',
 ok_check_email:'Almost done! We sent a confirmation link to your email. Click it to finish registration, then you can sign in.',
@@ -400,6 +402,10 @@ var email=document.getElementById('reg-email').value.trim();
 var pass=document.getElementById('reg-pass').value;
 if(!name||!email||!pass){setMsg('reg-msg',t.err_fill,'error');return}
 if(pass.length<6){setMsg('reg-msg',t.err_pass,'error');return}
+if(deviceAccountCount>0 && !window._blizkoExtraCode){
+setMsg('reg-msg',t.err_need_paid_code,'error');
+return;
+}
 setMsg('reg-msg',t.loading_reg,'');
 document.getElementById('reg-btn').disabled=true;
 var r=await db.auth.signUp({email:email,password:pass});
@@ -432,12 +438,15 @@ document.getElementById('reg-btn').disabled=false;
 }
 
 /* ===== список аккаунтов на этом устройстве — показываем при входе ===== */
+var deviceAccountCount = 0;
+
 async function loadDeviceAccounts(){
 try{
 var resp=await fetch(BLIZKO_API_URL+'/api/device/accounts/'+getDeviceId());
 if(!resp.ok)return;
 var data=await resp.json();
 var emails=data.emails||[];
+deviceAccountCount=emails.length;
 if(emails.length<2)return; // если аккаунт один — выбирать нечего, просто входи как обычно
 var t=T[lang];
 var box=document.createElement('div');
