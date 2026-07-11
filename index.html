@@ -145,6 +145,7 @@ name_ph:'Как тебя зовут?',pass_ph:'Минимум 6 символов
 err_fill:'Заполни все поля',err_pass:'Пароль минимум 6 символов',
 err_login:'Неверный email или пароль',
 ok_welcome:'Добро пожаловать!',ok_created:'Аккаунт создан!',
+ok_check_email:'Почти готово! Мы отправили письмо со ссылкой подтверждения на твой email. Перейди по ней, чтобы завершить регистрацию, потом сможешь войти.',
 loading_in:'Входим...',loading_reg:'Создаём аккаунт...',
 unlock_toggle_open:'Есть код разблокировки или доп.аккаунта?',
 unlock_toggle_close:'Скрыть',
@@ -185,6 +186,7 @@ name_ph:'What is your name?',pass_ph:'At least 6 characters',
 err_fill:'Please fill in all fields',err_pass:'Password must be at least 6 characters',
 err_login:'Invalid email or password',
 ok_welcome:'Welcome!',ok_created:'Account created!',
+ok_check_email:'Almost done! We sent a confirmation link to your email. Click it to finish registration, then you can sign in.',
 loading_in:'Signing in...',loading_reg:'Creating account...',
 unlock_toggle_open:'Have an unlock or extra-account code?',
 unlock_toggle_close:'Hide',
@@ -425,8 +427,8 @@ body:JSON.stringify({code:window._blizkoExtraCode,device_id:window._blizkoExtraD
 window._blizkoExtraCode=null;
 }
 
-setMsg('reg-msg',t.ok_created,'success');
-setTimeout(function(){window.location.href='profile.html'},1000)
+setMsg('reg-msg',t.ok_check_email,'success');
+document.getElementById('reg-btn').disabled=false;
 }
 
 /* ===== список аккаунтов на этом устройстве — показываем при входе ===== */
