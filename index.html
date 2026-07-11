@@ -165,7 +165,7 @@ start_btn_extra:'➕ Купить дополнительный аккаунт',
 start_submit:'Получить ссылку на оплату',
 start_open_bot:'Открыть в Telegram и оплатить',
 start_price_label:'Стоимость:',
-start_err_no_email:'Аккаунт с таким email не найден.'
+start_err_no_email:'На этом устройстве не найдено ни одного аккаунта Blizko. Убедись, что открываешь сайт с того же устройства, где регистрировался.'
 },en:{
 tagline:'Real connections near you',
 tab_login:'Sign in',tab_reg:'Register',
@@ -203,7 +203,7 @@ start_btn_extra:'➕ Buy an additional account',
 start_submit:'Get payment link',
 start_open_bot:'Open in Telegram and pay',
 start_price_label:'Price:',
-start_err_no_email:'No account found with this email.'
+start_err_no_email:'No Blizko account found for this device. Make sure you are opening the site from the device you registered on.'
 }};
 
 var lang=localStorage.getItem('lang')||'ru';
@@ -277,13 +277,9 @@ var box=document.getElementById('unlock-box-'+which);
 box.innerHTML=
 '<div class="unlock-hint">'+t.start_hint+'</div>'+
 
-'<button class="btn btn-secondary" onclick="toggleStartForm(\''+which+'\',\'unlock\')">'+t.start_btn_unlock+'</button>'+
-'<div id="start-form-unlock-'+which+'" style="display:none;margin-top:10px">'+
-'<div class="form-group"><label>Email</label><input type="email" id="start-email-'+which+'" autocomplete="email"></div>'+
-'<button class="btn" id="start-btn-unlock-'+which+'" onclick="startUnlockRequest(\''+which+'\')">'+t.start_submit+'</button>'+
+'<button class="btn btn-secondary" id="start-btn-unlock-'+which+'" onclick="startUnlockRequest(\''+which+'\')">'+t.start_btn_unlock+'</button>'+
 '<div class="msg" id="start-msg-unlock-'+which+'"></div>'+
 '<div id="start-result-unlock-'+which+'"></div>'+
-'</div>'+
 
 '<button class="btn btn-secondary" style="margin-top:10px" onclick="startExtraAccountRequest(\''+which+'\')" id="start-btn-extra-'+which+'">'+t.start_btn_extra+'</button>'+
 '<div class="msg" id="start-msg-extra-'+which+'"></div>'+
@@ -312,24 +308,22 @@ document.getElementById(containerId).innerHTML=
 
 async function startUnlockRequest(which){
 var t=T[lang];
-var email=document.getElementById('start-email-'+which).value.trim();
 var msgId='start-msg-unlock-'+which;
 var resultId='start-result-unlock-'+which;
 document.getElementById(resultId).innerHTML='';
-if(!email){setMsg(msgId,t.err_fill,'error');return}
 setMsg(msgId,t.unlock_loading,'');
 document.getElementById('start-btn-unlock-'+which).disabled=true;
 try{
 var resp=await fetch(BLIZKO_API_URL+'/api/unlock/create-request',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({type:'unlock',device_id:getDeviceId(),email:email})
+body:JSON.stringify({type:'unlock',device_id:getDeviceId()})
 });
 var data=await resp.json();
 document.getElementById('start-btn-unlock-'+which).disabled=false;
 if(!resp.ok){
 var err=(data&&data.detail)||'unknown_error';
-var msgMap={user_not_found:t.start_err_no_email,email_required:t.err_fill};
+var msgMap={no_account_for_device:t.start_err_no_email};
 setMsg(msgId,msgMap[err]||t.unlock_err_generic,'error');
 return;
 }
@@ -431,6 +425,15 @@ document.getElementById('reg-btn').disabled=true;
 var r=await db.auth.signUp({email:email,password:pass});
 if(r.error){setMsg('reg-msg',r.error.message,'error');document.getElementById('reg-btn').disabled=false;return}
 await db.from('profiles').insert({id:r.data.user.id,name:name,consent_given:true,consent_at:new Date().toISOString()});
+
+/* привязываем аккаунт к этому устройству — понадобится для "забыл пароль" без email */
+try{
+await fetch(BLIZKO_API_URL+'/api/device/link-account',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({device_id:getDeviceId(),user_id:r.data.user.id})
+});
+}catch(e){}
 
 /* если аккаунт создаётся по коду доп.аккаунта — подтверждаем на бэкенде */
 if(window._blizkoExtraCode){
