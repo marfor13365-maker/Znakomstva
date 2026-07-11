@@ -17,8 +17,8 @@ RESUME_BOT_URL = os.environ.get("RESUME_BOT_URL", "").rstrip("/")
 DEFAULT_PRICE_UNLOCK = 199
 DEFAULT_PRICE_EXTRA_BASE = 200
 
-# Username бота для оплаты (без @)
-BOT_USERNAME = os.environ.get("BOT_USERNAME", "Rezumeizi_bot")
+# Username бота, который принимает оплату (обрабатывает /start u_<id> и /start e_<id>)
+BOT_USERNAME = "Rezumeizi_bot"
 
 
 async def get_blizko_prices():
@@ -78,11 +78,37 @@ async def find_user_id_by_email(email: str):
         return users[0]["id"]
 
 
-async def create_unlock_request(req_type: str, device_id: str, target_user_id: str | None):
-    """Создаёт заявку и возвращает (request_id, telegram_deep_link, price)."""
+async def find_primary_user_for_device(device_id: str):
+    """Находит аккаунт, привязанный к этому устройству (для 'забыл пароль' без email).
+    Берём самый ранний из привязанных к устройству аккаунтов."""
+    url = (SUPABASE_URL + "/rest/v1/device_accounts?device_id=eq." + device_id
+           + "&select=user_id,created_at&order=created_at.asc&limit=1")
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, headers=_headers())
+        if r.status_code != 200:
+            return None
+        rows = r.json()
+        return rows[0]["user_id"] if rows else None
+
+
+async def link_device_account(device_id: str, user_id: str):
+    """Вызывается сайтом сразу после успешной регистрации — привязывает новый
+    аккаунт к устройству, чтобы потом можно было искать его по device_id."""
+    url = SUPABASE_URL + "/rest/v1/device_accounts"
+    async with httpx.AsyncClient() as client:
+        r = await client.post(url, headers=_headers(), json={"device_id": device_id, "user_id": user_id})
+        return r.status_code in (200, 201)
+
+
+async def create_unlock_request(req_type: str, device_id: str, target_user_id: str | None = None):
+    """Создаёт заявку и возвращает (request_id, telegram_deep_link, price).
+    Для type='unlock' target_user_id больше не передаётся снаружи — ищем сами по device_id."""
     prices = await get_blizko_prices()
 
     if req_type == "unlock":
+        target_user_id = await find_primary_user_for_device(device_id)
+        if not target_user_id:
+            raise ValueError("no_account_for_device")
         price = prices["unlock_price"]
     else:
         existing_count = await count_device_accounts(device_id)
@@ -105,8 +131,8 @@ async def create_unlock_request(req_type: str, device_id: str, target_user_id: s
         row = r.json()[0]
 
     request_id = row["id"]
-    # Префикс ОБЯЗАТЕЛЬНО должен совпадать с тем, что ждёт bot.py:
-    # "u_" — разблокировка, "e_" — дополнительный аккаунт.
+    # ВАЖНО: bot.py различает тип заявки по префиксу в /start-параметре:
+    #   "u_<id>" -> unlock, "e_<id>" -> extra_account
     prefix = "u_" if req_type == "unlock" else "e_"
     deep_link = "https://t.me/" + BOT_USERNAME + "?start=" + prefix + request_id
     return request_id, deep_link, price
