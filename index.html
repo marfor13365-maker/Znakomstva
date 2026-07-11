@@ -311,7 +311,7 @@ function renderTelegramLink(containerId,link,priceText){
 var t=T[lang];
 document.getElementById(containerId).innerHTML=
 '<div class="result-box">'+priceText+
-'<div style="margin-top:10px;word-break:break-all;background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px">'+link+'</div>'+
+'<a href="'+link+'" target="_blank" rel="noopener" style="display:block;margin-top:10px;word-break:break-all;background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--accent2);text-decoration:none">'+link+'</a>'+
 '<button type="button" class="btn btn-secondary" style="margin-top:10px" onclick="copyLink(\''+link+'\', this)">'+t.start_copy+'</button>'+
 '</div>';
 }
