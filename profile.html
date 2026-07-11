@@ -265,14 +265,17 @@ input[type="file"]{display:none}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="push-notifications.js"></script>
 <script>
+var BLIZKO_API_URL = (typeof window.BLIZKO_API_URL !== 'undefined') ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
+var currentAccessToken = null;
 var myPosts = [];
 
 async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) { window.location.href = 'index.html'; return; }
   currentUser = r.data.session.user;
+  currentAccessToken = r.data.session.access_token;
 
   var { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
   if (profile) {
@@ -699,6 +702,18 @@ async function confirmDeleteAccount() {
     await db.from('posts').delete().eq('user_id', currentUser.id);
     await db.from('profile_photos').delete().eq('user_id', currentUser.id);
     await db.from('profiles').delete().eq('id', currentUser.id);
+
+    /* по-настоящему удаляем учётку в auth.users через бэкенд (обычный ключ так не умеет) —
+       без этого шага вход с тем же email/паролем продолжал бы работать */
+    var delResp = await fetch(BLIZKO_API_URL + '/api/account/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: currentUser.id, access_token: currentAccessToken })
+    });
+    if (!delResp.ok) {
+      console.error('Не удалось удалить учётку через бэкенд:', await delResp.text());
+    }
+
     await db.auth.signOut();
     alert('Аккаунт удалён.');
     window.location.href = 'index.html';
