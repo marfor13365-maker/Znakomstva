@@ -121,6 +121,9 @@ input:focus{border-color:var(--accent)}
 <a class="footer-link" href="https://vektorizi-ru.vercel.app" target="_blank" rel="noopener">
 <span id="footer_text"></span>
 </a>
+<div style="margin-top:8px">
+<a class="footer-link" id="rules_link" href="https://telegra.ph/Polzovatelskoe-soglashenie-08-15-10" target="_blank" rel="noopener"></a>
+</div>
 </div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
@@ -159,13 +162,15 @@ unlock_ok_unlock:'Аккаунт разблокирован! Временный 
 unlock_ok_unlock_hint:'Войди с этим паролем, а затем смени его в настройках профиля.',
 unlock_ok_extra:'Код принят! Теперь заполни форму регистрации ниже, чтобы создать дополнительный аккаунт на этом устройстве.',
 footer_by:'Сделано в Студии Вектор',
-start_hint:'Забыл пароль или хочешь ещё один аккаунт на этом устройстве? Вы можете снять блокировку аккаунта или купить дополнительный аккаунт через наш Telegram-бот @Rezumeizi_bot.',
-start_btn_unlock:'🔓 Забыл пароль — разблокировать аккаунт',
+start_hint:'Хочешь ещё один аккаунт на этом устройстве? Скопируй ссылку ниже и вставь её в резюме-боте, когда он попросит — там же пройдёт оплата.',
 start_btn_extra:'➕ Купить дополнительный аккаунт',
 start_submit:'Получить ссылку на оплату',
-start_open_bot:'Открыть в Telegram и оплатить',
+start_copy:'📋 Скопировать ссылку',
+start_copied:'Скопировано!',
 start_price_label:'Стоимость:',
-start_err_no_email:'На этом устройстве не найдено ни одного аккаунта Blizko. Убедись, что открываешь сайт с того же устройства, где регистрировался.'
+rules_link:'📜 Правила',
+choose_account_title:'На этом устройстве уже есть аккаунты:',
+choose_account_hint:'Выбери, в какой войти:'
 },en:{
 tagline:'Real connections near you',
 tab_login:'Sign in',tab_reg:'Register',
@@ -197,13 +202,15 @@ unlock_ok_unlock:'Account unlocked! Temporary sign-in password:',
 unlock_ok_unlock_hint:'Sign in with this password, then change it in your profile settings.',
 unlock_ok_extra:'Code accepted! Now fill in the registration form below to create an additional account on this device.',
 footer_by:'Made by Studio Vector',
-start_hint:'Forgot your password or want another account on this device? You can unlock your account or buy an additional account through our Telegram bot @Rezumeizi_bot.',
-start_btn_unlock:'🔓 Forgot password — unlock account',
+start_hint:'Want another account on this device? Copy the link below and paste it into the resume-bot when it asks — payment happens there.',
 start_btn_extra:'➕ Buy an additional account',
 start_submit:'Get payment link',
-start_open_bot:'Open in Telegram and pay',
+start_copy:'📋 Copy link',
+start_copied:'Copied!',
 start_price_label:'Price:',
-start_err_no_email:'No Blizko account found for this device. Make sure you are opening the site from the device you registered on.'
+rules_link:'📜 Rules',
+choose_account_title:'This device already has accounts:',
+choose_account_hint:'Choose which one to sign in to:'
 }};
 
 var lang=localStorage.getItem('lang')||'ru';
@@ -231,6 +238,7 @@ document.getElementById('login-pass').placeholder='••••••••';
 document.getElementById('unlock-toggle-login').textContent=t.unlock_toggle_open;
 document.getElementById('unlock-toggle-reg').textContent=t.unlock_toggle_open;
 document.getElementById('footer_text').textContent=t.footer_by;
+document.getElementById('rules_link').textContent=t.rules_link;
 renderUnlockBox('login');
 renderUnlockBox('reg');
 }
@@ -277,11 +285,7 @@ var box=document.getElementById('unlock-box-'+which);
 box.innerHTML=
 '<div class="unlock-hint">'+t.start_hint+'</div>'+
 
-'<button class="btn btn-secondary" id="start-btn-unlock-'+which+'" onclick="startUnlockRequest(\''+which+'\')">'+t.start_btn_unlock+'</button>'+
-'<div class="msg" id="start-msg-unlock-'+which+'"></div>'+
-'<div id="start-result-unlock-'+which+'"></div>'+
-
-'<button class="btn btn-secondary" style="margin-top:10px" onclick="startExtraAccountRequest(\''+which+'\')" id="start-btn-extra-'+which+'">'+t.start_btn_extra+'</button>'+
+'<button class="btn btn-secondary" id="start-btn-extra-'+which+'" onclick="startExtraAccountRequest(\''+which+'\')">'+t.start_btn_extra+'</button>'+
 '<div class="msg" id="start-msg-extra-'+which+'"></div>'+
 '<div id="start-result-extra-'+which+'"></div>'+
 
@@ -294,45 +298,22 @@ box.innerHTML=
 '<div id="unlock-result-'+which+'"></div>';
 }
 
-function toggleStartForm(which,kind){
-var form=document.getElementById('start-form-'+kind+'-'+which);
-form.style.display=form.style.display==='none'?'block':'none';
+function copyLink(link, btnEl){
+var t=T[lang];
+navigator.clipboard.writeText(link).then(function(){
+var original=btnEl.textContent;
+btnEl.textContent=t.start_copied;
+setTimeout(function(){btnEl.textContent=original},1500);
+}).catch(function(){});
 }
 
 function renderTelegramLink(containerId,link,priceText){
 var t=T[lang];
 document.getElementById(containerId).innerHTML=
 '<div class="result-box">'+priceText+
-'<a class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="'+link+'" target="_blank" rel="noopener">'+t.start_open_bot+'</a></div>';
-}
-
-async function startUnlockRequest(which){
-var t=T[lang];
-var msgId='start-msg-unlock-'+which;
-var resultId='start-result-unlock-'+which;
-document.getElementById(resultId).innerHTML='';
-setMsg(msgId,t.unlock_loading,'');
-document.getElementById('start-btn-unlock-'+which).disabled=true;
-try{
-var resp=await fetch(BLIZKO_API_URL+'/api/unlock/create-request',{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({type:'unlock',device_id:getDeviceId()})
-});
-var data=await resp.json();
-document.getElementById('start-btn-unlock-'+which).disabled=false;
-if(!resp.ok){
-var err=(data&&data.detail)||'unknown_error';
-var msgMap={no_account_for_device:t.start_err_no_email};
-setMsg(msgId,msgMap[err]||t.unlock_err_generic,'error');
-return;
-}
-setMsg(msgId,'','');
-renderTelegramLink(resultId,data.telegram_link,t.start_price_label+' '+data.price+' ₽');
-}catch(e){
-setMsg(msgId,t.unlock_err_generic,'error');
-document.getElementById('start-btn-unlock-'+which).disabled=false;
-}
+'<div style="margin-top:10px;word-break:break-all;background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px">'+link+'</div>'+
+'<button type="button" class="btn btn-secondary" style="margin-top:10px" onclick="copyLink(\''+link+'\', this)">'+t.start_copy+'</button>'+
+'</div>';
 }
 
 async function startExtraAccountRequest(which){
@@ -426,12 +407,12 @@ var r=await db.auth.signUp({email:email,password:pass});
 if(r.error){setMsg('reg-msg',r.error.message,'error');document.getElementById('reg-btn').disabled=false;return}
 await db.from('profiles').insert({id:r.data.user.id,name:name,consent_given:true,consent_at:new Date().toISOString()});
 
-/* привязываем аккаунт к этому устройству — понадобится для "забыл пароль" без email */
+/* привязываем аккаунт к этому устройству и запоминаем email — для выбора аккаунта при входе */
 try{
 await fetch(BLIZKO_API_URL+'/api/device/link-account',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({device_id:getDeviceId(),user_id:r.data.user.id})
+body:JSON.stringify({device_id:getDeviceId(),user_id:r.data.user.id,email:email})
 });
 }catch(e){}
 
@@ -441,7 +422,7 @@ try{
 await fetch(BLIZKO_API_URL+'/api/unlock/consume-extra',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({code:window._blizkoExtraCode,device_id:window._blizkoExtraDeviceId,new_user_id:r.data.user.id})
+body:JSON.stringify({code:window._blizkoExtraCode,device_id:window._blizkoExtraDeviceId,new_user_id:r.data.user.id,email:email})
 });
 }catch(e){}
 window._blizkoExtraCode=null;
@@ -451,7 +432,28 @@ setMsg('reg-msg',t.ok_created,'success');
 setTimeout(function(){window.location.href='profile.html'},1000)
 }
 
-spawnHearts();setLang(lang);
+/* ===== список аккаунтов на этом устройстве — показываем при входе ===== */
+async function loadDeviceAccounts(){
+try{
+var resp=await fetch(BLIZKO_API_URL+'/api/device/accounts/'+getDeviceId());
+if(!resp.ok)return;
+var data=await resp.json();
+var emails=data.emails||[];
+if(emails.length<2)return; // если аккаунт один — выбирать нечего, просто входи как обычно
+var t=T[lang];
+var box=document.createElement('div');
+box.style.marginBottom='16px';
+var html='<div class="unlock-hint" style="margin-bottom:8px">'+t.choose_account_title+'<br>'+t.choose_account_hint+'</div>';
+emails.forEach(function(email){
+html+='<button type="button" class="btn btn-secondary" style="margin-top:6px" onclick="document.getElementById(\'login-email\').value=\''+email+'\'">'+email+'</button>';
+});
+box.innerHTML=html;
+var loginForm=document.getElementById('login-form');
+loginForm.insertBefore(box, loginForm.firstChild);
+}catch(e){}
+}
+
+spawnHearts();setLang(lang);loadDeviceAccounts();
 </script>
 </body>
 </html>
