@@ -1,52 +1,19 @@
 # unlock_utils.py
-# Положи рядом с main.py и push_utils.py в репозитории vector-chat-api.
+# Только логика доп.аккаунтов Blizko. "Забыл пароль" убран полностью.
 
 import os
 import secrets
 import string
+import re
 import httpx
 from datetime import datetime, timezone
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
-
-# Адрес бота resume-bot — там хранятся актуальные цены (админ меняет их в боте)
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_KEY", "")
 RESUME_BOT_URL = os.environ.get("RESUME_BOT_URL", "").rstrip("/")
 
-# Цены по умолчанию (если бот недоступен)
-DEFAULT_PRICE_UNLOCK = 199
 DEFAULT_PRICE_EXTRA_BASE = 200
-
-# Username бота, который принимает оплату (обрабатывает /start u_<id> и /start e_<id>)
-BOT_USERNAME = "Rezumeizi_bot"
-
-
-async def get_blizko_prices():
-    """Берёт актуальные цены из админки бота resume-bot. При ошибке — дефолтные."""
-    if not RESUME_BOT_URL:
-        return {"unlock_price": DEFAULT_PRICE_UNLOCK, "extra_base_price": DEFAULT_PRICE_EXTRA_BASE}
-    try:
-        async with httpx.AsyncClient() as client:
-            r = await client.get(RESUME_BOT_URL + "/api/blizko-prices", timeout=10.0)
-            if r.status_code == 200:
-                data = r.json()
-                return {
-                    "unlock_price": int(data.get("unlock_price", DEFAULT_PRICE_UNLOCK)),
-                    "extra_base_price": int(data.get("extra_base_price", DEFAULT_PRICE_EXTRA_BASE))
-                }
-    except Exception as e:
-        print("Не удалось получить цены от resume-bot:", e)
-    return {"unlock_price": DEFAULT_PRICE_UNLOCK, "extra_base_price": DEFAULT_PRICE_EXTRA_BASE}
-
-
-async def count_device_accounts(device_id: str):
-    """Сколько аккаунтов уже привязано к этому устройству."""
-    url = SUPABASE_URL + "/rest/v1/device_accounts?device_id=eq." + device_id + "&select=id"
-    async with httpx.AsyncClient() as client:
-        r = await client.get(url, headers=_headers())
-        if r.status_code != 200:
-            return 0
-        return len(r.json())
 
 
 def _headers():
@@ -60,69 +27,97 @@ def _headers():
 
 def _gen_code(length=8):
     alphabet = string.ascii_uppercase + string.digits
-    # Убираем легко путаемые символы
     alphabet = alphabet.replace("0", "").replace("O", "").replace("1", "").replace("I", "")
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
-async def find_user_id_by_email(email: str):
-    url = SUPABASE_URL + "/auth/v1/admin/users?email=" + email
+async def get_extra_base_price():
+    if not RESUME_BOT_URL:
+        return DEFAULT_PRICE_EXTRA_BASE
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(RESUME_BOT_URL + "/api/blizko-prices", timeout=10.0)
+            if r.status_code == 200:
+                return int(r.json().get("extra_base_price", DEFAULT_PRICE_EXTRA_BASE))
+    except Exception as e:
+        print("Не удалось получить цену от resume-bot:", e)
+    return DEFAULT_PRICE_EXTRA_BASE
+
+
+async def count_device_accounts(device_id: str, ip_address: str = None):
+    """Считаем аккаунты, привязанные либо к этому device_id, либо к этому же IP —
+    так очистка localStorage (смена device_id) сама по себе не сбрасывает прогрессию цены."""
+    url = SUPABASE_URL + "/rest/v1/device_accounts?or=(device_id.eq." + device_id
+    if ip_address:
+        url += ",ip_address.eq." + ip_address
+    url += ")&select=id"
     async with httpx.AsyncClient() as client:
         r = await client.get(url, headers=_headers())
         if r.status_code != 200:
-            return None
-        data = r.json()
-        users = data.get("users", data if isinstance(data, list) else [])
-        if not users:
-            return None
-        return users[0]["id"]
+            return 0
+        return len(r.json())
 
 
-async def find_primary_user_for_device(device_id: str):
-    """Находит аккаунт, привязанный к этому устройству (для 'забыл пароль' без email).
-    Берём самый ранний из привязанных к устройству аккаунтов."""
+async def list_device_accounts(device_id: str):
+    """Список email всех аккаунтов, зарегистрированных на этом устройстве (для выбора при входе)."""
     url = (SUPABASE_URL + "/rest/v1/device_accounts?device_id=eq." + device_id
-           + "&select=user_id,created_at&order=created_at.asc&limit=1")
+           + "&select=email,created_at&order=created_at.asc")
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, headers=_headers())
+        if r.status_code != 200:
+            return []
+        return [row["email"] for row in r.json() if row.get("email")]
+
+
+async def link_device_account(device_id: str, user_id: str, email: str, ip_address: str = None):
+    """Вызывается сайтом сразу после регистрации — привязывает аккаунт к устройству.
+    Разрешаем только для первого (бесплатного) аккаунта на этом device_id/IP — все
+    последующие обязаны идти через consume_extra_account_request с оплаченным кодом."""
+    existing = await count_device_accounts(device_id, ip_address)
+    if existing > 0:
+        return False, "extra_account_requires_paid_code"
+
+    url = SUPABASE_URL + "/rest/v1/device_accounts"
+    async with httpx.AsyncClient() as client:
+        r = await client.post(url, headers=_headers(), json={
+            "device_id": device_id, "user_id": user_id, "email": email, "ip_address": ip_address
+        })
+        return (r.status_code in (200, 201)), None
+
+
+async def find_pending_request(device_id: str):
+    """Если у устройства уже есть неоплаченная заявка на доп.аккаунт — возвращаем её,
+    чтобы не плодить новые записи и не позволять сбрасывать/пересчитывать цену повторными нажатиями."""
+    url = (SUPABASE_URL + "/rest/v1/unlock_requests?device_id=eq." + device_id
+           + "&type=eq.extra_account&status=eq.pending&select=*&order=created_at.desc&limit=1")
     async with httpx.AsyncClient() as client:
         r = await client.get(url, headers=_headers())
         if r.status_code != 200:
             return None
         rows = r.json()
-        return rows[0]["user_id"] if rows else None
+        return rows[0] if rows else None
 
 
-async def link_device_account(device_id: str, user_id: str):
-    """Вызывается сайтом сразу после успешной регистрации — привязывает новый
-    аккаунт к устройству, чтобы потом можно было искать его по device_id."""
-    url = SUPABASE_URL + "/rest/v1/device_accounts"
-    async with httpx.AsyncClient() as client:
-        r = await client.post(url, headers=_headers(), json={"device_id": device_id, "user_id": user_id})
-        return r.status_code in (200, 201)
+async def create_extra_account_request(device_id: str):
+    """Создаёт заявку на доп.аккаунт. Цена = базовая × 2^(сколько уже куплено на этом устройстве).
+    Если есть неоплаченная заявка — отдаём её же, а не создаём новую."""
+    bot_username = os.environ.get("RESUME_BOT_USERNAME", "Rezumeizi_bot")
 
+    pending = await find_pending_request(device_id)
+    if pending:
+        link = "https://t.me/" + bot_username + "?start=e_" + pending["id"]
+        return pending["id"], link, pending["price"]
 
-async def create_unlock_request(req_type: str, device_id: str, target_user_id: str | None = None):
-    """Создаёт заявку и возвращает (request_id, telegram_deep_link, price).
-    Для type='unlock' target_user_id больше не передаётся снаружи — ищем сами по device_id."""
-    prices = await get_blizko_prices()
-
-    if req_type == "unlock":
-        target_user_id = await find_primary_user_for_device(device_id)
-        if not target_user_id:
-            raise ValueError("no_account_for_device")
-        price = prices["unlock_price"]
-    else:
-        existing_count = await count_device_accounts(device_id)
-        # 1-й доп.аккаунт — базовая цена, 2-й — ×2, 3-й — ×4 и т.д.
-        price = prices["extra_base_price"] * (2 ** existing_count)
+    base_price = await get_extra_base_price()
+    existing_count = await count_device_accounts(device_id)
+    price = base_price * (2 ** existing_count)
 
     payload = {
-        "type": req_type,
+        "type": "extra_account",
         "device_id": device_id,
-        "target_user_id": target_user_id,
         "status": "pending",
         "price": price
     }
-
     url = SUPABASE_URL + "/rest/v1/unlock_requests"
     async with httpx.AsyncClient() as client:
         r = await client.post(url, headers=_headers(), json=payload)
@@ -131,11 +126,24 @@ async def create_unlock_request(req_type: str, device_id: str, target_user_id: s
         row = r.json()[0]
 
     request_id = row["id"]
-    # ВАЖНО: bot.py различает тип заявки по префиксу в /start-параметре:
-    #   "u_<id>" -> unlock, "e_<id>" -> extra_account
-    prefix = "u_" if req_type == "unlock" else "e_"
-    deep_link = "https://t.me/" + BOT_USERNAME + "?start=" + prefix + request_id
-    return request_id, deep_link, price
+    # Ссылка, которую пользователь копирует и вставляет в резюме-бот
+    bot_username = os.environ.get("RESUME_BOT_USERNAME", "Rezumeizi_bot")
+    link = "https://t.me/" + bot_username + "?start=e_" + request_id
+    return request_id, link, price
+
+
+REQUEST_ID_RE = re.compile(r"e_([a-zA-Z0-9\-]+)")
+
+
+def extract_request_id(pasted_text: str):
+    """Достаёт request_id из вставленной пользователем ссылки (или сырого id)."""
+    m = REQUEST_ID_RE.search(pasted_text.strip())
+    if m:
+        return m.group(1)
+    cleaned = pasted_text.strip()
+    if re.fullmatch(r"[a-zA-Z0-9\-]{8,}", cleaned):
+        return cleaned
+    return None
 
 
 async def get_unlock_request(request_id: str):
@@ -149,8 +157,7 @@ async def get_unlock_request(request_id: str):
 
 
 async def mark_request_paid(request_id: str):
-    """Бот вызывает это (через /api/unlock/mark-paid) после успешной оплаты.
-    Генерирует код, сохраняет его в заявке, возвращает код (бот отправляет его пользователю)."""
+    """Бот вызывает после успешной оплаты. Генерирует код, отдаёт его боту для показа пользователю."""
     req = await get_unlock_request(request_id)
     if not req:
         return None, "request_not_found"
@@ -159,11 +166,7 @@ async def mark_request_paid(request_id: str):
 
     code = _gen_code()
     url = SUPABASE_URL + "/rest/v1/unlock_requests?id=eq." + request_id
-    payload = {
-        "status": "paid",
-        "code": code,
-        "paid_at": datetime.now(timezone.utc).isoformat()
-    }
+    payload = {"status": "paid", "code": code, "paid_at": datetime.now(timezone.utc).isoformat()}
     async with httpx.AsyncClient() as client:
         r = await client.patch(url, headers=_headers(), json=payload)
         if r.status_code not in (200, 204):
@@ -173,7 +176,7 @@ async def mark_request_paid(request_id: str):
 
 
 async def redeem_code(code: str, device_id: str):
-    """Пользователь вводит код на сайте. Проверяем и выполняем действие."""
+    """Пользователь вставляет код на сайте — разрешаем регистрацию доп.аккаунта."""
     url = SUPABASE_URL + "/rest/v1/unlock_requests?code=eq." + code + "&select=*"
     async with httpx.AsyncClient() as client:
         r = await client.get(url, headers=_headers())
@@ -183,60 +186,14 @@ async def redeem_code(code: str, device_id: str):
 
     if req["status"] != "paid":
         return {"ok": False, "error": "code_not_active"}
-
     if req["device_id"] != device_id:
         return {"ok": False, "error": "device_mismatch"}
 
-    result = {"ok": True, "type": req["type"]}
-
-    async with httpx.AsyncClient() as client:
-        if req["type"] == "unlock":
-            target_user_id = req["target_user_id"]
-            if not target_user_id:
-                return {"ok": False, "error": "no_target_user"}
-
-            # 1. Снимаем блокировку профиля
-            await client.patch(
-                SUPABASE_URL + "/rest/v1/profiles?id=eq." + target_user_id,
-                headers=_headers(),
-                json={"blocked": False}
-            )
-
-            # 2. Генерируем новый временный пароль через Supabase Admin API
-            temp_password = _gen_code(10)
-            admin_r = await client.put(
-                SUPABASE_URL + "/auth/v1/admin/users/" + target_user_id,
-                headers=_headers(),
-                json={"password": temp_password}
-            )
-            if admin_r.status_code not in (200, 201):
-                return {"ok": False, "error": "password_reset_failed"}
-
-            result["temp_password"] = temp_password
-            result["user_id"] = target_user_id
-
-        elif req["type"] == "extra_account":
-            # Разрешаем зарегистрировать ещё один аккаунт на этом устройстве.
-            # Сайт при регистрации проверит наличие неиспользованной "paid" заявки
-            # типа extra_account для своего device_id — если есть, регистрация разрешена,
-            # а после успешной регистрации сайт сам помечает заявку использованной
-            # (вызовом /api/unlock/consume).
-            pass
-
-        # Помечаем заявку использованной (для unlock — сразу;
-        # для extra_account — сайт подтвердит отдельным вызовом после регистрации)
-        if req["type"] == "unlock":
-            await client.patch(
-                SUPABASE_URL + "/rest/v1/unlock_requests?id=eq." + req["id"],
-                headers=_headers(),
-                json={"status": "used", "used_at": datetime.now(timezone.utc).isoformat()}
-            )
-
-    return result
+    return {"ok": True, "type": "extra_account"}
 
 
-async def consume_extra_account_request(code: str, device_id: str, new_user_id: str):
-    """Вызывается сайтом ПОСЛЕ успешной регистрации нового аккаунта по коду extra_account."""
+async def consume_extra_account_request(code: str, device_id: str, new_user_id: str, email: str):
+    """Вызывается сайтом ПОСЛЕ успешной регистрации нового аккаунта по коду."""
     url = SUPABASE_URL + "/rest/v1/unlock_requests?code=eq." + code + "&select=*"
     async with httpx.AsyncClient() as client:
         r = await client.get(url, headers=_headers())
@@ -252,12 +209,37 @@ async def consume_extra_account_request(code: str, device_id: str, new_user_id: 
             headers=_headers(),
             json={"status": "used", "used_at": datetime.now(timezone.utc).isoformat()}
         )
-
-        # Привязываем новый аккаунт к этому же устройству
         await client.post(
             SUPABASE_URL + "/rest/v1/device_accounts",
             headers=_headers(),
-            json={"device_id": device_id, "user_id": new_user_id}
+            json={"device_id": device_id, "user_id": new_user_id, "email": email}
         )
-
     return True
+
+
+async def get_user_id_from_token(access_token: str):
+    """Проверяет access_token у самого Supabase Auth и возвращает id владельца токена.
+    Так бэкенд узнаёт, ЧЕЙ это токен, а не доверяет user_id, присланному клиентом напрямую."""
+    if not access_token:
+        return None
+    url = SUPABASE_URL + "/auth/v1/user"
+    headers = {
+        "Authorization": "Bearer " + access_token,
+        "apikey": SUPABASE_ANON_KEY,
+    }
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, headers=headers)
+        if r.status_code != 200:
+            return None
+        return r.json().get("id")
+
+
+async def delete_auth_user(user_id: str):
+    """По-настоящему удаляет пользователя из auth.users (через service-role Admin API).
+    Это единственный способ удалить учётку целиком — обычный клиентский ключ так не умеет.
+    Заодно срабатывает SQL-триггер, который чистит связанную запись в device_accounts."""
+    url = SUPABASE_URL + "/auth/v1/admin/users/" + user_id
+    async with httpx.AsyncClient() as client:
+        r = await client.delete(url, headers=_headers())
+        return r.status_code in (200, 204)
+
