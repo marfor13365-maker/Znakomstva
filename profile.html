@@ -616,40 +616,37 @@ async function publishFromProfile() {
   if (!pendingProfilePhotoUrl) return;
   var caption = document.getElementById('post-caption-input').value.trim();
   var btn = document.getElementById('post-publish-btn');
-  btn.disabled = true; btn.textContent = '...';
+  btn.disabled = true; btn.textContent = 'Проверяем...';
 
-  if (existingProfilePhotoId) {
-    var { error: postErr } = await db.from('posts').insert({
-      user_id: currentUser.id,
-      photo_url: pendingProfilePhotoUrl,
-      caption: caption,
-      media_type: pendingProfileMediaType,
-      profile_photo_id: existingProfilePhotoId
+  try {
+    var resp = await fetch(BLIZKO_API_URL + '/api/posts/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        access_token: currentAccessToken,
+        photo_url: pendingProfilePhotoUrl,
+        media_type: pendingProfileMediaType,
+        caption: caption,
+        also_feed: !existingProfilePhotoId && document.getElementById('post-also-feed').checked,
+        profile_photo_id: existingProfilePhotoId || null
+      })
     });
-    if (postErr) { alert('Ошибка: ' + postErr.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
-    closePostUpload();
-    await loadMyPosts();
+    var data = await resp.json();
+    if (!resp.ok) {
+      var detail = (data && data.detail) || 'unknown_error';
+      if (detail.indexOf('content_rejected') === 0) {
+        alert('⚠️ Публикация отклонена модерацией: ' + detail.replace('content_rejected: ', ''));
+      } else {
+        alert('Ошибка: ' + detail);
+      }
+      btn.disabled = false; btn.textContent = 'Опубликовать';
+      return;
+    }
+  } catch (e) {
+    alert('Не удалось опубликовать: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Опубликовать';
     return;
-  }
-
-  var { data: profPhoto, error: profErr } = await db.from('profile_photos').insert({
-    user_id: currentUser.id,
-    photo_url: pendingProfilePhotoUrl,
-    media_type: pendingProfileMediaType,
-    position: myPosts.length
-  }).select().single();
-
-  if (profErr) { alert('Ошибка: ' + profErr.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
-
-  var alsoFeed = document.getElementById('post-also-feed').checked;
-  if (alsoFeed) {
-    await db.from('posts').insert({
-      user_id: currentUser.id,
-      photo_url: pendingProfilePhotoUrl,
-      caption: caption,
-      media_type: pendingProfileMediaType,
-      profile_photo_id: profPhoto.id
-    });
   }
 
   closePostUpload();
