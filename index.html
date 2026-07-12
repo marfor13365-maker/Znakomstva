@@ -111,6 +111,7 @@ input:focus{border-color:var(--accent)}
 <div class="checkbox-row"><input type="checkbox" id="consent2" onchange="checkConsent()"><span id="c2"></span></div>
 <div class="checkbox-row"><input type="checkbox" id="consent3" onchange="checkConsent()"><span id="c3"></span></div>
 </div>
+<div class="h-captcha" data-sitekey="YOUR_HCAPTCHA_SITE_KEY" style="margin-bottom:12px"></div>
 <button class="btn" id="reg-btn" onclick="doRegister()" disabled></button>
 <div class="msg" id="reg-msg"></div>
 <button type="button" class="unlock-toggle" id="unlock-toggle-reg" onclick="toggleUnlockBox('reg')"></button>
@@ -125,6 +126,7 @@ input:focus{border-color:var(--accent)}
 <a class="footer-link" id="rules_link" href="rules.html"></a>
 </div>
 </div>
+<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -144,6 +146,7 @@ c3:'Я ознакомился(ась) с правилами сервиса',
 name_ph:'Как тебя зовут?',pass_ph:'Минимум 6 символов',
 err_fill:'Заполни все поля',err_pass:'Пароль минимум 6 символов',
 err_need_paid_code:'На этом устройстве уже есть аккаунт. Чтобы создать ещё один, сначала купи доп.аккаунт и введи полученный код выше.',
+err_captcha:'Пройди проверку "Я не робот" ниже.',
 err_login:'Неверный email или пароль',
 ok_welcome:'Добро пожаловать!',ok_created:'Аккаунт создан!',
 ok_check_email:'Почти готово! Мы отправили письмо со ссылкой подтверждения на твой email. Перейди по ней, чтобы завершить регистрацию, потом сможешь войти.',
@@ -186,6 +189,7 @@ c3:'I have read the terms of service',
 name_ph:'What is your name?',pass_ph:'At least 6 characters',
 err_fill:'Please fill in all fields',err_pass:'Password must be at least 6 characters',
 err_need_paid_code:'This device already has an account. To create another one, buy an extra account first and enter the code above.',
+err_captcha:'Please complete the "I am not a robot" check below.',
 err_login:'Invalid email or password',
 ok_welcome:'Welcome!',ok_created:'Account created!',
 ok_check_email:'Almost done! We sent a confirmation link to your email. Click it to finish registration, then you can sign in.',
@@ -400,7 +404,9 @@ var t=T[lang];
 var name=document.getElementById('reg-name').value.trim();
 var email=document.getElementById('reg-email').value.trim();
 var pass=document.getElementById('reg-pass').value;
+var captchaToken=(typeof hcaptcha!=='undefined')?hcaptcha.getResponse():'';
 if(!name||!email||!pass){setMsg('reg-msg',t.err_fill,'error');return}
+if(!captchaToken){setMsg('reg-msg',t.err_captcha,'error');return}
 if(pass.length<6){setMsg('reg-msg',t.err_pass,'error');return}
 if(deviceAccountCount>0 && !window._blizkoExtraCode){
 setMsg('reg-msg',t.err_need_paid_code,'error');
@@ -408,7 +414,8 @@ return;
 }
 setMsg('reg-msg',t.loading_reg,'');
 document.getElementById('reg-btn').disabled=true;
-var r=await db.auth.signUp({email:email,password:pass});
+var r=await db.auth.signUp({email:email,password:pass,options:{captchaToken:captchaToken}});
+if(r.error && typeof hcaptcha!=='undefined'){hcaptcha.reset()}
 if(r.error){setMsg('reg-msg',r.error.message,'error');document.getElementById('reg-btn').disabled=false;return}
 await db.from('profiles').insert({id:r.data.user.id,name:name,consent_given:true,consent_at:new Date().toISOString()});
 
