@@ -111,6 +111,7 @@ input:focus{border-color:var(--accent)}
 <div class="checkbox-row"><input type="checkbox" id="consent2" onchange="checkConsent()"><span id="c2"></span></div>
 <div class="checkbox-row"><input type="checkbox" id="consent3" onchange="checkConsent()"><span id="c3"></span></div>
 </div>
+<div class="h-captcha" data-sitekey="8d14406a-4fb2-4d6e-acb8-d80a6b5af6fa" style="margin-bottom:12px"></div>
 <button class="btn" id="reg-btn" onclick="doRegister()" disabled></button>
 <div class="msg" id="reg-msg"></div>
 <button type="button" class="unlock-toggle" id="unlock-toggle-reg" onclick="toggleUnlockBox('reg')"></button>
@@ -121,13 +122,16 @@ input:focus{border-color:var(--accent)}
 <a class="footer-link" href="https://vektorizi-ru.vercel.app" target="_blank" rel="noopener">
 <span id="footer_text"></span>
 </a>
+<div style="margin-top:8px">
+<a class="footer-link" id="rules_link" href="rules.html"></a>
 </div>
+</div>
+<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var BLIZKO_API_URL = (typeof window.BLIZKO_API_URL !== 'undefined') ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
-var BLIZKO_BOT_USERNAME = 'Rezumeizi_bot';
 
 var T={ru:{
 tagline:'Настоящие знакомства рядом',
@@ -141,8 +145,11 @@ c2:'Мне исполнилось 18 лет',
 c3:'Я ознакомился(ась) с правилами сервиса',
 name_ph:'Как тебя зовут?',pass_ph:'Минимум 6 символов',
 err_fill:'Заполни все поля',err_pass:'Пароль минимум 6 символов',
+err_need_paid_code:'На этом устройстве уже есть аккаунт. Чтобы создать ещё один, сначала купи доп.аккаунт и введи полученный код выше.',
+err_captcha:'Пройди проверку "Я не робот" ниже.',
 err_login:'Неверный email или пароль',
 ok_welcome:'Добро пожаловать!',ok_created:'Аккаунт создан!',
+ok_check_email:'Почти готово! Мы отправили письмо со ссылкой подтверждения на твой email. Перейди по ней, чтобы завершить регистрацию, потом сможешь войти.',
 loading_in:'Входим...',loading_reg:'Создаём аккаунт...',
 unlock_toggle_open:'Есть код разблокировки или доп.аккаунта?',
 unlock_toggle_close:'Скрыть',
@@ -160,9 +167,15 @@ unlock_ok_unlock:'Аккаунт разблокирован! Временный 
 unlock_ok_unlock_hint:'Войди с этим паролем, а затем смени его в настройках профиля.',
 unlock_ok_extra:'Код принят! Теперь заполни форму регистрации ниже, чтобы создать дополнительный аккаунт на этом устройстве.',
 footer_by:'Сделано в Студии Вектор',
-start_hint:'Забыл пароль или хочешь ещё один аккаунт на этом устройстве? Открой наш Telegram-бот @Rezumeizi_bot — там можно снять блокировку аккаунта или купить дополнительный аккаунт.',
-start_btn_unlock:'🔓 Забыл пароль — разблокировать аккаунт',
-start_btn_extra:'➕ Купить дополнительный аккаунт'
+start_hint:'Хочешь ещё один аккаунт на этом устройстве? Скопируй ссылку ниже и вставь её в резюме-боте, когда он попросит — там же пройдёт оплата.',
+start_btn_extra:'➕ Купить дополнительный аккаунт',
+start_submit:'Получить ссылку на оплату',
+start_copy:'📋 Скопировать ссылку и перейти в бот для оплаты',
+start_copied:'Скопировано!',
+start_price_label:'Стоимость:',
+rules_link:'📜 Правила',
+choose_account_title:'На этом устройстве уже есть аккаунты:',
+choose_account_hint:'Выбери, в какой войти:'
 },en:{
 tagline:'Real connections near you',
 tab_login:'Sign in',tab_reg:'Register',
@@ -175,8 +188,11 @@ c2:'I am 18 years of age or older',
 c3:'I have read the terms of service',
 name_ph:'What is your name?',pass_ph:'At least 6 characters',
 err_fill:'Please fill in all fields',err_pass:'Password must be at least 6 characters',
+err_need_paid_code:'This device already has an account. To create another one, buy an extra account first and enter the code above.',
+err_captcha:'Please complete the "I am not a robot" check below.',
 err_login:'Invalid email or password',
 ok_welcome:'Welcome!',ok_created:'Account created!',
+ok_check_email:'Almost done! We sent a confirmation link to your email. Click it to finish registration, then you can sign in.',
 loading_in:'Signing in...',loading_reg:'Creating account...',
 unlock_toggle_open:'Have an unlock or extra-account code?',
 unlock_toggle_close:'Hide',
@@ -194,9 +210,15 @@ unlock_ok_unlock:'Account unlocked! Temporary sign-in password:',
 unlock_ok_unlock_hint:'Sign in with this password, then change it in your profile settings.',
 unlock_ok_extra:'Code accepted! Now fill in the registration form below to create an additional account on this device.',
 footer_by:'Made by Studio Vector',
-start_hint:'Forgot your password or want another account on this device? Open our Telegram bot @Rezumeizi_bot — you can unlock your account or buy an additional account there.',
-start_btn_unlock:'🔓 Forgot password — unlock account',
-start_btn_extra:'➕ Buy an additional account'
+start_hint:'Want another account on this device? Copy the link below and paste it into the resume-bot when it asks — payment happens there.',
+start_btn_extra:'➕ Buy an additional account',
+start_submit:'Get payment link',
+start_copy:'📋 Copy link and open the bot to pay',
+start_copied:'Copied!',
+start_price_label:'Price:',
+rules_link:'📜 Rules',
+choose_account_title:'This device already has accounts:',
+choose_account_hint:'Choose which one to sign in to:'
 }};
 
 var lang=localStorage.getItem('lang')||'ru';
@@ -224,6 +246,7 @@ document.getElementById('login-pass').placeholder='••••••••';
 document.getElementById('unlock-toggle-login').textContent=t.unlock_toggle_open;
 document.getElementById('unlock-toggle-reg').textContent=t.unlock_toggle_open;
 document.getElementById('footer_text').textContent=t.footer_by;
+document.getElementById('rules_link').textContent=t.rules_link;
 renderUnlockBox('login');
 renderUnlockBox('reg');
 }
@@ -264,20 +287,15 @@ box.style.display=open?'block':'none';
 document.getElementById('unlock-toggle-'+which).textContent=open?T[lang].unlock_toggle_close:T[lang].unlock_toggle_open;
 }
 
-/* Кнопки больше НЕ ходят на бэкенд за ссылкой/ценой — юридически продажу ведёт только бот.
-   Сайт лишь открывает Telegram с device_id в start-параметре. */
 function renderUnlockBox(which){
 var t=T[lang];
 var box=document.getElementById('unlock-box-'+which);
-var deviceId=getDeviceId();
-var unlockLink='https://t.me/'+BLIZKO_BOT_USERNAME+'?start=unlock_'+deviceId;
-var extraLink='https://t.me/'+BLIZKO_BOT_USERNAME+'?start=extra_'+deviceId;
-
 box.innerHTML=
 '<div class="unlock-hint">'+t.start_hint+'</div>'+
 
-'<a class="btn btn-secondary" style="display:block;text-align:center;text-decoration:none" href="'+unlockLink+'" target="_blank" rel="noopener">'+t.start_btn_unlock+'</a>'+
-'<a class="btn btn-secondary" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="'+extraLink+'" target="_blank" rel="noopener">'+t.start_btn_extra+'</a>'+
+'<button class="btn btn-secondary" id="start-btn-extra-'+which+'" onclick="startExtraAccountRequest(\''+which+'\')">'+t.start_btn_extra+'</button>'+
+'<div class="msg" id="start-msg-extra-'+which+'"></div>'+
+'<div id="start-result-extra-'+which+'"></div>'+
 
 '<div style="height:1px;background:var(--border);margin:18px 0"></div>'+
 
@@ -286,6 +304,48 @@ box.innerHTML=
 '<button class="btn btn-secondary" id="unlock-btn-'+which+'" onclick="redeemUnlockCode(\''+which+'\')">'+t.unlock_submit+'</button>'+
 '<div class="msg" id="unlock-msg-'+which+'"></div>'+
 '<div id="unlock-result-'+which+'"></div>';
+}
+
+function copyAndOpenBot(link, btnEl){
+var t=T[lang];
+navigator.clipboard.writeText(link).then(function(){}).catch(function(){});
+window.open(link, '_blank');
+}
+
+function renderTelegramLink(containerId,link){
+var t=T[lang];
+document.getElementById(containerId).innerHTML=
+'<div class="result-box">'+
+'<div style="word-break:break-all;background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted)">'+link+'</div>'+
+'<button type="button" class="btn" style="margin-top:10px" onclick="copyAndOpenBot(\''+link+'\', this)">'+t.start_copy+'</button>'+
+'</div>';
+}
+
+async function startExtraAccountRequest(which){
+var t=T[lang];
+var msgId='start-msg-extra-'+which;
+var resultId='start-result-extra-'+which;
+document.getElementById(resultId).innerHTML='';
+setMsg(msgId,t.unlock_loading,'');
+document.getElementById('start-btn-extra-'+which).disabled=true;
+try{
+var resp=await fetch(BLIZKO_API_URL+'/api/unlock/create-request',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({type:'extra_account',device_id:getDeviceId()})
+});
+var data=await resp.json();
+document.getElementById('start-btn-extra-'+which).disabled=false;
+if(!resp.ok){
+setMsg(msgId,t.unlock_err_generic,'error');
+return;
+}
+setMsg(msgId,'','');
+renderTelegramLink(resultId,data.telegram_link);
+}catch(e){
+setMsg(msgId,t.unlock_err_generic,'error');
+document.getElementById('start-btn-extra-'+which).disabled=false;
+}
 }
 
 async function redeemUnlockCode(which){
@@ -344,13 +404,29 @@ var t=T[lang];
 var name=document.getElementById('reg-name').value.trim();
 var email=document.getElementById('reg-email').value.trim();
 var pass=document.getElementById('reg-pass').value;
+var captchaToken=(typeof hcaptcha!=='undefined')?hcaptcha.getResponse():'';
 if(!name||!email||!pass){setMsg('reg-msg',t.err_fill,'error');return}
+if(!captchaToken){setMsg('reg-msg',t.err_captcha,'error');return}
 if(pass.length<6){setMsg('reg-msg',t.err_pass,'error');return}
+if(deviceAccountCount>0 && !window._blizkoExtraCode){
+setMsg('reg-msg',t.err_need_paid_code,'error');
+return;
+}
 setMsg('reg-msg',t.loading_reg,'');
 document.getElementById('reg-btn').disabled=true;
-var r=await db.auth.signUp({email:email,password:pass});
+var r=await db.auth.signUp({email:email,password:pass,options:{captchaToken:captchaToken}});
+if(r.error && typeof hcaptcha!=='undefined'){hcaptcha.reset()}
 if(r.error){setMsg('reg-msg',r.error.message,'error');document.getElementById('reg-btn').disabled=false;return}
 await db.from('profiles').insert({id:r.data.user.id,name:name,consent_given:true,consent_at:new Date().toISOString()});
+
+/* привязываем аккаунт к этому устройству и запоминаем email — для выбора аккаунта при входе */
+try{
+await fetch(BLIZKO_API_URL+'/api/device/link-account',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({device_id:getDeviceId(),user_id:r.data.user.id,email:email})
+});
+}catch(e){}
 
 /* если аккаунт создаётся по коду доп.аккаунта — подтверждаем на бэкенде */
 if(window._blizkoExtraCode){
@@ -358,17 +434,41 @@ try{
 await fetch(BLIZKO_API_URL+'/api/unlock/consume-extra',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({code:window._blizkoExtraCode,device_id:window._blizkoExtraDeviceId,new_user_id:r.data.user.id})
+body:JSON.stringify({code:window._blizkoExtraCode,device_id:window._blizkoExtraDeviceId,new_user_id:r.data.user.id,email:email})
 });
 }catch(e){}
 window._blizkoExtraCode=null;
 }
 
-setMsg('reg-msg',t.ok_created,'success');
-setTimeout(function(){window.location.href='profile.html'},1000)
+setMsg('reg-msg',t.ok_check_email,'success');
+document.getElementById('reg-btn').disabled=false;
 }
 
-spawnHearts();setLang(lang);
+/* ===== список аккаунтов на этом устройстве — показываем при входе ===== */
+var deviceAccountCount = 0;
+
+async function loadDeviceAccounts(){
+try{
+var resp=await fetch(BLIZKO_API_URL+'/api/device/accounts/'+getDeviceId());
+if(!resp.ok)return;
+var data=await resp.json();
+var emails=data.emails||[];
+deviceAccountCount=emails.length;
+if(emails.length<2)return; // если аккаунт один — выбирать нечего, просто входи как обычно
+var t=T[lang];
+var box=document.createElement('div');
+box.style.marginBottom='16px';
+var html='<div class="unlock-hint" style="margin-bottom:8px">'+t.choose_account_title+'<br>'+t.choose_account_hint+'</div>';
+emails.forEach(function(email){
+html+='<button type="button" class="btn btn-secondary" style="margin-top:6px" onclick="document.getElementById(\'login-email\').value=\''+email+'\'">'+email+'</button>';
+});
+box.innerHTML=html;
+var loginForm=document.getElementById('login-form');
+loginForm.insertBefore(box, loginForm.firstChild);
+}catch(e){}
+}
+
+spawnHearts();setLang(lang);loadDeviceAccounts();
 </script>
 </body>
 </html>
