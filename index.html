@@ -87,6 +87,7 @@ input:focus{border-color:var(--accent)}
 </button>
 </div>
 </div>
+<div id="hcaptcha-login" style="margin-bottom:12px"></div>
 <button class="btn" id="btn_login" onclick="doLogin()"></button>
 <div class="msg" id="login-msg"></div>
 <button type="button" class="unlock-toggle" id="unlock-toggle-login" onclick="toggleUnlockBox('login')"></button>
@@ -111,7 +112,7 @@ input:focus{border-color:var(--accent)}
 <div class="checkbox-row"><input type="checkbox" id="consent2" onchange="checkConsent()"><span id="c2"></span></div>
 <div class="checkbox-row"><input type="checkbox" id="consent3" onchange="checkConsent()"><span id="c3"></span></div>
 </div>
-<div class="h-captcha" data-sitekey="8d14406a-4fb2-4d6e-acb8-d80a6b5af6fa" style="margin-bottom:12px"></div>
+<div id="hcaptcha-register" style="margin-bottom:12px"></div>
 <button class="btn" id="reg-btn" onclick="doRegister()" disabled></button>
 <div class="msg" id="reg-msg"></div>
 <button type="button" class="unlock-toggle" id="unlock-toggle-reg" onclick="toggleUnlockBox('reg')"></button>
@@ -126,7 +127,7 @@ input:focus{border-color:var(--accent)}
 <a class="footer-link" id="rules_link" href="rules.html"></a>
 </div>
 </div>
-<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+<script src="https://js.hcaptcha.com/1/api.js?onload=onHcaptchaLoad&render=explicit" async defer></script>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -222,6 +223,14 @@ choose_account_hint:'Choose which one to sign in to:'
 }};
 
 var lang=localStorage.getItem('lang')||'ru';
+var HCAPTCHA_SITEKEY='8d14406a-4fb2-4d6e-acb8-d80a6b5af6fa';
+var loginCaptchaId=null;
+var regCaptchaId=null;
+function onHcaptchaLoad(){
+if(typeof hcaptcha==='undefined')return;
+loginCaptchaId=hcaptcha.render('hcaptcha-login',{sitekey:HCAPTCHA_SITEKEY});
+regCaptchaId=hcaptcha.render('hcaptcha-register',{sitekey:HCAPTCHA_SITEKEY});
+}
 
 function setLang(l){lang=l;localStorage.setItem('lang',l);document.querySelectorAll('.lang-btn').forEach(function(b,i){b.classList.toggle('active',(i===0&&l==='ru')||(i===1&&l==='en'))});applyLang()}
 
@@ -397,14 +406,30 @@ document.getElementById('unlock-btn-'+which).disabled=false;
 }
 }
 
-async function doLogin(){var t=T[lang];var email=document.getElementById('login-email').value.trim();var pass=document.getElementById('login-pass').value;if(!email||!pass){setMsg('login-msg',t.err_fill,'error');return}setMsg('login-msg',t.loading_in,'');var r=await db.auth.signInWithPassword({email:email,password:pass});if(r.error)setMsg('login-msg',t.err_login,'error');else{setMsg('login-msg',t.ok_welcome,'success');setTimeout(function(){window.location.href='feed.html'},800)}}
+async function doLogin(){
+var t=T[lang];
+var email=document.getElementById('login-email').value.trim();
+var pass=document.getElementById('login-pass').value;
+var captchaToken=(typeof hcaptcha!=='undefined'&&loginCaptchaId!==null)?hcaptcha.getResponse(loginCaptchaId):'';
+if(!email||!pass){setMsg('login-msg',t.err_fill,'error');return}
+if(!captchaToken){setMsg('login-msg',t.err_captcha,'error');return}
+setMsg('login-msg',t.loading_in,'');
+var r=await db.auth.signInWithPassword({email:email,password:pass,options:{captchaToken:captchaToken}});
+if(r.error){
+setMsg('login-msg',t.err_login,'error');
+if(typeof hcaptcha!=='undefined'&&loginCaptchaId!==null)hcaptcha.reset(loginCaptchaId);
+}else{
+setMsg('login-msg',t.ok_welcome,'success');
+setTimeout(function(){window.location.href='feed.html'},800)
+}
+}
 
 async function doRegister(){
 var t=T[lang];
 var name=document.getElementById('reg-name').value.trim();
 var email=document.getElementById('reg-email').value.trim();
 var pass=document.getElementById('reg-pass').value;
-var captchaToken=(typeof hcaptcha!=='undefined')?hcaptcha.getResponse():'';
+var captchaToken=(typeof hcaptcha!=='undefined'&&regCaptchaId!==null)?hcaptcha.getResponse(regCaptchaId):'';
 if(!name||!email||!pass){setMsg('reg-msg',t.err_fill,'error');return}
 if(!captchaToken){setMsg('reg-msg',t.err_captcha,'error');return}
 if(pass.length<6){setMsg('reg-msg',t.err_pass,'error');return}
@@ -415,7 +440,7 @@ return;
 setMsg('reg-msg',t.loading_reg,'');
 document.getElementById('reg-btn').disabled=true;
 var r=await db.auth.signUp({email:email,password:pass,options:{captchaToken:captchaToken}});
-if(r.error && typeof hcaptcha!=='undefined'){hcaptcha.reset()}
+if(r.error && typeof hcaptcha!=='undefined' && regCaptchaId!==null){hcaptcha.reset(regCaptchaId)}
 if(r.error){setMsg('reg-msg',r.error.message,'error');document.getElementById('reg-btn').disabled=false;return}
 await db.from('profiles').insert({id:r.data.user.id,name:name,consent_given:true,consent_at:new Date().toISOString()});
 
