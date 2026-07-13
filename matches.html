@@ -87,15 +87,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   </button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script type="module">
 import { initCallModule, initIncomingCallListener, startCall, answerCall, declineCall, endCall } from './call-webrtc.js';
 window.__call = { initCallModule, initIncomingCallListener, startCall, answerCall, declineCall, endCall };
-
+</script>
+<script>
 // ============================================================
 // УДАЛЕНИЕ ЧЕРЕЗ ОБЫЧНЫЙ КЛИЕНТ (RLS уже настроен в Supabase)
 // ============================================================
