@@ -17,6 +17,12 @@ let callChannel = null;     // supabase realtime channel текущего зво
 let currentCallId = null;
 let onIncomingCallCallback = null; // UI-хук: показать модалку "входящий звонок"
 let onCallStateChangeCallback = null; // UI-хук: обновить статус (connecting/connected/ended)
+let _client = null; // клиент supabase-js (то, что в проекте называется `db`)
+
+// Вызвать один раз перед использованием любых других функций модуля.
+export function initCallModule(supabaseClient) {
+  _client = supabaseClient;
+}
 
 function channelNameFor(matchId) {
   return `call-${matchId}`;
@@ -37,7 +43,7 @@ export function initIncomingCallListener(myUserId, matchIds, { onIncomingCall, o
   // Подписываемся на все каналы звонков по активным мэтчам пользователя.
   // matchIds — массив id мэтчей текущего пользователя (можно обновлять при новых мэтчах).
   matchIds.forEach((matchId) => {
-    const ch = supabase.channel(channelNameFor(matchId), {
+    const ch = _client.channel(channelNameFor(matchId), {
       config: { broadcast: { self: false } },
     });
 
@@ -66,7 +72,7 @@ export async function startCall(matchId, myUserId, calleeUserId) {
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
 
-  callChannel = supabase.channel(channelNameFor(matchId), {
+  callChannel = _client.channel(channelNameFor(matchId), {
     config: { broadcast: { self: false } },
   });
 
