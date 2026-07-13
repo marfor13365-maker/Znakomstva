@@ -87,7 +87,7 @@ input:focus{border-color:var(--accent)}
 </button>
 </div>
 </div>
-<div id="hcaptcha-login" style="margin-bottom:12px"></div>
+<div id="hcaptcha-login" style="margin-bottom:12px;display:flex;justify-content:center"></div>
 <button class="btn" id="btn_login" onclick="doLogin()"></button>
 <div class="msg" id="login-msg"></div>
 <button type="button" class="unlock-toggle" id="unlock-toggle-login" onclick="toggleUnlockBox('login')"></button>
@@ -112,7 +112,7 @@ input:focus{border-color:var(--accent)}
 <div class="checkbox-row"><input type="checkbox" id="consent2" onchange="checkConsent()"><span id="c2"></span></div>
 <div class="checkbox-row"><input type="checkbox" id="consent3" onchange="checkConsent()"><span id="c3"></span></div>
 </div>
-<div id="hcaptcha-register" style="margin-bottom:12px"></div>
+<div id="hcaptcha-register" style="margin-bottom:12px;display:flex;justify-content:center"></div>
 <button class="btn" id="reg-btn" onclick="doRegister()" disabled></button>
 <div class="msg" id="reg-msg"></div>
 <button type="button" class="unlock-toggle" id="unlock-toggle-reg" onclick="toggleUnlockBox('reg')"></button>
@@ -228,8 +228,8 @@ var loginCaptchaId=null;
 var regCaptchaId=null;
 function onHcaptchaLoad(){
 if(typeof hcaptcha==='undefined')return;
-loginCaptchaId=hcaptcha.render('hcaptcha-login',{sitekey:HCAPTCHA_SITEKEY});
-regCaptchaId=hcaptcha.render('hcaptcha-register',{sitekey:HCAPTCHA_SITEKEY});
+loginCaptchaId=hcaptcha.render('hcaptcha-login',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
+regCaptchaId=hcaptcha.render('hcaptcha-register',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
 }
 
 function setLang(l){lang=l;localStorage.setItem('lang',l);document.querySelectorAll('.lang-btn').forEach(function(b,i){b.classList.toggle('active',(i===0&&l==='ru')||(i===1&&l==='en'))});applyLang()}
