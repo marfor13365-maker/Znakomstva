@@ -25,10 +25,21 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .match-info{flex:1;min-width:0}
 .match-name{font-weight:600;font-size:15px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .match-city{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.match-meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.match-meta{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.match-meta-col{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .match-time{font-size:11px;color:var(--muted)}
 .match-delete-btn{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;transition:color 0.2s;flex-shrink:0;line-height:1}
 .match-delete-btn:active{color:var(--accent)}
+.match-call-btn{background:none;border:none;color:var(--accent);font-size:20px;cursor:pointer;padding:4px 8px;transition:transform 0.15s;flex-shrink:0;line-height:1}
+.match-call-btn:active{transform:scale(0.9)}
+.incoming-call-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.4)}
+.incoming-call-banner .call-info{font-family:'Inter',sans-serif;font-size:14px;font-weight:600}
+.incoming-call-banner .call-actions{display:flex;gap:10px}
+.incoming-call-banner button{border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.incoming-call-banner .accept-btn{background:white;color:var(--accent)}
+.incoming-call-banner .decline-btn{background:rgba(0,0,0,0.25);color:white}
+.call-status-banner{position:fixed;top:0;left:0;right:0;background:var(--card);color:var(--text);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;z-index:100;border-bottom:1px solid var(--border)}
+.call-status-banner .end-btn{background:var(--accent);color:white;border:none;border-radius:10px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
 .empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
@@ -43,6 +54,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </style>
 </head>
 <body>
+
+<div id="call-banners-wrap"></div>
 
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">&#8592;</button>
@@ -77,12 +90,17 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module">
+import { initCallModule, initIncomingCallListener, startCall, answerCall, declineCall, endCall } from './call-webrtc.js';
+window.__call = { initCallModule, initIncomingCallListener, startCall, answerCall, declineCall, endCall };
+</script>
 <script>
 // ============================================================
 // УДАЛЕНИЕ ЧЕРЕЗ ОБЫЧНЫЙ КЛИЕНТ (RLS уже настроен в Supabase)
 // ============================================================
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
+var pendingIncomingCall = null; // { matchId, callId, fromUserId, sdp }
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -96,6 +114,73 @@ function timeAgo(dateStr) {
   var mon = (d.getMonth()+1).toString().padStart(2,'0');
   return day + '.' + mon;
 }
+
+// ---------- Звонки ----------
+
+window.callMatch = async function(matchId, otherUserId, event) {
+  if (event) { event.stopPropagation(); event.preventDefault(); }
+  if (!currentUser) return;
+  try {
+    await window.__call.startCall(matchId, currentUser.id, otherUserId);
+    showCallStatusBanner('Звоним...');
+  } catch (e) {
+    console.error('Ошибка звонка:', e);
+    alert('Не удалось начать звонок: доступ к микрофону не разрешён или ошибка соединения.');
+  }
+};
+
+function showIncomingCallBanner(name) {
+  var wrap = document.getElementById('call-banners-wrap');
+  wrap.innerHTML = `
+    <div class="incoming-call-banner" id="incoming-call-banner">
+      <div class="call-info">📞 Звонит ${name}</div>
+      <div class="call-actions">
+        <button class="accept-btn" onclick="window.acceptIncomingCall()">Принять</button>
+        <button class="decline-btn" onclick="window.declineIncomingCall()">Отклонить</button>
+      </div>
+    </div>
+  `;
+}
+
+function showCallStatusBanner(text) {
+  var wrap = document.getElementById('call-banners-wrap');
+  wrap.innerHTML = `
+    <div class="call-status-banner" id="call-status-banner">
+      <div>${text}</div>
+      <button class="end-btn" onclick="window.hangupCall()">Завершить</button>
+    </div>
+  `;
+}
+
+function clearCallBanners() {
+  document.getElementById('call-banners-wrap').innerHTML = '';
+}
+
+window.acceptIncomingCall = async function() {
+  if (!pendingIncomingCall) return;
+  var call = pendingIncomingCall;
+  pendingIncomingCall = null;
+  try {
+    await window.__call.answerCall(call.matchId, currentUser.id, call.callId, call.sdp);
+    showCallStatusBanner('Звонок идёт');
+  } catch (e) {
+    console.error('Ошибка принятия звонка:', e);
+    clearCallBanners();
+  }
+};
+
+window.declineIncomingCall = function() {
+  pendingIncomingCall = null;
+  window.__call.declineCall();
+  clearCallBanners();
+};
+
+window.hangupCall = function() {
+  window.__call.endCall();
+  clearCallBanners();
+};
+
+// ---------- Удаление матча ----------
 
 window.deleteMatch = async function(matchId, event) {
   if (event) {
@@ -118,7 +203,6 @@ window.deleteMatch = async function(matchId, event) {
   try {
     console.log('🔍 Удаляем матч с ID:', matchId);
 
-    // 1. Удаляем сообщения
     const { error: msgError } = await db
       .from('messages')
       .delete()
@@ -129,7 +213,6 @@ window.deleteMatch = async function(matchId, event) {
       return;
     }
 
-    // 2. Удаляем сам матч
     const { error: matchError } = await db
       .from('matches')
       .delete()
@@ -159,6 +242,9 @@ async function init() {
     }
     currentUser = r.data.session.user;
     console.log('✅ Авторизован как:', currentUser.id);
+
+    window.__call.initCallModule(db);
+
     await loadMatches();
     if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
       BlizkoTheme.applyLang();
@@ -192,15 +278,18 @@ async function loadMatches() {
     }
 
     var items = [];
+    var matchIds = [];
     for (var i = 0; i < matches.length; i++) {
       var m = matches[i];
       var otherId = m.user1 === currentUser.id ? m.user2 : m.user1;
       var { data: otherProfile, error: profErr } = await db.from('profiles').select('name,city,photo_url').eq('id', otherId).single();
       if (profErr) console.warn('Profile not found for user:', otherId);
       items.push({ match: m, profile: otherProfile || {}, otherId: otherId });
+      matchIds.push(m.id);
     }
 
     var html = '';
+    var namesByOtherId = {};
     items.forEach(function(item) {
       var p = item.profile || {};
       var matchTime = timeAgo(item.match.created_at);
@@ -209,6 +298,7 @@ async function loadMatches() {
       var city = p.city || '';
       var matchId = item.match.id;
       var otherId = item.otherId;
+      namesByOtherId[otherId] = name;
 
       html += `
         <div class="match-item" onclick="window.location.href='chat.html?match=${matchId}'">
@@ -220,8 +310,11 @@ async function loadMatches() {
             <div class="match-city">${city}</div>
           </div>
           <div class="match-meta">
-            <div class="match-time">${matchTime}</div>
-            <button class="match-delete-btn" onclick="deleteMatch('${matchId}', event)">🗑</button>
+            <button class="match-call-btn" onclick="callMatch('${matchId}', '${otherId}', event)">📞</button>
+            <div class="match-meta-col">
+              <div class="match-time">${matchTime}</div>
+              <button class="match-delete-btn" onclick="deleteMatch('${matchId}', event)">🗑</button>
+            </div>
           </div>
         </div>
       `;
@@ -231,6 +324,18 @@ async function loadMatches() {
     if (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.applyLang) {
       BlizkoTheme.applyLang();
     }
+
+    // Слушаем входящие звонки по всем мэтчам этого пользователя
+    window.__call.initIncomingCallListener(currentUser.id, matchIds, {
+      onIncomingCall: function(data) {
+        pendingIncomingCall = data;
+        var name = namesByOtherId[data.fromUserId] || 'Пользователь';
+        showIncomingCallBanner(name);
+      },
+      onCallStateChange: function(state) {
+        if (state === 'ended') clearCallBanners();
+      }
+    });
 
   } catch(e) {
     console.error('loadMatches error:', e);
