@@ -326,24 +326,7 @@ async function loadMatches() {
       BlizkoTheme.applyLang();
     }
 
-    // Слушаем входящие звонки по всем мэтчам этого пользователя
-    window.__call.initIncomingCallListener(currentUser.id, matchIds, {
-      onIncomingCall: function(data) {
-        pendingIncomingCall = data;
-        var name = namesByOtherId[data.fromUserId] || 'Пользователь';
-        showIncomingCallBanner(name);
-      },
-      onCallStateChange: function(state) {
-        if (state === 'ended') clearCallBanners();
-      }
-    });
-
-  } catch(e) {
-    
-      
-  }
-}
-
+    // Слушаем входящие 
 init();
 </script>
 </body>
