@@ -10,6 +10,8 @@ const ICE_SERVERS = [
   // { urls: 'turn:your-turn-server.example.com:3478', username: 'user', credential: 'pass' },
 ];
 
+var BLIZKO_API_URL = (typeof window !== 'undefined' && window.BLIZKO_API_URL) ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
+
 let pc = null;
 let localStream = null;
 let callChannel = null;
@@ -116,7 +118,34 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
     payload: { callId, fromUserId: _myUserId, sdp: offer },
   });
 
+  notifyIncomingCallPush(matchId, calleeUserId, callId).catch((e) => log('push-уведомление о звонке не отправлено', e));
+
   return callId;
+}
+
+async function notifyIncomingCallPush(matchId, calleeUserId, callId) {
+  var sessionResult = await _client.auth.getSession();
+  var accessToken = sessionResult.data.session && sessionResult.data.session.access_token;
+  if (!accessToken) return;
+
+  var callerName = 'Пользователь';
+  try {
+    var profResult = await _client.from('profiles').select('name').eq('id', _myUserId).single();
+    if (profResult.data && profResult.data.name) callerName = profResult.data.name;
+  } catch (e) { /* используем дефолтное имя */ }
+
+  await fetch(BLIZKO_API_URL + '/api/calls/notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      to_user_id: calleeUserId,
+      from_user_id: _myUserId,
+      access_token: accessToken,
+      caller_name: callerName,
+      call_id: callId,
+      match_id: matchId,
+    }),
+  });
 }
 
 async function acceptCurrentCall(matchId, callId, remoteSdp) {
