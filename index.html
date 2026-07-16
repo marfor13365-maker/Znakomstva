@@ -130,7 +130,6 @@ input:focus{border-color:var(--accent)}
 <a class="footer-link" id="rules_link" href="rules.html"></a>
 </div>
 </div>
-<script src="https://openfpcdn.io/fingerprintjs/v4"></script>
 <script src="https://js.hcaptcha.com/1/api.js?onload=onHcaptchaLoad&render=explicit" async defer></script>
 <script src="theme.js"></script>
 <script src="config.js"></script>
@@ -293,26 +292,9 @@ input.type=isHidden?'text':'password';
 btn.style.color=isHidden?'var(--accent2)':'var(--muted)';
 }
 
-// ===== FingerprintJS + fallback device id =====
-var _fpVisitorId = null;
-var _fpReady = (async function initFingerprint(){
-  try {
-    var fp = await FingerprintJS.load();
-    var result = await fp.get();
-    _fpVisitorId = result.visitorId; // стабилен между визитами и инкогнито, не хранится в localStorage
-  } catch(e) {
-    _fpVisitorId = null; // если библиотека не загрузилась — упадём обратно на localStorage/cookie
-  }
-})();
-
+// ===== НОВАЯ ФУНКЦИЯ getDeviceId с поддержкой кук =====
 function getDeviceId(){
-  // Если FingerprintJS успел посчитать отпечаток — используем его как основной ID.
-  // Префикс 'fp_' помогает бэкенду отличать новый формат от старого 'dev_' на переходный период.
-  if (_fpVisitorId) {
-    return 'fp_' + _fpVisitorId;
-  }
-
-  // ===== Фолбэк на старую логику (куки + localStorage), если fingerprint недоступен =====
+  // 1) Пытаемся прочитать из куки
   var cookieId = document.cookie.split('; ').find(row => row.startsWith('blizko_device_id='));
   if (cookieId) {
     var id = cookieId.split('=')[1];
@@ -322,6 +304,7 @@ function getDeviceId(){
     return id;
   }
 
+  // 2) Если куки нет — пытаемся из localStorage
   var localId = localStorage.getItem('blizko_device_id');
   if (localId) {
     var domain = window.location.hostname;
@@ -330,6 +313,7 @@ function getDeviceId(){
     return localId;
   }
 
+  // 3) Создаём новый ID
   var newId = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 12);
   localStorage.setItem('blizko_device_id', newId);
   var domain = window.location.hostname;
@@ -384,7 +368,6 @@ document.getElementById(resultId).innerHTML='';
 setMsg(msgId,t.unlock_loading,'');
 document.getElementById('start-btn-extra-'+which).disabled=true;
 try{
-await _fpReady;
 var resp=await fetch(BLIZKO_API_URL+'/api/unlock/create-request',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
@@ -423,7 +406,6 @@ if(!code){setMsg(msgId,t.err_fill,'error');return}
 setMsg(msgId,t.unlock_loading,'');
 document.getElementById('unlock-btn-'+which).disabled=true;
 try{
-await _fpReady;
 var resp=await fetch(BLIZKO_API_URL+'/api/unlock/redeem',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
@@ -494,17 +476,15 @@ if(!name||!email||!pass){setMsg('reg-msg',t.err_fill,'error');return}
 if(!captchaToken){setMsg('reg-msg',t.err_captcha,'error');return}
 if(pass.length<6){setMsg('reg-msg',t.err_pass,'error');return}
 
-var deviceId;
+var deviceId = getDeviceId();
 var existingAccounts = [];
 try {
-  await _fpReady;
-  deviceId = getDeviceId();
   var resp = await fetch(BLIZKO_API_URL + '/api/device/accounts/' + deviceId);
   if (resp.ok) {
     var data = await resp.json();
     existingAccounts = data.emails || [];
   }
-} catch(e) { deviceId = getDeviceId(); /* если не удалось, считаем, что аккаунтов нет */ }
+} catch(e) { /* если не удалось, считаем, что аккаунтов нет */ }
 
 if (existingAccounts.length > 0 && !window._blizkoExtraCode) {
   setMsg('reg-msg', t.err_need_paid_code, 'error');
@@ -514,15 +494,15 @@ if (existingAccounts.length > 0 && !window._blizkoExtraCode) {
 setMsg('reg-msg', t.loading_reg, '');
 document.getElementById('reg-btn').disabled = true;
 
-var r = await db.auth.signUp({email:email, password:pass, options:{captchaToken:captchaToken, data:{name:name}}});
+var r = await db.auth.signUp({email:email, password:pass, options:{captchaToken:captchaToken}});
 if (r.error) {
   if (typeof hcaptcha !== 'undefined' && regCaptchaId !== null) hcaptcha.reset(regCaptchaId);
   setMsg('reg-msg', r.error.message, 'error');
   document.getElementById('reg-btn').disabled = false;
   return;
 }
-// Профиль (включая name) теперь создаётся серверным триггером handle_new_user() —
-// он не зависит от сессии в браузере и срабатывает даже до подтверждения email.
+
+await db.from('profiles').insert({id:r.data.user.id, name:name, consent_given:true, consent_at:new Date().toISOString()});
 
 try {
   await fetch(BLIZKO_API_URL + '/api/device/link-account', {
@@ -550,7 +530,6 @@ document.getElementById('reg-btn').disabled = false;
 var deviceAccountCount = 0;
 async function loadDeviceAccounts(){
 try{
-await _fpReady;
 var resp=await fetch(BLIZKO_API_URL+'/api/device/accounts/'+getDeviceId());
 if(!resp.ok)return;
 var data=await resp.json();
