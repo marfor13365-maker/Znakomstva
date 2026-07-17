@@ -225,7 +225,7 @@ input[type="file"]{display:none}
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var db = createBlizkoClient();
 var BACKEND_URL = 'https://vector-chat-api.onrender.com';
 var currentUser = null;
 var pendingPhotoUrl = null;
