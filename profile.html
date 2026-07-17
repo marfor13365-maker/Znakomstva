@@ -287,6 +287,21 @@ input[type="file"]{display:none}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="push-notifications.js"></script>
 <script>
+var BLIZKO_DEBUG = new URLSearchParams(window.location.search).get('debug') === '1';
+function blizkoDbg(msg) {
+  if (!BLIZKO_DEBUG) return;
+  var el = document.getElementById('blizko-debug-panel');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'blizko-debug-panel';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#000;color:#0f0;font-size:11px;padding:6px;z-index:99999;max-height:150px;overflow:auto;white-space:pre-wrap;font-family:monospace';
+    document.body.appendChild(el);
+  }
+  var time = new Date().toISOString().slice(11, 19);
+  el.textContent += time + ' [profile.html] ' + msg + '\n';
+}
+blizkoDbg('script started');
+
 var BLIZKO_API_URL = (typeof window.BLIZKO_API_URL !== 'undefined') ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
 var db = createBlizkoClient();
 var currentUser = null;
@@ -295,7 +310,8 @@ var myPosts = [];
 
 async function init() {
   var r = await db.auth.getSession();
-  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  blizkoDbg('init: getSession() -> session=' + !!r.data.session);
+  if (!r.data.session) { blizkoDbg('REDIRECT to index.html'); window.location.href = 'index.html'; return; }
   currentUser = r.data.session.user;
   currentAccessToken = r.data.session.access_token;
 
