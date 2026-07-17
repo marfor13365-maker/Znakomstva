@@ -69,7 +69,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var db = createBlizkoClient();
 var currentUser = null;
 var myResponses = {}; // to_user (т.е. кого я уже оценил) -> is_like
 
