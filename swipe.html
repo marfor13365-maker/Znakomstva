@@ -139,7 +139,7 @@ function debug(msg) {
 
 async function init() {
   try {
-    db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    db = createBlizkoClient();
     var { data: { session }, error } = await db.auth.getSession();
     if (error || !session) { window.location.href = 'index.html'; return; }
     currentUser = session.user;
