@@ -68,6 +68,21 @@ function createBlizkoClient() {
     }
   });
 
+  // Обновляем токен сессии только пока вкладка активна (видна на экране).
+  // Если этот же аккаунт открыт в нескольких вкладках одновременно, без этой меры они
+  // одновременно пытаются обновить один и тот же (одноразовый) refresh-токен — и та вкладка,
+  // что не успела первой, теряет сессию и вылетает на экран входа. Приостановка обновления
+  // в фоновых вкладках убирает эту гонку.
+  function handleVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      client.auth.startAutoRefresh();
+    } else {
+      client.auth.stopAutoRefresh();
+    }
+  }
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  handleVisibilityChange();
+
   client.auth.onAuthStateChange(function (event, session) {
     if (session && ['SIGNED_IN', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].indexOf(event) !== -1) {
       saveSessionToVault(session);
