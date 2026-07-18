@@ -53,6 +53,18 @@ async function switchToVaultAccount(client, userId) {
   return !error;
 }
 
+// Уникальный идентификатор ЭТОЙ вкладки (живёт в sessionStorage, значит свой на каждую вкладку).
+// Нужен, чтобы у каждой вкладки было своё уникальное имя внутренней блокировки Supabase —
+// иначе несколько вкладок одного сайта борются за одну и ту же блокировку и вызывают мигание/гонки.
+function getTabId() {
+  var id = sessionStorage.getItem('blizko_tab_id');
+  if (!id) {
+    id = 'tab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+    sessionStorage.setItem('blizko_tab_id', id);
+  }
+  return id;
+}
+
 // Создаёт Supabase-клиент с сессией в sessionStorage (своя для КАЖДОЙ вкладки) —
 // чинит путаницу аккаунтов между вкладками. Плюс автоматически подпитывает сейф аккаунтов
 // свежими токенами при каждом входе/обновлении токена в этой вкладке.
@@ -60,6 +72,7 @@ function createBlizkoClient() {
   var client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
       storage: window.sessionStorage,
+      storageKey: 'sb-blizko-auth-' + getTabId(),
       persistSession: true,
       autoRefreshToken: true
     }
