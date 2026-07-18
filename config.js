@@ -66,9 +66,6 @@ function createBlizkoClient() {
   });
 
   client.auth.onAuthStateChange(function (event, session) {
-    if (typeof blizkoDbg === 'function') {
-      blizkoDbg('[config.js] onAuthStateChange: ' + event + ' session=' + !!session);
-    }
     if (session && ['SIGNED_IN', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].indexOf(event) !== -1) {
       saveSessionToVault(session);
     }
