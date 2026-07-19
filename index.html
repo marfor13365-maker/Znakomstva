@@ -156,7 +156,7 @@ input:focus{border-color:var(--accent)}
 </div>
 </div>
 
-<!-- ОТЛАДОЧНАЯ ПАНЕЛЬ (HTML) -->
+<!-- ОТЛАДОЧНАЯ ПАНЕЛЬ -->
 <div id="debug-panel">
   <div>🔍 Отладка активна (редиректы заблокированы)</div>
   <div id="debug-log">Ожидание событий...</div>
@@ -167,7 +167,7 @@ input:focus{border-color:var(--accent)}
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ===== ОТЛАДОЧНЫЙ КОД (вставляется до всей логики) =====
+// ===== ОТЛАДОЧНЫЙ КОД =====
 const debugLog = document.getElementById('debug-log');
 let debugCounter = 0;
 
@@ -180,7 +180,6 @@ function addDebugLine(text, className = '') {
   debugLog.scrollTop = debugLog.scrollHeight;
 }
 
-// Перехват ошибок
 window.onerror = function(msg, url, line, col, error) {
   addDebugLine(`ОШИБКА: ${msg} (${url}:${line})`, 'error');
   return false;
@@ -322,30 +321,19 @@ function spawnHearts(){var c=document.getElementById('hearts');var e=['❤️','
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 addDebugLine('Supabase клиент создан', 'session');
 
-// ===== ПЕРЕХВАТ РЕДИРЕКТОВ (для отладки) =====
+// ===== ПЕРЕХВАТ РЕДИРЕКТОВ (БЕЗ ОШИБКИ) =====
 addDebugLine('РЕДИРЕКТЫ ЗАБЛОКИРОВАНЫ (только логируются)', 'redirect');
 
-const originalHref = window.location.href;
-Object.defineProperty(window.location, 'href', {
-  set: function(value) {
-    addDebugLine(`ПОПЫТКА location.href → ${value}`, 'redirect');
-    // Не даём редиректить
-  },
-  get: function() {
-    return originalHref;
-  },
-  configurable: true
-});
-
+// Перехватываем только assign и replace (location.href не трогаем)
 const origAssign = window.location.assign;
 window.location.assign = function(url) {
   addDebugLine(`ПОПЫТКА location.assign → ${url}`, 'redirect');
-  // origAssign.call(this, url);
+  // не выполняем оригинал
 };
 const origReplace = window.location.replace;
 window.location.replace = function(url) {
   addDebugLine(`ПОПЫТКА location.replace → ${url}`, 'redirect');
-  // origReplace.call(this, url);
+  // не выполняем оригинал
 };
 
 // ===== getSession =====
