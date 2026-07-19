@@ -33,13 +33,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .notif-toggle-row{padding:4px 0}
 .notif-toggle-row label{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
 .notif-toggle-row input[type="checkbox"]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
-.account-row{display:flex;align-items:center;gap:8px;padding:6px 0}
-.account-row-avatar{width:24px;height:24px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px}
-.account-row-avatar img{width:100%;height:100%;object-fit:cover}
-.account-row-name{flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.account-row-name.current{color:var(--accent);font-weight:600}
-.account-row-switch{background:none;border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer}
-.account-row-remove{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:2px 4px}
 
 .profile-header{padding:80px 20px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .avatar-circle{width:100px;height:100px;border-radius:50%;background:var(--input-bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative}
@@ -147,11 +140,6 @@ input[type="file"]{display:none}
     <button class="settings-btn" onclick="toggleSettingsMenu()">⚙️</button>
     <div class="settings-menu" id="settings-menu">
       <button class="settings-menu-item" onclick="window.location.href='edit-profile.html'">Моя анкета</button>
-      <div class="settings-menu-section" id="my-accounts-section" style="display:none">
-        <div class="settings-menu-label">Мои аккаунты</div>
-        <div id="my-accounts-list"></div>
-        <button class="settings-menu-item" style="border:none;padding:8px 0;text-decoration:underline;color:var(--muted);font-size:12px" onclick="window.location.href='index.html'">+ Добавить ещё аккаунт</button>
-      </div>
       <button class="settings-menu-item" onclick="enablePushNotifications()">🔔 Включить уведомления</button>
       <div class="settings-menu-section" id="notif-toggles-section" style="display:none">
         <div class="settings-menu-label">Уведомления</div>
@@ -288,15 +276,14 @@ input[type="file"]{display:none}
 <script src="push-notifications.js"></script>
 <script>
 var BLIZKO_API_URL = (typeof window.BLIZKO_API_URL !== 'undefined') ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
-var db = createBlizkoClient();
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 var currentAccessToken = null;
 var myPosts = [];
 
 async function init() {
   var r = await db.auth.getSession();
-  blizkoDbg('profile.html init: getSession() session=' + !!r.data.session);
-  if (!r.data.session) { blizkoRedirect('index.html', 'profile.html no session'); return; }
+  if (!r.data.session) { window.location.href = 'index.html'; return; }
   currentUser = r.data.session.user;
   currentAccessToken = r.data.session.access_token;
 
@@ -312,7 +299,6 @@ async function init() {
   await loadFollowCounts();
   updateThemeButtons();
   await refreshNotifToggleVisibility();
-  await loadMyAccountsList();
 }
 
 async function refreshNotifToggleVisibility() {
@@ -324,68 +310,6 @@ async function refreshNotifToggleVisibility() {
     document.getElementById('notif-likes-cb').checked = !!prefs.notif_likes;
     document.getElementById('notif-matches-cb').checked = !!prefs.notif_matches;
     document.getElementById('notif-calls-cb').checked = !!prefs.notif_calls;
-  }
-}
-
-async function loadMyAccountsList() {
-  var vault = getAccountVault();
-  var section = document.getElementById('my-accounts-section');
-  var list = document.getElementById('my-accounts-list');
-
-  if (vault.length === 0) {
-    section.style.display = 'none';
-    return;
-  }
-  section.style.display = 'block';
-
-  var ids = vault.map(function (a) { return a.user_id; });
-  var { data: profiles } = await db.from('profiles').select('id, name, photo_url').in('id', ids);
-  var profileById = {};
-  (profiles || []).forEach(function (p) { profileById[p.id] = p; });
-
-  list.innerHTML = '';
-  vault.forEach(function (acc) {
-    var prof = profileById[acc.user_id] || {};
-    var isCurrent = currentUser && acc.user_id === currentUser.id;
-
-    var row = document.createElement('div');
-    row.className = 'account-row';
-
-    var avatarHtml = prof.photo_url ? '<img src="' + prof.photo_url + '">' : '👤';
-    var nameHtml = '<span class="account-row-name' + (isCurrent ? ' current' : '') + '">' + (prof.name || 'Пользователь') + (isCurrent ? ' (текущий)' : '') + '</span>';
-
-    row.innerHTML = '<div class="account-row-avatar">' + avatarHtml + '</div>' + nameHtml;
-
-    if (!isCurrent) {
-      var switchBtn = document.createElement('button');
-      switchBtn.className = 'account-row-switch';
-      switchBtn.textContent = 'Войти';
-      switchBtn.onclick = function () { doSwitchAccount(acc.user_id); };
-      row.appendChild(switchBtn);
-    }
-
-    var removeBtn = document.createElement('button');
-    removeBtn.className = 'account-row-remove';
-    removeBtn.textContent = '✕';
-    removeBtn.title = 'Убрать из списка (не удаляет аккаунт)';
-    removeBtn.onclick = function () {
-      removeFromAccountVault(acc.user_id);
-      loadMyAccountsList();
-    };
-    row.appendChild(removeBtn);
-
-    list.appendChild(row);
-  });
-}
-
-async function doSwitchAccount(userId) {
-  var ok = await switchToVaultAccount(db, userId);
-  if (ok) {
-    window.location.reload();
-  } else {
-    alert('Не удалось переключиться — возможно, сессия этого аккаунта устарела. Войди в него заново через "Добавить ещё аккаунт".');
-    removeFromAccountVault(userId);
-    loadMyAccountsList();
   }
 }
 
