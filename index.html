@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Blizko - Dating (отладка)</title>
+<title>Blizko - Dating</title>
 <link rel="manifest" href="manifest.json">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
@@ -62,31 +62,6 @@ input:focus{border-color:var(--accent)}
 .footer-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;text-decoration:none;opacity:0.8;transition:opacity 0.2s}
 .footer-link:active{opacity:1}
 .footer-logo{width:16px;height:16px;border-radius:4px;object-fit:cover}
-
-/* ===== ОТЛАДОЧНАЯ ПАНЕЛЬ ===== */
-#debug-panel {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.92);
-  color: #0f0;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-family: monospace;
-  z-index: 99999;
-  max-width: 90vw;
-  max-height: 50vh;
-  overflow-y: auto;
-  border: 1px solid #444;
-  pointer-events: none;
-  line-height: 1.6;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.9);
-}
-#debug-panel .event { color: #ffcc00; }
-#debug-panel .session { color: #66ff66; }
-#debug-panel .redirect { color: #ff6666; }
-#debug-panel .error { color: #ff3333; }
 </style>
 </head>
 <body>
@@ -155,37 +130,11 @@ input:focus{border-color:var(--accent)}
 <a class="footer-link" id="rules_link" href="rules.html"></a>
 </div>
 </div>
-
-<!-- ОТЛАДОЧНАЯ ПАНЕЛЬ -->
-<div id="debug-panel">
-  <div>🔍 Отладка активна (редиректы заблокированы)</div>
-  <div id="debug-log">Ожидание событий...</div>
-</div>
-
 <script src="https://js.hcaptcha.com/1/api.js?onload=onHcaptchaLoad&render=explicit" async defer></script>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ===== ОТЛАДОЧНЫЙ КОД =====
-const debugLog = document.getElementById('debug-log');
-let debugCounter = 0;
-
-function addDebugLine(text, className = '') {
-  debugCounter++;
-  const line = document.createElement('div');
-  line.className = className;
-  line.textContent = `#${debugCounter} ${text}`;
-  debugLog.appendChild(line);
-  debugLog.scrollTop = debugLog.scrollHeight;
-}
-
-window.onerror = function(msg, url, line, col, error) {
-  addDebugLine(`ОШИБКА: ${msg} (${url}:${line})`, 'error');
-  return false;
-};
-
-// ===== ИНИЦИАЛИЗАЦИЯ =====
 var BLIZKO_API_URL = (typeof window.BLIZKO_API_URL !== 'undefined') ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
 
 var T={ru:{
@@ -318,47 +267,18 @@ renderUnlockBox('reg');
 
 function spawnHearts(){var c=document.getElementById('hearts');var e=['❤️','🧡','💕','💖','💗','💓','💝'];for(var i=0;i<14;i++){var h=document.createElement('div');h.className='heart';h.textContent=e[Math.floor(Math.random()*e.length)];h.style.left=Math.random()*100+'vw';h.style.fontSize=(13+Math.random()*16)+'px';h.style.animationDuration=(8+Math.random()*10)+'s';h.style.animationDelay=(Math.random()*14)+'s';c.appendChild(h)}}
 
-var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-addDebugLine('Supabase клиент создан', 'session');
+var db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-// ===== ПЕРЕХВАТ РЕДИРЕКТОВ (БЕЗ ОШИБКИ) =====
-addDebugLine('РЕДИРЕКТЫ ЗАБЛОКИРОВАНЫ (только логируются)', 'redirect');
-
-// Перехватываем только assign и replace (location.href не трогаем)
-const origAssign = window.location.assign;
-window.location.assign = function(url) {
-  addDebugLine(`ПОПЫТКА location.assign → ${url}`, 'redirect');
-  // не выполняем оригинал
-};
-const origReplace = window.location.replace;
-window.location.replace = function(url) {
-  addDebugLine(`ПОПЫТКА location.replace → ${url}`, 'redirect');
-  // не выполняем оригинал
-};
-
-// ===== getSession =====
 db.auth.getSession().then(function(r){
-  var hasSession = !!(r.data && r.data.session);
-  addDebugLine(`getSession: сессия ${hasSession ? 'ЕСТЬ' : 'НЕТ'}`, hasSession ? 'session' : '');
-  if (hasSession) {
-    addDebugLine(`  Email: ${r.data.session.user.email}`, 'session');
-  }
-}).catch(function(e){
-  addDebugLine(`Ошибка getSession: ${e.message}`, 'error');
+  if(r.data.session) window.location.href='feed.html';
 });
 
-// ===== onAuthStateChange =====
 db.auth.onAuthStateChange(function(event, session){
-  var hasSession = !!(session);
-  addDebugLine(`onAuthStateChange: ${event} | Сессия: ${hasSession ? 'ЕСТЬ' : 'НЕТ'}`, 'event');
-  if (hasSession && session.user) {
-    addDebugLine(`  Email: ${session.user.email}`, 'session');
+  if(event === 'SIGNED_IN' && session){
+    window.location.href = 'feed.html';
   }
 });
 
-addDebugLine('Отладка запущена. Наблюдай за событиями ниже.', '');
-
-// ===== ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ (без изменений) =====
 function switchTab(tab){document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register'))});document.getElementById('login-form').style.display=tab==='login'?'block':'none';document.getElementById('register-form').style.display=tab==='register'?'block':'none'}
 
 function checkConsent(){document.getElementById('reg-btn').disabled=!['consent1','consent2','consent3'].every(function(id){return document.getElementById(id).checked})}
@@ -372,6 +292,7 @@ input.type=isHidden?'text':'password';
 btn.style.color=isHidden?'var(--accent2)':'var(--muted)';
 }
 
+// ===== device_id с поддержкой кук (общий для всех поддоменов) =====
 function getDeviceId(){
   var cookieId = document.cookie.split('; ').find(row => row.startsWith('blizko_device_id='));
   if (cookieId) {
