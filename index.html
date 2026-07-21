@@ -233,6 +233,7 @@ var loginCaptchaId=null;
 var regCaptchaId=null;
 var hcaptchaReady=false;
 
+// ===== ИСПРАВЛЕНИЕ КАПЧИ =====
 function onHcaptchaLoad(){
   if(typeof hcaptcha==='undefined')return;
   hcaptchaReady=true;
@@ -259,11 +260,13 @@ function renderRegCaptcha(){
   }
 }
 
+// Fallback если onHcaptchaLoad не вызвался
 setTimeout(function(){
   if(!hcaptchaReady&&typeof hcaptcha!=='undefined'){
     onHcaptchaLoad();
   }
 },4000);
+// ===== КОНЕЦ ИСПРАВЛЕНИЯ КАПЧИ =====
 
 function setLang(l){lang=l;localStorage.setItem('lang',l);document.querySelectorAll('.lang-btn').forEach(function(b,i){b.classList.toggle('active',(i===0&&l==='ru')||(i===1&&l==='en'))});applyLang()}
 
@@ -297,6 +300,7 @@ function spawnHearts(){var c=document.getElementById('hearts');var e=['❤️','
 
 var db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
+// ===== ЗАЩИТА ОТ ДВОЙНОГО РЕДИРЕКТА =====
 var redirectDone = false;
 function maybeRedirectToFeed(session) {
   if (redirectDone || !session) return;
@@ -313,6 +317,7 @@ db.auth.onAuthStateChange(function(event, session){
     maybeRedirectToFeed(session);
   }
 });
+// ===== КОНЕЦ =====
 
 function switchTab(tab){
   document.querySelectorAll('.tab').forEach(function(t,i){
@@ -522,7 +527,7 @@ try {
     var data = await resp.json();
     existingAccounts = data.emails || [];
   }
-} catch(e) { /* если не удалось, считаем, что аккаунтов нет */ }
+} catch(e) { }
 
 if (existingAccounts.length > 0 && !window._blizkoExtraCode) {
   setMsg('reg-msg', t.err_need_paid_code, 'error');
