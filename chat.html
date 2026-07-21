@@ -1,1 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Blizko - Чат</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
+.back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center}
+.user-info{flex:1;min-width:0}
+.user-name{font-weight:600;font-size:15px}
+.user-status{font-size:12px;color:var(--muted)}
+.messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+.msg-bubble{max-width:80%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;word-wrap:break-word}
+.msg-bubble.me{align-self:flex-end;background:var(--accent);color:white;border-bottom-right-radius:4px}
+.msg-bubble.them{align-self:flex-start;background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg-time{font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
+.input-bar{display:flex;gap:8px;padding:12px 20px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--bg)}
+.input-bar input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:10px 16px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none}
+.input-bar input:focus{border-color:var(--accent)}
+.input-bar button{background:var(--accent);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:16px;flex-shrink:0}
+.input-bar button:disabled{opacity:0.4;cursor:not-allowed}
+.empty-chat{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
+</style>
+</head>
+<body>
 
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <div class="user-info">
+    <div class="user-name" id="chat-user-name">Загрузка...</div>
+    <div class="user-status" id="chat-user-status">онлайн</div>
+  </div>
+</div>
+
+<div class="messages" id="messages-wrap">
+  <div class="empty-chat">Начни общение первым 👋</div>
+</div>
+
+<div class="input-bar">
+  <input type="text" id="msg-input" placeholder="Сообщение..." maxlength="500" onkeydown="if(event.key==='Enter')sendMessage()">
+  <button id="send-btn" onclick="sendMessage()">➤</button>
+</div>
+
+<script src="theme.js"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var db = createBlizkoClient();
+var currentUser = null;
+var matchId = null;
+var otherUserId = null;
+var subscription = null;
+var messagesMap = {};
+
+function getParam(name) {
+  var url = new URL(window.location.href);
+  return url.searchParams.get(name);
+}
+
+async function init() {
+  var r = await db.auth.getSession();
+  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  currentUser = r.data.session.user;
+  
+  matchId = getParam('match');
+  if (!matchId) { window.location.href = 'matches.html'; return; }
+  
+  var { data: match } = await db.from('matches').select('*').eq('id', matchId).single();
+  if (!match) { window.location.href = 'matches.html'; return; }
+  
+  otherUserId = match.user1 === currentUser.id ? match.user2 : match.user1;
+  
+  var { data: profile } = await db.from('profiles').select('name').eq('id', otherUserId).single();
+  document.getElementById('chat-user-name').textContent = profile ? profile.name : 'Пользователь';
+  
+  await loadMessages();
+  setupRealtime();
+  
+  // ===== ИСПРАВЛЕНИЕ: переподключение при возврате =====
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && subscription) {
+      db.removeChannel(subscription);
+      setupRealtime();
+    }
+  });
+}
+
+async function loadMessages() {
+  var wrap = document.getElementById('messages-wrap');
+  var { data: messages, error } = await db.from('messages')
+    .select('*')
+    .eq('match_id', matchId)
+    .order('created_at', { ascending: true });
+  
+  if (error) { console.error(error); return; }
+  
+  wrap.innerHTML = '';
+  messagesMap = {};
+  
+  if (!messages || messages.length === 0) {
+    wrap.innerHTML = '<div class="empty-chat">Начни общение первым 👋</div>';
+    return;
+  }
+  
+  messages.forEach(function(msg) {
+    appendMessageToDOM(msg);
+  });
+  
+  scrollBottom();
+}
+
+function appendMessageToDOM(msg) {
+  if (messagesMap[msg.id]) return; // дубликат
+  messagesMap[msg.id] = true;
+  
+  var wrap = document.getElementById('messages-wrap');
+  var empty = wrap.querySelector('.empty-chat');
+  if (empty) empty.remove();
+  
+  var isMe = msg.sender_id === currentUser.id;
+  var bubble = document.createElement('div');
+  bubble.className = 'msg-bubble ' + (isMe ? 'me' : 'them');
+  
+  var time = new Date(msg.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+  bubble.innerHTML = '<div>' + escapeHtml(msg.text) + '</div><div class="msg-time">' + time + '</div>';
+  
+  wrap.appendChild(bubble);
+  scrollBottom();
+}
+
+function scrollBottom() {
+  var wrap = document.getElementById('messages-wrap');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ===== ИСПРАВЛЕНИЕ: оптимальная подписка — добавляем одно сообщение =====
+function setupRealtime() {
+  subscription = db.channel('messages-' + matchId)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: 'match_id=eq.' + matchId
+    }, function(payload) {
+      var newMsg = payload.new;
+      if (newMsg.sender_id === currentUser.id) return;
+      appendMessageToDOM(newMsg);
+    })
+    .subscribe();
+}
+
+// ===== ИСПРАВЛЕНИЕ: блокировка кнопки отправки =====
+async function sendMessage() {
+  var input = document.getElementById('msg-input');
+  var btn = document.getElementById('send-btn');
+  var text = input.value.trim();
+  if (!text) return;
+  
+  btn.disabled = true;
+  
+  var payload = {
+    match_id: matchId,
+    sender_id: currentUser.id,
+    text: text
+  };
+  
+  var { error } = await db.from('messages').insert(payload);
+  btn.disabled = false;
+  
+  if (error) { alert('Ошибка: ' + error.message); return; }
+  
+  input.value = '';
+  // Оптимистичное добавление своего сообщения
+  appendMessageToDOM({
+    id: 'temp_' + Date.now(),
+    sender_id: currentUser.id,
+    text: text,
+    created_at: new Date().toISOString()
+  });
+}
+
+window.addEventListener('beforeunload', function() {
+  if (subscription) db.removeChannel(subscription);
+});
+
+init();
+</script>
+</body>
+</html>
