@@ -74,13 +74,30 @@ var db = createBlizkoClient();
 var currentUser = null;
 var myResponses = {};
 
-// ===== КАК В FEED.HTML =====
+// ===== ИСПРАВЛЕНИЕ: ждём сессию с повторными попытками =====
 async function init() {
-  var r = await db.auth.getSession();
-  if (!r.data.session) { window.location.href = 'index.html'; return; }
-  currentUser = r.data.session.user;
+  var session = null;
+  var attempts = 0;
+  
+  // Пробуем получить сессию до 10 раз с интервалом 200мс
+  while (!session && attempts < 10) {
+    var r = await db.auth.getSession();
+    session = r.data.session;
+    if (!session) {
+      attempts++;
+      await new Promise(function(resolve) { setTimeout(resolve, 200); });
+    }
+  }
+  
+  if (!session) {
+    window.location.href = 'index.html';
+    return;
+  }
+  
+  currentUser = session.user;
   await loadLikes();
 }
+// ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
 
 async function loadLikes() {
   var wrap = document.getElementById('list-wrap');
