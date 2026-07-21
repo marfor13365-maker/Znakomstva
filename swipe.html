@@ -97,7 +97,6 @@ var isDragging = false;
 var startX = 0, startY = 0;
 var pendingLikeId = null;
 
-// ===== КАК В FEED.HTML: просто await getSession() =====
 async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) { window.location.href = 'index.html'; return; }
