@@ -25,6 +25,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .input-bar button{background:var(--accent);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:16px;flex-shrink:0}
 .input-bar button:disabled{opacity:0.4;cursor:not-allowed}
 .empty-chat{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
+.empty-state .icon{font-size:60px;margin-bottom:16px}
+.empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
+.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -50,7 +54,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var db = createBlizkoClient();
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 var matchId = null;
 var otherUserId = null;
@@ -62,10 +66,36 @@ function getParam(name) {
   return url.searchParams.get(name);
 }
 
+// ===== ПОВТОРНЫЕ ПОПЫТКИ: ждём пока Supabase восстановит сессию =====
 async function init() {
-  var r = await db.auth.getSession();
-  if (!r.data.session) { window.location.href = 'index.html'; return; }
-  currentUser = r.data.session.user;
+  var wrap = document.getElementById('messages-wrap');
+  var session = null;
+  var attempts = 0;
+  var maxAttempts = 15;
+  
+  while (!session && attempts < maxAttempts) {
+    var r = await db.auth.getSession();
+    session = r.data.session;
+    if (!session) {
+      attempts++;
+      await new Promise(function(resolve) { setTimeout(resolve, 200); });
+    }
+  }
+  
+  if (!session) {
+    wrap.innerHTML = 
+      '<div class="empty-state" style="padding:60px 20px;">' +
+        '<div class="icon">🔒</div>' +
+        '<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
+        '<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
+        '<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'index.html\'">Войти</button>' +
+      '</div>';
+    // Скрываем поле ввода
+    document.querySelector('.input-bar').style.display = 'none';
+    return;
+  }
+  
+  currentUser = session.user;
   
   matchId = getParam('match');
   if (!matchId) { window.location.href = 'matches.html'; return; }
@@ -81,7 +111,7 @@ async function init() {
   await loadMessages();
   setupRealtime();
   
-  // ===== ИСПРАВЛЕНИЕ: переподключение при возврате =====
+  // Переподключение при возврате на вкладку
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden && subscription) {
       db.removeChannel(subscription);
@@ -115,7 +145,7 @@ async function loadMessages() {
 }
 
 function appendMessageToDOM(msg) {
-  if (messagesMap[msg.id]) return; // дубликат
+  if (messagesMap[msg.id]) return;
   messagesMap[msg.id] = true;
   
   var wrap = document.getElementById('messages-wrap');
@@ -142,7 +172,6 @@ function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ===== ИСПРАВЛЕНИЕ: оптимальная подписка — добавляем одно сообщение =====
 function setupRealtime() {
   subscription = db.channel('messages-' + matchId)
     .on('postgres_changes', {
@@ -158,7 +187,6 @@ function setupRealtime() {
     .subscribe();
 }
 
-// ===== ИСПРАВЛЕНИЕ: блокировка кнопки отправки =====
 async function sendMessage() {
   var input = document.getElementById('msg-input');
   var btn = document.getElementById('send-btn');
@@ -179,7 +207,6 @@ async function sendMessage() {
   if (error) { alert('Ошибка: ' + error.message); return; }
   
   input.value = '';
-  // Оптимистичное добавление своего сообщения
   appendMessageToDOM({
     id: 'temp_' + Date.now(),
     sender_id: currentUser.id,
