@@ -26,7 +26,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .skip-btn{background:transparent;border:1px solid var(--border);color:var(--text)}
 .card-actions button:active{opacity:0.8}
 .label{position:absolute;top:40px;padding:8px 16px;border-radius:8px;font-family:'Unbounded',sans-serif;font-size:24px;font-weight:600;opacity:0;transition:opacity 0.2s}
-.like-label{right:20px;background:rgba(76,255,159,0.2);color:var(--green);border:2px solid var(--green)}
+.like-label{right:20px;background:rgba(76,255,159,0.2);color:#4cff9f;border:2px solid #4cff9f}
 .nope-label{left:20px;background:rgba(255,107,107,0.2);color:#ff6b6b;border:2px solid #ff6b6b}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
@@ -96,11 +96,36 @@ var currentIndex = 0;
 var isDragging = false;
 var startX = 0, startY = 0;
 var pendingLikeId = null;
+var authChecked = false;
+
+// ===== ЗАЩИТА ОТ RACE CONDITION =====
+function handleAuth(session) {
+  if (authChecked) return;
+  if (!session) {
+    window.location.replace('index.html');
+    return;
+  }
+  authChecked = true;
+  currentUser = session.user;
+  init();
+}
+
+db.auth.getSession().then(function(r){
+  if (r.data.session) handleAuth(r.data.session);
+});
+
+db.auth.onAuthStateChange(function(event, session){
+  if (event === 'SIGNED_IN') handleAuth(session);
+  if (event === 'SIGNED_OUT') window.location.replace('index.html');
+});
+
+// Fallback: если через 3 секунды auth не проверен — редирект
+setTimeout(function(){
+  if (!authChecked) window.location.replace('index.html');
+}, 3000);
+// ===== КОНЕЦ ЗАЩИТЫ =====
 
 async function init() {
-  var r = await db.auth.getSession();
-  if (!r.data.session) { window.location.href = 'index.html'; return; }
-  currentUser = r.data.session.user;
   await loadProfiles();
 }
 
@@ -155,7 +180,6 @@ function renderCard() {
   setupDrag(document.getElementById('current-card'));
 }
 
-// ===== ИСПРАВЛЕНИЕ: обработчики только на карточке =====
 function setupDrag(card) {
   if (!card) return;
   card.addEventListener('mousedown', dragStart);
@@ -169,9 +193,7 @@ function setupDrag(card) {
 }
 
 function dragStart(e) {
-  // Не начинать drag при тапе по кнопкам внутри карточки
   if (e.target.closest('.card-actions')) return;
-  
   isDragging = true;
   var card = e.currentTarget;
   card.classList.add('dragging');
@@ -184,13 +206,10 @@ function dragMove(e) {
   if (!isDragging) return;
   var card = document.getElementById('current-card');
   if (!card) { isDragging = false; return; }
-  
   var pt = e.touches ? e.touches[0] : e;
   var dx = pt.clientX - startX;
   var dy = pt.clientY - startY;
-  
   card.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx * 0.1) + 'deg)';
-  
   var ll = document.getElementById('like-label');
   var nl = document.getElementById('nope-label');
   if (ll) ll.style.opacity = dx > 20 ? Math.min((dx - 20) / 80, 1) : 0;
@@ -200,7 +219,6 @@ function dragMove(e) {
 function dragEnd(e) {
   if (!isDragging) return;
   isDragging = false;
-  
   var card = document.getElementById('current-card');
   if (!card) return;
   card.classList.remove('dragging');
@@ -216,12 +234,10 @@ function dragEnd(e) {
   if (ll) ll.style.opacity = 0;
   if (nl) nl.style.opacity = 0;
   
-  // Увеличенные пороги
   if (dx > 100) { openLikeModal(); }
   else if (dx < -100) { swipe('left'); }
   else if (dy < -150) { nextProfile(); }
 }
-// ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
 
 function swipe(direction) {
   var card = document.getElementById('current-card');
@@ -264,7 +280,6 @@ async function sendLike() {
     comment: comment || null
   }, { onConflict: 'from_user,to_user' });
   
-  // Проверяем матч
   var { data: matchData } = await db.from('matches').select('*')
     .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + pendingLikeId + '),and(user1.eq.' + pendingLikeId + ',user2.eq.' + currentUser.id + ')')
     .maybeSingle();
@@ -285,8 +300,6 @@ async function sendLike() {
 function openFilters() {
   alert('Фильтры скоро будут!');
 }
-
-init();
 </script>
 </body>
 </html>
