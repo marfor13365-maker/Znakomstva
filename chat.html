@@ -2,33 +2,69 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Blizko - Чат</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
-.back-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px 4px 0;display:flex;align-items:center}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg);z-index:10;flex-shrink:0}
+.back-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px;display:flex;align-items:center}
 .user-info{flex:1;min-width:0}
 .user-name{font-weight:600;font-size:15px}
 .user-status{font-size:12px;color:var(--muted)}
-.messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
-.msg-bubble{max-width:80%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;word-wrap:break-word}
+.messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.msg-bubble{max-width:75%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;word-wrap:break-word}
 .msg-bubble.me{align-self:flex-end;background:var(--accent);color:white;border-bottom-right-radius:4px}
 .msg-bubble.them{align-self:flex-start;background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px}
-.msg-time{font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
-.input-bar{display:flex;gap:8px;padding:12px 20px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--bg)}
-.input-bar input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:10px 16px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none}
-.input-bar input:focus{border-color:var(--accent)}
-.input-bar button{background:var(--accent);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:16px;flex-shrink:0}
-.input-bar button:disabled{opacity:0.4;cursor:not-allowed}
+.msg-time{font-size:10px;opacity:0.7;margin-top:4px;text-align:right}
+.msg-bubble.them .msg-time{color:var(--muted)}
 .empty-chat{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
 .empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+
+/* ===== ПОЛЕ ВВОДА — исправлено, не обрезается ===== */
+.input-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;min-height:56px}
+.attach-btn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:36px;height:36px}
+.attach-btn:active{color:var(--accent)}
+.input-bar input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:10px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;min-height:40px}
+.input-bar input:focus{border-color:var(--accent)}
+.voice-btn{background:var(--accent);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.voice-btn:active{opacity:0.8}
+.send-btn{background:var(--accent);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.send-btn:active{opacity:0.8}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* Модалка для вложений */
+.attach-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:200;display:none;align-items:flex-end;justify-content:center;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.attach-modal.show{display:flex}
+.attach-menu{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;width:100%;max-width:400px}
+.attach-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600;margin-bottom:12px;text-align:center}
+.attach-options{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.attach-option{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px;border-radius:12px;background:var(--input-bg);border:1px solid var(--border);cursor:pointer}
+.attach-option:active{background:var(--border)}
+.attach-option .ico{font-size:24px}
+.attach-option span{font-size:11px;color:var(--text)}
+.attach-cancel{width:100%;margin-top:12px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer}
+
+/* Запись голосового */
+.voice-recording{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.voice-recording.show{display:flex}
+.voice-recording .rec-icon{font-size:60px;animation:pulse 1s ease-in-out infinite}
+.voice-recording .rec-text{font-size:16px;color:var(--text)}
+.voice-recording .rec-timer{font-size:24px;font-family:'Unbounded',sans-serif;color:var(--accent)}
+.voice-recording .rec-stop{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+/* Фото в чате */
+.msg-photo{width:100%;max-width:200px;border-radius:12px;margin-bottom:4px;cursor:pointer}
+.msg-video{width:100%;max-width:200px;border-radius:12px;margin-bottom:4px}
+.msg-file{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.3);border-radius:8px;margin-bottom:4px}
+.msg-file .file-icon{font-size:20px}
+.msg-file .file-name{font-size:12px;word-break:break-all}
 </style>
 </head>
 <body>
@@ -45,10 +81,46 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <div class="empty-chat">Начни общение первым 👋</div>
 </div>
 
+<!-- ===== ПОЛЕ ВВОДА — с кнопками голосового и скрепки ===== -->
 <div class="input-bar">
+  <button class="attach-btn" onclick="openAttachModal()" title="Вложения">📎</button>
   <input type="text" id="msg-input" placeholder="Сообщение..." maxlength="500" onkeydown="if(event.key==='Enter')sendMessage()">
-  <button id="send-btn" onclick="sendMessage()">➤</button>
+  <button class="voice-btn" id="voice-btn" onclick="startVoiceRecording()" title="Голосовое">🎤</button>
+  <button class="send-btn" id="send-btn" onclick="sendMessage()" style="display:none">➤</button>
 </div>
+
+<!-- Модалка вложений -->
+<div class="attach-modal" id="attach-modal">
+  <div class="attach-menu">
+    <div class="attach-title">Прикрепить</div>
+    <div class="attach-options">
+      <div class="attach-option" onclick="selectFile('image')">
+        <span class="ico">📷</span>
+        <span>Фото</span>
+      </div>
+      <div class="attach-option" onclick="selectFile('video')">
+        <span class="ico">🎥</span>
+        <span>Видео</span>
+      </div>
+      <div class="attach-option" onclick="selectFile('file')">
+        <span class="ico">📄</span>
+        <span>Файл</span>
+      </div>
+    </div>
+    <button class="attach-cancel" onclick="closeAttachModal()">Отмена</button>
+  </div>
+</div>
+
+<!-- Запись голосового -->
+<div class="voice-recording" id="voice-recording">
+  <div class="rec-icon">🎙️</div>
+  <div class="rec-text">Идёт запись...</div>
+  <div class="rec-timer" id="rec-timer">00:00</div>
+  <button class="rec-stop" onclick="stopVoiceRecording()">✋ Остановить</button>
+</div>
+
+<!-- Скрытый input для файлов -->
+<input type="file" id="file-input" style="display:none" onchange="handleFileSelect(this)">
 
 <script src="theme.js"></script>
 <script src="config.js"></script>
@@ -60,29 +132,28 @@ var matchId = null;
 var otherUserId = null;
 var subscription = null;
 var messagesMap = {};
+var mediaRecorder = null;
+var audioChunks = [];
+var recInterval = null;
+var recSeconds = 0;
 
 function getParam(name) {
   var url = new URL(window.location.href);
   return url.searchParams.get(name);
 }
 
-// ===== ПОВТОРНЫЕ ПОПЫТКИ: ждём пока Supabase восстановит сессию =====
+// Показывать/скрывать кнопку отправки в зависимости от текста
+document.getElementById('msg-input').addEventListener('input', function() {
+  var hasText = this.value.trim().length > 0;
+  document.getElementById('send-btn').style.display = hasText ? 'flex' : 'none';
+  document.getElementById('voice-btn').style.display = hasText ? 'none' : 'flex';
+});
+
 async function init() {
   var wrap = document.getElementById('messages-wrap');
-  var session = null;
-  var attempts = 0;
-  var maxAttempts = 15;
+  var r = await db.auth.getSession();
   
-  while (!session && attempts < maxAttempts) {
-    var r = await db.auth.getSession();
-    session = r.data.session;
-    if (!session) {
-      attempts++;
-      await new Promise(function(resolve) { setTimeout(resolve, 200); });
-    }
-  }
-  
-  if (!session) {
+  if (!r.data.session) {
     wrap.innerHTML = 
       '<div class="empty-state" style="padding:60px 20px;">' +
         '<div class="icon">🔒</div>' +
@@ -90,12 +161,11 @@ async function init() {
         '<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
         '<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'index.html\'">Войти</button>' +
       '</div>';
-    // Скрываем поле ввода
     document.querySelector('.input-bar').style.display = 'none';
     return;
   }
   
-  currentUser = session.user;
+  currentUser = r.data.session.user;
   
   matchId = getParam('match');
   if (!matchId) { window.location.href = 'matches.html'; return; }
@@ -111,7 +181,6 @@ async function init() {
   await loadMessages();
   setupRealtime();
   
-  // Переподключение при возврате на вкладку
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden && subscription) {
       db.removeChannel(subscription);
@@ -157,7 +226,31 @@ function appendMessageToDOM(msg) {
   bubble.className = 'msg-bubble ' + (isMe ? 'me' : 'them');
   
   var time = new Date(msg.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
-  bubble.innerHTML = '<div>' + escapeHtml(msg.text) + '</div><div class="msg-time">' + time + '</div>';
+  
+  var contentHtml = '';
+  
+  // Фото
+  if (msg.photo_url) {
+    contentHtml += '<img class="msg-photo" src="' + msg.photo_url + '" onclick="window.open(this.src)">';
+  }
+  // Видео
+  if (msg.video_url) {
+    contentHtml += '<video class="msg-video" src="' + msg.video_url + '" controls></video>';
+  }
+  // Файл
+  if (msg.file_url) {
+    contentHtml += '<div class="msg-file"><span class="file-icon">📄</span><span class="file-name">' + escapeHtml(msg.file_name || 'Файл') + '</span></div>';
+  }
+  // Голосовое
+  if (msg.voice_url) {
+    contentHtml += '<audio controls src="' + msg.voice_url + '" style="max-width:200px"></audio>';
+  }
+  // Текст
+  if (msg.text) {
+    contentHtml += '<div>' + escapeHtml(msg.text) + '</div>';
+  }
+  
+  bubble.innerHTML = contentHtml + '<div class="msg-time">' + time + '</div>';
   
   wrap.appendChild(bubble);
   scrollBottom();
@@ -189,11 +282,8 @@ function setupRealtime() {
 
 async function sendMessage() {
   var input = document.getElementById('msg-input');
-  var btn = document.getElementById('send-btn');
   var text = input.value.trim();
   if (!text) return;
-  
-  btn.disabled = true;
   
   var payload = {
     match_id: matchId,
@@ -202,16 +292,132 @@ async function sendMessage() {
   };
   
   var { error } = await db.from('messages').insert(payload);
-  btn.disabled = false;
-  
   if (error) { alert('Ошибка: ' + error.message); return; }
   
   input.value = '';
+  document.getElementById('send-btn').style.display = 'none';
+  document.getElementById('voice-btn').style.display = 'flex';
+  
   appendMessageToDOM({
     id: 'temp_' + Date.now(),
     sender_id: currentUser.id,
     text: text,
     created_at: new Date().toISOString()
+  });
+}
+
+// ===== ВЛОЖЕНИЯ =====
+function openAttachModal() {
+  document.getElementById('attach-modal').classList.add('show');
+}
+
+function closeAttachModal() {
+  document.getElementById('attach-modal').classList.remove('show');
+}
+
+var fileType = '';
+function selectFile(type) {
+  fileType = type;
+  closeAttachModal();
+  var input = document.getElementById('file-input');
+  input.accept = type === 'image' ? 'image/*' : type === 'video' ? 'video/*' : '*/*';
+  input.click();
+}
+
+async function handleFileSelect(input) {
+  var file = input.files[0];
+  if (!file) return;
+  
+  var ext = file.name.split('.').pop().toLowerCase();
+  var fileName = Date.now() + '_' + Math.random().toString(36).slice(2) + '.' + ext;
+  var bucket = fileType === 'image' ? 'chat-photos' : fileType === 'video' ? 'chat-videos' : 'chat-files';
+  
+  // Загрузка в Supabase Storage
+  var { data: uploadData, error: uploadError } = await db.storage
+    .from(bucket)
+    .upload(fileName, file);
+  
+  if (uploadError) { alert('Ошибка загрузки: ' + uploadError.message); return; }
+  
+  var { data: urlData } = db.storage.from(bucket).getPublicUrl(fileName);
+  var publicUrl = urlData.publicUrl;
+  
+  var payload = {
+    match_id: matchId,
+    sender_id: currentUser.id,
+    text: null
+  };
+  
+  if (fileType === 'image') payload.photo_url = publicUrl;
+  else if (fileType === 'video') payload.video_url = publicUrl;
+  else {
+    payload.file_url = publicUrl;
+    payload.file_name = file.name;
+  }
+  
+  await db.from('messages').insert(payload);
+  input.value = '';
+}
+
+// ===== ГОЛОСОВЫЕ =====
+function startVoiceRecording() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('Голосовые сообщения не поддерживаются в этом браузере');
+    return;
+  }
+  
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    recSeconds = 0;
+    
+    mediaRecorder.ondataavailable = function(e) {
+      audioChunks.push(e.data);
+    };
+    
+    mediaRecorder.onstop = function() {
+      var audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      uploadVoiceMessage(audioBlob);
+      stream.getTracks().forEach(function(t) { t.stop(); });
+    };
+    
+    mediaRecorder.start();
+    document.getElementById('voice-recording').classList.add('show');
+    
+    recInterval = setInterval(function() {
+      recSeconds++;
+      var m = Math.floor(recSeconds / 60).toString().padStart(2, '0');
+      var s = (recSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('rec-timer').textContent = m + ':' + s;
+    }, 1000);
+  }).catch(function() {
+    alert('Нет доступа к микрофону');
+  });
+}
+
+function stopVoiceRecording() {
+  if (!mediaRecorder) return;
+  clearInterval(recInterval);
+  mediaRecorder.stop();
+  document.getElementById('voice-recording').classList.remove('show');
+  document.getElementById('rec-timer').textContent = '00:00';
+}
+
+async function uploadVoiceMessage(blob) {
+  var fileName = Date.now() + '_voice.webm';
+  
+  var { data: uploadData, error: uploadError } = await db.storage
+    .from('chat-voices')
+    .upload(fileName, blob);
+  
+  if (uploadError) { alert('Ошибка загрузки голосового: ' + uploadError.message); return; }
+  
+  var { data: urlData } = db.storage.from('chat-voices').getPublicUrl(fileName);
+  
+  await db.from('messages').insert({
+    match_id: matchId,
+    sender_id: currentUser.id,
+    voice_url: urlData.publicUrl
   });
 }
 
