@@ -98,12 +98,22 @@ var isDragging = false;
 var startX = 0, startY = 0;
 var pendingLikeId = null;
 
-// ===== КАК В FEED.HTML: если нет сессии — показываем кнопку "Войти" =====
 async function init() {
   var wrap = document.getElementById('card-wrap');
-  var r = await db.auth.getSession();
+  var session = null;
+  var attempts = 0;
+  var maxAttempts = 15;
   
-  if (!r.data.session) {
+  while (!session && attempts < maxAttempts) {
+    var r = await db.auth.getSession();
+    session = r.data.session;
+    if (!session) {
+      attempts++;
+      await new Promise(function(resolve) { setTimeout(resolve, 200); });
+    }
+  }
+  
+  if (!session) {
     wrap.innerHTML = 
       '<div class="empty-state" style="padding:60px 20px;">' +
         '<div class="icon">🔒</div>' +
@@ -114,7 +124,7 @@ async function init() {
     return;
   }
   
-  currentUser = r.data.session.user;
+  currentUser = session.user;
   await loadProfiles();
 }
 
