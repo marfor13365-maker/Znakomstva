@@ -24,6 +24,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .mini-btn{padding:8px 16px;border-radius:10px;border:none;font-family:'Unbounded',sans-serif;font-size:11px;font-weight:600;cursor:pointer}
 .mini-btn.like{background:var(--accent);color:white}
 .mini-btn.skip{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.mini-btn:disabled{opacity:0.4;cursor:not-allowed}
 .matched-tag{font-size:11px;color:var(--green);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:4px}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
@@ -71,7 +72,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script>
 var db = createBlizkoClient();
 var currentUser = null;
-var myResponses = {}; // to_user (т.е. кого я уже оценил) -> is_like
+var myResponses = {};
 
 async function init() {
   var r = await db.auth.getSession();
@@ -83,7 +84,6 @@ async function init() {
 async function loadLikes() {
   var wrap = document.getElementById('list-wrap');
 
-  // Кто лайкнул меня
   var { data: likesData, error } = await db.from('likes')
     .select('*, profiles!likes_from_user_fkey(name, age, city, photo_url)')
     .eq('to_user', currentUser.id)
@@ -91,7 +91,6 @@ async function loadLikes() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    // Фоллбэк без явного имени fk constraint
     var fallback = await db.from('likes')
       .select('*')
       .eq('to_user', currentUser.id)
@@ -108,7 +107,6 @@ async function loadLikes() {
 
   likesData = likesData || [];
 
-  // Мои собственные оценки (чтобы понять с кем уже матч / кого я лайкнул в ответ)
   var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
   myResponses = {};
   (myLikes || []).forEach(function(l) { myResponses[l.to_user] = l.is_like; });
@@ -133,13 +131,16 @@ async function loadLikes() {
     } else {
       actionsHtml =
         '<div class="like-actions">' +
-        '<button class="mini-btn like" onclick="event.stopPropagation();likeBack(\'' + like.from_user + '\')">❤️ Лайкнуть в ответ</button>' +
+        '<button class="mini-btn like" onclick="event.stopPropagation();likeBack(\'' + like.from_user + '\', this)">❤️ Лайкнуть в ответ</button>' +
         '<button class="mini-btn skip" onclick="event.stopPropagation();skipLike(\'' + like.from_user + '\', this)">Пропустить</button>' +
         '</div>';
     }
 
-    item.style.cursor = 'pointer';
-    item.onclick = function() { window.location.href = 'view-profile.html?user=' + like.from_user; };
+    // ===== ИСПРАВЛЕНИЕ: не реагировать на клики по кнопкам =====
+    item.onclick = function(e) {
+      if (e.target.closest('.like-actions')) return;
+      window.location.href = 'view-profile.html?user=' + like.from_user;
+    };
 
     item.innerHTML =
       '<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
@@ -158,26 +159,31 @@ function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-async function likeBack(otherUserId) {
+// ===== ИСПРАВЛЕНИЕ: блокировка кнопки и задержка перед редиректом =====
+async function likeBack(otherUserId, btnEl) {
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+  
   await db.from('likes').upsert({
     from_user: currentUser.id,
     to_user: otherUserId,
     is_like: true
   }, { onConflict: 'from_user,to_user' });
 
-  // Проверяем — образовался матч?
   var { data: matchData } = await db.from('matches').select('*')
     .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
     .single();
 
   if (matchData) {
-    window.location.href = 'chat.html?match=' + matchData.id;
+    setTimeout(function() {
+      window.location.href = 'chat.html?match=' + matchData.id;
+    }, 300);
   } else {
     await loadLikes();
   }
 }
 
 async function skipLike(otherUserId, btnEl) {
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
   await db.from('likes').upsert({
     from_user: currentUser.id,
     to_user: otherUserId,
@@ -185,6 +191,7 @@ async function skipLike(otherUserId, btnEl) {
   }, { onConflict: 'from_user,to_user' });
   await loadLikes();
 }
+// ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
 
 init();
 </script>
