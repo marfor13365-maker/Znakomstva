@@ -96,34 +96,35 @@ var currentIndex = 0;
 var isDragging = false;
 var startX = 0, startY = 0;
 var pendingLikeId = null;
-var authChecked = false;
+var authResolved = false;
 
-// ===== ЗАЩИТА ОТ RACE CONDITION =====
-function handleAuth(session) {
-  if (authChecked) return;
-  if (!session) {
-    window.location.replace('index.html');
-    return;
-  }
-  authChecked = true;
-  currentUser = session.user;
-  init();
-}
-
+// ===== ИСПРАВЛЕНИЕ: не редиректим сразу, ждём точного ответа =====
 db.auth.getSession().then(function(r){
-  if (r.data.session) handleAuth(r.data.session);
+  if (r.data.session) {
+    authResolved = true;
+    currentUser = r.data.session.user;
+    init();
+  }
 });
 
 db.auth.onAuthStateChange(function(event, session){
-  if (event === 'SIGNED_IN') handleAuth(session);
-  if (event === 'SIGNED_OUT') window.location.replace('index.html');
+  if (event === 'SIGNED_IN' && session && !authResolved) {
+    authResolved = true;
+    currentUser = session.user;
+    init();
+  }
+  if (event === 'SIGNED_OUT') {
+    window.location.replace('index.html');
+  }
 });
 
-// Fallback: если через 3 секунды auth не проверен — редирект
+// Только если через 3 секунды точно нет сессии — редирект
 setTimeout(function(){
-  if (!authChecked) window.location.replace('index.html');
+  if (!authResolved) {
+    window.location.replace('index.html');
+  }
 }, 3000);
-// ===== КОНЕЦ ЗАЩИТЫ =====
+// ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
 
 async function init() {
   await loadProfiles();
