@@ -98,25 +98,23 @@ var startX = 0, startY = 0;
 var pendingLikeId = null;
 var authResolved = false;
 
-// ===== ИСПРАВЛЕНИЕ: ждём загрузки Supabase и config.js =====
-function waitForSupabase(callback, retries) {
-  retries = retries || 0;
-  if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined' && typeof createBlizkoClient === 'function') {
-    db = createBlizkoClient();
-    callback();
-  } else if (retries < 50) {
-    setTimeout(function() { waitForSupabase(callback, retries + 1); }, 100);
-  } else {
-    document.getElementById('card-wrap').innerHTML = '<div class="empty-state"><p>Ошибка загрузки. Обнови страницу.</p></div>';
+// ===== ПРЯМАЯ ИНИЦИАЛИЗАЦИЯ: ждём config.js и Supabase =====
+function initApp() {
+  // Проверяем, что Supabase загружен и config.js определил константы
+  if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
+    setTimeout(initApp, 100);
+    return;
   }
-}
-
-function startApp() {
+  
+  // Создаём клиента напрямую
+  db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  
+  // Проверяем авторизацию
   db.auth.getSession().then(function(r){
     if (r.data.session) {
       authResolved = true;
       currentUser = r.data.session.user;
-      init();
+      loadProfiles();
     }
   });
 
@@ -124,13 +122,14 @@ function startApp() {
     if (event === 'SIGNED_IN' && session && !authResolved) {
       authResolved = true;
       currentUser = session.user;
-      init();
+      loadProfiles();
     }
     if (event === 'SIGNED_OUT') {
       window.location.replace('index.html');
     }
   });
 
+  // Fallback: если через 3 секунды точно нет сессии — редирект
   setTimeout(function(){
     if (!authResolved) {
       window.location.replace('index.html');
@@ -138,12 +137,13 @@ function startApp() {
   }, 3000);
 }
 
-waitForSupabase(startApp);
-// ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
-
-async function init() {
-  await loadProfiles();
+// Запускаем после полной загрузки страницы
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }
+// ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
 
 async function loadProfiles() {
   var wrap = document.getElementById('card-wrap');
