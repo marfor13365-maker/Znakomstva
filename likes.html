@@ -74,6 +74,7 @@ var db = createBlizkoClient();
 var currentUser = null;
 var myResponses = {};
 
+// ===== КАК В FEED.HTML =====
 async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) { window.location.href = 'index.html'; return; }
@@ -136,7 +137,6 @@ async function loadLikes() {
         '</div>';
     }
 
-    // ===== ИСПРАВЛЕНИЕ: не реагировать на клики по кнопкам =====
     item.onclick = function(e) {
       if (e.target.closest('.like-actions')) return;
       window.location.href = 'view-profile.html?user=' + like.from_user;
@@ -159,7 +159,6 @@ function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ===== ИСПРАВЛЕНИЕ: блокировка кнопки и задержка перед редиректом =====
 async function likeBack(otherUserId, btnEl) {
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
   
@@ -191,7 +190,6 @@ async function skipLike(otherUserId, btnEl) {
   }, { onConflict: 'from_user,to_user' });
   await loadLikes();
 }
-// ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
 
 init();
 </script>
