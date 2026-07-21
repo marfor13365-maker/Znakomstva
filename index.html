@@ -90,7 +90,7 @@ input:focus{border-color:var(--accent)}
 </button>
 </div>
 </div>
-<div id="hcaptcha-login" style="margin-bottom:12px;display:flex;justify-content:center"></div>
+<div id="hcaptcha-login" style="margin-bottom:12px;display:flex;justify-content:center;min-height:78px"></div>
 <button class="btn" id="btn_login" onclick="doLogin()"></button>
 <div class="msg" id="login-msg"></div>
 <button type="button" class="unlock-toggle" id="unlock-toggle-login" onclick="toggleUnlockBox('login')"></button>
@@ -115,7 +115,7 @@ input:focus{border-color:var(--accent)}
 <div class="checkbox-row"><input type="checkbox" id="consent2" onchange="checkConsent()"><span id="c2"></span></div>
 <div class="checkbox-row"><input type="checkbox" id="consent3" onchange="checkConsent()"><span id="c3"></span></div>
 </div>
-<div id="hcaptcha-register" style="margin-bottom:12px;display:flex;justify-content:center"></div>
+<div id="hcaptcha-register" style="margin-bottom:12px;display:flex;justify-content:center;min-height:78px"></div>
 <button class="btn" id="reg-btn" onclick="doRegister()" disabled></button>
 <div class="msg" id="reg-msg"></div>
 <button type="button" class="unlock-toggle" id="unlock-toggle-reg" onclick="toggleUnlockBox('reg')"></button>
@@ -123,7 +123,7 @@ input:focus{border-color:var(--accent)}
 </div>
 </div>
 <div class="footer">
-<a class="footer-link" href="https://vektorizi-ru.vercel.app" target="_blank" rel="noopener">
+<a class="footer-link" href="https://znakom.store" target="_blank" rel="noopener">
 <span id="footer_text"></span>
 </a>
 <div style="margin-top:8px">
@@ -231,11 +231,39 @@ var lang=localStorage.getItem('lang')||'ru';
 var HCAPTCHA_SITEKEY='8d14406a-4fb2-4d6e-acb8-d80a6b5af6fa';
 var loginCaptchaId=null;
 var regCaptchaId=null;
+var hcaptchaReady=false;
+
 function onHcaptchaLoad(){
-if(typeof hcaptcha==='undefined')return;
-loginCaptchaId=hcaptcha.render('hcaptcha-login',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
-regCaptchaId=hcaptcha.render('hcaptcha-register',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
+  if(typeof hcaptcha==='undefined')return;
+  hcaptchaReady=true;
+  renderLoginCaptcha();
 }
+
+function renderLoginCaptcha(){
+  if(!hcaptchaReady||loginCaptchaId!==null)return;
+  var container=document.getElementById('hcaptcha-login');
+  if(container&&container.offsetParent!==null){
+    try{
+      loginCaptchaId=hcaptcha.render('hcaptcha-login',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
+    }catch(e){console.error('hCaptcha login render error:',e);}
+  }
+}
+
+function renderRegCaptcha(){
+  if(!hcaptchaReady||regCaptchaId!==null)return;
+  var container=document.getElementById('hcaptcha-register');
+  if(container&&container.offsetParent!==null){
+    try{
+      regCaptchaId=hcaptcha.render('hcaptcha-register',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
+    }catch(e){console.error('hCaptcha reg render error:',e);}
+  }
+}
+
+setTimeout(function(){
+  if(!hcaptchaReady&&typeof hcaptcha!=='undefined'){
+    onHcaptchaLoad();
+  }
+},4000);
 
 function setLang(l){lang=l;localStorage.setItem('lang',l);document.querySelectorAll('.lang-btn').forEach(function(b,i){b.classList.toggle('active',(i===0&&l==='ru')||(i===1&&l==='en'))});applyLang()}
 
@@ -269,7 +297,6 @@ function spawnHearts(){var c=document.getElementById('hearts');var e=['❤️','
 
 var db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-// ===== ИСПРАВЛЕНИЕ: защита от двойного редиректа =====
 var redirectDone = false;
 function maybeRedirectToFeed(session) {
   if (redirectDone || !session) return;
@@ -286,9 +313,17 @@ db.auth.onAuthStateChange(function(event, session){
     maybeRedirectToFeed(session);
   }
 });
-// ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
 
-function switchTab(tab){document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register'))});document.getElementById('login-form').style.display=tab==='login'?'block':'none';document.getElementById('register-form').style.display=tab==='register'?'block':'none'}
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register'))
+  });
+  document.getElementById('login-form').style.display=tab==='login'?'block':'none';
+  document.getElementById('register-form').style.display=tab==='register'?'block':'none';
+  if(tab==='register'){
+    setTimeout(renderRegCaptcha,100);
+  }
+}
 
 function checkConsent(){document.getElementById('reg-btn').disabled=!['consent1','consent2','consent3'].every(function(id){return document.getElementById(id).checked})}
 
