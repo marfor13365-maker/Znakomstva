@@ -44,6 +44,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .like-modal-actions button{flex:1;padding:12px;border:none;border-radius:12px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
 .like-modal-actions .send{background:var(--accent);color:white}
 .like-modal-actions .cancel{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -89,7 +90,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var db = createBlizkoClient();
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 var profiles = [];
 var currentIndex = 0;
@@ -97,9 +98,22 @@ var isDragging = false;
 var startX = 0, startY = 0;
 var pendingLikeId = null;
 
+// ===== КАК В FEED.HTML: если нет сессии — показываем кнопку "Войти" =====
 async function init() {
+  var wrap = document.getElementById('card-wrap');
   var r = await db.auth.getSession();
-  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  
+  if (!r.data.session) {
+    wrap.innerHTML = 
+      '<div class="empty-state" style="padding:60px 20px;">' +
+        '<div class="icon">🔒</div>' +
+        '<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
+        '<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
+        '<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'index.html\'">Войти</button>' +
+      '</div>';
+    return;
+  }
+  
   currentUser = r.data.session.user;
   await loadProfiles();
 }
