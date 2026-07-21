@@ -20,7 +20,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .match-info{flex:1;min-width:0}
 .match-name{font-weight:600;font-size:15px;margin-bottom:3px}
 .match-last{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.match-time{font-size:11px;color:var(--muted);margin-top:4px}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
 .empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
@@ -30,7 +29,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .bottom-btn:not(.active){opacity:0.85}
 .bottom-btn .ico{font-size:20px}
 .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
-.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -69,33 +67,16 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var currentUser = null;
 
+// Как в feed.html: просто ждём сессию, без кнопки "Войти"
 async function init() {
-  var wrap = document.getElementById('list-wrap');
-  var session = null;
-  var attempts = 0;
-  var maxAttempts = 15;
+  var r = await db.auth.getSession();
   
-  while (!session && attempts < maxAttempts) {
-    var r = await db.auth.getSession();
-    session = r.data.session;
-    if (!session) {
-      attempts++;
-      await new Promise(function(resolve) { setTimeout(resolve, 200); });
-    }
-  }
-  
-  if (!session) {
-    wrap.innerHTML = 
-      '<div class="empty-state" style="padding:60px 20px;">' +
-        '<div class="icon">🔒</div>' +
-        '<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
-        '<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
-        '<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'index.html\'">Войти</button>' +
-      '</div>';
+  if (!r.data.session) {
+    // Просто показываем загрузку, сессия скоро появится
     return;
   }
   
-  currentUser = session.user;
+  currentUser = r.data.session.user;
   await loadMatches();
 }
 
@@ -125,10 +106,12 @@ async function loadMatches() {
     var item = document.createElement('div');
     item.className = 'match-item';
     
-    item.onclick = function(e) {
-      if (e.target.closest('.match-call-btn') || e.target.closest('.match-delete-btn')) return;
-      window.location.href = 'chat.html?match=' + match.id;
-    };
+    // При тапе — переход в чат с этим матчем
+    item.onclick = (function(mid) {
+      return function() {
+        window.location.href = 'chat.html?match=' + mid;
+      };
+    })(match.id);
     
     item.innerHTML =
       '<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
