@@ -2,353 +2,288 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Blizko - Знакомства</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
-:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;position:relative}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;position:absolute;top:0;left:0;right:0;background:linear-gradient(rgba(13,13,13,0.85),transparent);z-index:15}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;position:fixed;top:0;left:0;right:0;background:var(--bg);z-index:10}
 .logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.topbar-right{display:flex;align-items:center;gap:8px}
-.lang-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;min-width:40px;text-align:center}
-.lang-btn:active{opacity:0.7}
-.feed-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-.card-stack{position:relative;width:100%;max-width:360px;height:480px}
-.profile-card{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:24px;overflow:hidden;cursor:grab;user-select:none;transition:transform 0.1s;box-shadow:0 8px 40px rgba(0,0,0,0.5)}
-.profile-card.dragging{transition:none;cursor:grabbing}
-.profile-card.fly-right{transition:transform 0.4s ease,opacity 0.4s;transform:translateX(150%) rotate(20deg)!important;opacity:0}
-.profile-card.fly-left{transition:transform 0.4s ease,opacity 0.4s;transform:translateX(-150%) rotate(-20deg)!important;opacity:0}
-.profile-card.fly-up{transition:transform 0.4s ease,opacity 0.4s;transform:translateY(-150%) scale(0.8)!important;opacity:0}
-.card-photo{width:100%;height:100%;object-fit:cover;background:var(--card)}
-.card-no-photo{width:100%;height:100%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:80px}
-.card-overlay{position:absolute;bottom:0;left:0;right:0;padding:24px;background:linear-gradient(transparent,rgba(0,0,0,0.85))}
+.filter-btn{background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;font-family:'Inter',sans-serif;font-size:12px;cursor:pointer}
+.card-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:360px;height:520px;position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.5);transition:transform 0.1s;touch-action:none}
+.card.dragging{transition:none}
+.card img{width:100%;height:100%;object-fit:cover;display:block}
+.card-info{position:absolute;bottom:0;left:0;right:0;padding:20px;background:linear-gradient(transparent,rgba(0,0,0,0.85))}
 .card-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-bottom:4px}
-.card-info{font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:8px}
-.card-about{font-size:12px;color:rgba(255,255,255,0.6);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.like-label{position:absolute;top:30px;left:20px;border:3px solid var(--green);color:var(--green);font-family:'Unbounded',sans-serif;font-size:18px;padding:6px 14px;border-radius:8px;opacity:0;transform:rotate(-15deg)}
-.nope-label{position:absolute;top:30px;right:20px;border:3px solid var(--accent);color:var(--accent);font-family:'Unbounded',sans-serif;font-size:18px;padding:6px 14px;border-radius:8px;opacity:0;transform:rotate(15deg)}
-.seen-badge{position:absolute;top:30px;left:50%;transform:translateX(-50%);font-family:'Unbounded',sans-serif;font-size:11px;font-weight:600;padding:6px 14px;border-radius:20px;z-index:5}
-.seen-badge.liked{background:rgba(76,255,159,0.2);color:var(--green);border:1px solid var(--green)}
-.seen-badge.disliked{background:rgba(255,77,109,0.2);color:var(--accent);border:1px solid var(--accent)}
-.empty-state{text-align:center;color:var(--muted);padding:40px 20px}
+.card-meta{font-size:13px;color:var(--muted);margin-bottom:12px}
+.card-bio{font-size:14px;line-height:1.5;margin-bottom:16px}
+.card-actions{display:flex;gap:12px}
+.card-actions button{flex:1;padding:12px;border:none;border-radius:12px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:opacity 0.2s}
+.like-btn{background:var(--accent);color:white}
+.skip-btn{background:transparent;border:1px solid var(--border);color:var(--text)}
+.card-actions button:active{opacity:0.8}
+.label{position:absolute;top:40px;padding:8px 16px;border-radius:8px;font-family:'Unbounded',sans-serif;font-size:24px;font-weight:600;opacity:0;transition:opacity 0.2s}
+.like-label{right:20px;background:rgba(76,255,159,0.2);color:var(--green);border:2px solid var(--green)}
+.nope-label{left:20px;background:rgba(255,107,107,0.2);color:#ff6b6b;border:2px solid #ff6b6b}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
-.empty-state p{font-size:14px;line-height:1.6}
-/* Кнопки на карточке */
-.card-actions{position:absolute;top:16px;left:0;right:0;display:flex;justify-content:space-between;padding:0 16px;z-index:10;pointer-events:none}
-.card-action-btn{width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.5);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;pointer-events:auto;backdrop-filter:blur(4px);color:white}
-.card-action-btn:active{transform:scale(0.85)}
-.card-action-btn.dislike{border-color:var(--accent);color:var(--accent)}
-.card-action-btn.like{border-color:var(--green);color:var(--green)}
-.card-action-btn.dislike:hover{background:rgba(255,77,109,0.2)}
-.card-action-btn.like:hover{background:rgba(76,255,159,0.2)}
-.match-popup{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;padding:20px}
-.match-popup.show{display:flex}
-.match-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;text-align:center}
-.match-sub{color:var(--muted);font-size:14px;margin-bottom:32px;text-align:center}
-.match-photos{display:flex;gap:16px;margin-bottom:32px}
-.match-photo{width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--accent)}
-.match-photo-placeholder{width:100px;height:100px;border-radius:50%;background:var(--card);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:40px}
-.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin:6px;width:100%;max-width:280px}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
-.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:transparent;z-index:10;gap:6px}
-.bottom-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:rgba(255,255,255,0.85);cursor:pointer;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:opacity 0.2s;flex:1;border-radius:16px;box-shadow:0 2px 10px rgba(255,77,109,0.4)}
-.bottom-btn.active{color:white;font-weight:600;opacity:1}
-.bottom-btn:not(.active){opacity:0.85}
+.empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
+.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:var(--bg);z-index:10;gap:6px}
+.bottom-btn{background:var(--input-bg);border:none;color:var(--muted);cursor:pointer;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:all 0.2s;flex:1;border-radius:16px}
+.bottom-btn.active{color:var(--accent);font-weight:600}
 .bottom-btn .ico{font-size:20px}
-.debug-bar{position:fixed;bottom:80px;left:0;right:0;background:rgba(0,0,0,0.8);color:#4cff9f;font-size:11px;padding:6px 12px;text-align:center;z-index:50;display:none}
-
-/* Окно лайка с комментарием */
-.like-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:150;display:none;align-items:flex-end;justify-content:center}
+.like-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .like-modal.show{display:flex}
-.like-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
-.like-sheet-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:14px;text-align:center}
-.like-comment-input{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:70px;margin-bottom:14px;transition:border-color 0.2s}
-.like-comment-input:focus{border-color:var(--accent)}
-.like-sheet-actions{display:flex;gap:10px}
-.like-sheet-actions .btn{margin:0}
+.like-modal-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:340px}
+.like-modal-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600;margin-bottom:12px}
+.like-modal textarea{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:80px;margin-bottom:16px}
+.like-modal-actions{display:flex;gap:10px}
+.like-modal-actions button{flex:1;padding:12px;border:none;border-radius:12px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.like-modal-actions .send{background:var(--accent);color:white}
+.like-modal-actions .cancel{background:transparent;border:1px solid var(--border);color:var(--text)}
 </style>
 </head>
 <body>
 <div class="topbar">
-  <div class="logo" data-i18n="swipe">Знакомства</div>
-  <div class="topbar-right">
-    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
-  </div>
+  <div class="logo">Blizko</div>
+  <button class="filter-btn" onclick="openFilters()">⚙️ Фильтры</button>
 </div>
 
-<div class="feed-wrap" id="feed-wrap">
-  <div style="color:var(--muted);font-size:14px" data-i18n="loading">⏳ Загрузка...</div>
+<div class="card-wrap" id="card-wrap">
+  <div class="loading" style="padding:40px;text-align:center;color:var(--muted)">⏳ Загрузка...</div>
 </div>
 
 <div class="bottombar">
   <button class="bottom-btn" onclick="window.location.href='feed.html'">
-    <span class="ico">🏠</span><span data-i18n="feed">Лента</span>
+    <span class="ico">🏠</span><span>Лента</span>
   </button>
   <button class="bottom-btn active" onclick="window.location.href='swipe.html'">
-    <span class="ico">😍</span><span data-i18n="swipe">Знакомства</span>
+    <span class="ico">😍</span><span>Знакомства</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='likes.html'">
-    <span class="ico">💖</span><span data-i18n="likes">Лайки</span>
+    <span class="ico">💖</span><span>Лайки</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='matches.html'">
-    <span class="ico">💬</span><span data-i18n="chats">Чаты</span>
+    <span class="ico">💬</span><span>Чаты</span>
   </button>
   <button class="bottom-btn" onclick="window.location.href='profile.html'">
-    <span class="ico">👤</span><span data-i18n="profile">Профиль</span>
+    <span class="ico">👤</span><span>Профиль</span>
   </button>
 </div>
 
-<!-- Окно лайка с комментарием -->
 <div class="like-modal" id="like-modal">
-  <div class="like-sheet">
-    <div class="like-sheet-title" data-i18n="match_like">❤️ Понравился(ась)?</div>
-    <textarea class="like-comment-input" id="like-comment" data-i18n-placeholder="write_comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
-    <div class="like-sheet-actions">
-      <button class="btn btn-outline" onclick="closeLikeModal()" data-i18n="cancel">Отмена</button>
-      <button class="btn" onclick="confirmLike()" data-i18n="like">Лайкнуть</button>
+  <div class="like-modal-card">
+    <div class="like-modal-title">❤️ Понравился(ась)?</div>
+    <textarea id="like-comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
+    <div class="like-modal-actions">
+      <button class="cancel" onclick="closeLikeModal()">Отмена</button>
+      <button class="send" onclick="sendLike()">Лайкнуть</button>
     </div>
   </div>
 </div>
-
-<div class="match-popup" id="match-popup">
-  <div class="match-title">🎉 Match!</div>
-  <div class="match-sub" data-i18n="match_text">Вы понравились друг другу!</div>
-  <div class="match-photos" id="match-photos"></div>
-  <button class="btn" onclick="goToChat()" data-i18n="chats">Написать сообщение</button>
-  <button class="btn btn-outline" onclick="closeMatch()" data-i18n="swipe">Продолжить смотреть</button>
-</div>
-
-<div class="debug-bar" id="debug-bar"></div>
 
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var db = null, currentUser = null, currentProfile = null;
-var profiles = [], currentIndex = 0, currentMatchId = null;
-var likesMap = {};
-var isDragging = false, startX = 0, startY = 0;
-
-function debug(msg) {
-  var bar = document.getElementById('debug-bar');
-  bar.style.display = 'block';
-  bar.textContent = msg;
-}
+var db = createBlizkoClient();
+var currentUser = null;
+var profiles = [];
+var currentIndex = 0;
+var isDragging = false;
+var startX = 0, startY = 0;
+var pendingLikeId = null;
 
 async function init() {
-  try {
-    db = createBlizkoClient();
-    var { data: { session }, error } = await db.auth.getSession();
-    if (error || !session) { window.location.href = 'index.html'; return; }
-    currentUser = session.user;
-    var { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
-    currentProfile = profile;
-    await loadProfiles();
-    BlizkoTheme.applyLang();
-  } catch(e) { debug('Ошибка: ' + e.message); }
+  var r = await db.auth.getSession();
+  if (!r.data.session) { window.location.href = 'index.html'; return; }
+  currentUser = r.data.session.user;
+  await loadProfiles();
 }
 
 async function loadProfiles() {
-  var query = db.from('profiles')
-    .select('*')
-    .eq('is_active', true)
-    .neq('id', currentUser.id);
-
-  if (currentProfile && currentProfile.looking_for && currentProfile.looking_for !== 'any') {
-    query = query.eq('gender', currentProfile.looking_for);
-  }
-
-  var { data, error } = await query.limit(100);
-  if (error) { debug('Ошибка: ' + error.message); return; }
+  var wrap = document.getElementById('card-wrap');
+  var { data, error } = await db.from('profiles')
+    .select('*, profile_photos(photo_url)')
+    .neq('id', currentUser.id)
+    .limit(20);
+  
+  if (error) { console.error(error); wrap.innerHTML = '<div class="empty-state"><p>Ошибка загрузки</p></div>'; return; }
+  
   profiles = data || [];
-
-  var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
-  likesMap = {};
-  (myLikes || []).forEach(function(l) { likesMap[l.to_user] = l.is_like; });
-
-  debug('Анкет всего: ' + profiles.length);
-  renderFeed();
-}
-
-function renderFeed() {
-  var wrap = document.getElementById('feed-wrap');
-  wrap.innerHTML = '';
   if (profiles.length === 0) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">💕</div><p data-i18n="no_profiles">Пока нет анкет.<br>Загляни позже!</p></div>';
-    BlizkoTheme.applyLang();
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">😴</div><p>Пока никого нет рядом.<br>Попробуй позже!</p></div>';
     return;
   }
-  if (currentIndex >= profiles.length) currentIndex = 0;
-  var profile = profiles[currentIndex];
-  var stack = document.createElement('div');
-  stack.className = 'card-stack';
-  var card = document.createElement('div');
-  card.className = 'profile-card';
-  card.id = 'current-card';
-  var likeLabel = document.createElement('div');
-  likeLabel.className = 'like-label'; likeLabel.id = 'like-label'; likeLabel.textContent = 'LIKE';
-  var nopeLabel = document.createElement('div');
-  nopeLabel.className = 'nope-label'; nopeLabel.id = 'nope-label'; nopeLabel.textContent = 'NOPE';
-  card.appendChild(likeLabel);
-  card.appendChild(nopeLabel);
-  if (likesMap.hasOwnProperty(profile.id)) {
-    var badge = document.createElement('div');
-    badge.className = 'seen-badge ' + (likesMap[profile.id] ? 'liked' : 'disliked');
-    badge.textContent = likesMap[profile.id] ? '❤️ Понравилось' : '❌ Пропущено';
-    card.appendChild(badge);
-  }
-  if (profile.photo_url) {
-    var img = document.createElement('img');
-    img.className = 'card-photo'; img.src = profile.photo_url;
-    img.onerror = function() { this.outerHTML = '<div class="card-no-photo">👤</div>'; };
-    card.appendChild(img);
-  } else {
-    var np = document.createElement('div');
-    np.className = 'card-no-photo'; np.textContent = '👤';
-    card.appendChild(np);
-  }
-  var overlay = document.createElement('div');
-  overlay.className = 'card-overlay';
-  overlay.innerHTML = '<div class="card-name">' + profile.name + (profile.age ? ', ' + profile.age : '') + '</div>' +
-    (profile.city ? '<div class="card-info">📍 ' + profile.city + '</div>' : '') +
-    (profile.about ? '<div class="card-about">' + profile.about + '</div>' : '');
-  card.appendChild(overlay);
-
-  // Кнопки на карточке — только ❌ и ❤️
-  var actionsDiv = document.createElement('div');
-  actionsDiv.className = 'card-actions';
-  actionsDiv.innerHTML = `
-    <button class="card-action-btn dislike" onclick="event.stopPropagation(); swipe('left')">✕</button>
-    <button class="card-action-btn like" onclick="event.stopPropagation(); openLikeModal()">❤️</button>
-  `;
-  card.appendChild(actionsDiv);
-
-  stack.appendChild(card);
-  wrap.appendChild(stack);
-  setupDrag(card);
-  BlizkoTheme.applyLang();
+  
+  currentIndex = 0;
+  renderCard();
 }
 
+function renderCard() {
+  var wrap = document.getElementById('card-wrap');
+  if (currentIndex >= profiles.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>Все анкеты просмотрены!<br>Заходи позже — появятся новые.</p></div>';
+    return;
+  }
+  
+  var p = profiles[currentIndex];
+  var photos = p.profile_photos || [];
+  var photoUrl = photos.length > 0 ? photos[0].photo_url : '';
+  var age = p.age ? ', ' + p.age : '';
+  var city = p.city ? '📍 ' + p.city : '';
+  
+  wrap.innerHTML =
+    '<div class="card" id="current-card">' +
+      (photoUrl ? '<img src="' + photoUrl + '" alt="">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px">👤</div>') +
+      '<div class="like-label label" id="like-label">ЛАЙК</div>' +
+      '<div class="nope-label label" id="nope-label">НЕТ</div>' +
+      '<div class="card-info">' +
+        '<div class="card-name">' + (p.name || 'Пользователь') + age + '</div>' +
+        '<div class="card-meta">' + city + '</div>' +
+        '<div class="card-bio">' + (p.bio || '') + '</div>' +
+        '<div class="card-actions">' +
+          '<button class="skip-btn" onclick="skipProfile()">👎 Пропустить</button>' +
+          '<button class="like-btn" onclick="openLikeModal()">❤️ Лайк</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  
+  setupDrag(document.getElementById('current-card'));
+}
+
+// ===== ИСПРАВЛЕНИЕ: обработчики только на карточке =====
 function setupDrag(card) {
+  if (!card) return;
   card.addEventListener('mousedown', dragStart);
   card.addEventListener('touchstart', dragStart, {passive: true});
-  document.addEventListener('mousemove', dragMove);
-  document.addEventListener('touchmove', dragMove, {passive: true});
-  document.addEventListener('mouseup', dragEnd);
-  document.addEventListener('touchend', dragEnd);
+  card.addEventListener('mousemove', dragMove);
+  card.addEventListener('touchmove', dragMove, {passive: true});
+  card.addEventListener('mouseup', dragEnd);
+  card.addEventListener('touchend', dragEnd);
+  card.addEventListener('touchcancel', dragEnd);
+  card.addEventListener('mouseleave', dragEnd);
 }
 
 function dragStart(e) {
+  // Не начинать drag при тапе по кнопкам внутри карточки
+  if (e.target.closest('.card-actions')) return;
+  
   isDragging = true;
-  var card = document.getElementById('current-card');
-  if (card) card.classList.add('dragging');
+  var card = e.currentTarget;
+  card.classList.add('dragging');
   var pt = e.touches ? e.touches[0] : e;
-  startX = pt.clientX; startY = pt.clientY;
+  startX = pt.clientX;
+  startY = pt.clientY;
 }
 
 function dragMove(e) {
   if (!isDragging) return;
   var card = document.getElementById('current-card');
-  if (!card) return;
+  if (!card) { isDragging = false; return; }
+  
   var pt = e.touches ? e.touches[0] : e;
-  var dx = pt.clientX - startX, dy = pt.clientY - startY;
+  var dx = pt.clientX - startX;
+  var dy = pt.clientY - startY;
+  
   card.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx * 0.1) + 'deg)';
-  var ll = document.getElementById('like-label'), nl = document.getElementById('nope-label');
-  if (ll) ll.style.opacity = dx > 20 ? Math.min((dx-20)/80, 1) : 0;
-  if (nl) nl.style.opacity = dx < -20 ? Math.min((-dx-20)/80, 1) : 0;
+  
+  var ll = document.getElementById('like-label');
+  var nl = document.getElementById('nope-label');
+  if (ll) ll.style.opacity = dx > 20 ? Math.min((dx - 20) / 80, 1) : 0;
+  if (nl) nl.style.opacity = dx < -20 ? Math.min((-dx - 20) / 80, 1) : 0;
 }
 
-function dragEnd() {
+function dragEnd(e) {
   if (!isDragging) return;
   isDragging = false;
+  
   var card = document.getElementById('current-card');
   if (!card) return;
   card.classList.remove('dragging');
+  
   var m = card.style.transform.match(/translate\(([^,]+)px/);
   var dx = m ? parseFloat(m[1]) : 0;
-  var dy = 0;
-  var mY = card.style.transform.match(/translate\([^,]+, ([^)]+)px/);
-  if (mY) dy = parseFloat(mY[1]);
-  if (dx > 80) { card.style.transform = ''; openLikeModal(); }
-  else if (dx < -80) swipe('left');
-  else if (dy < -80) nextProfile(); // свайп вверх = пропустить
-  else {
-    card.style.transform = '';
-    var ll = document.getElementById('like-label'), nl = document.getElementById('nope-label');
-    if (ll) ll.style.opacity = 0;
-    if (nl) nl.style.opacity = 0;
-  }
+  var mY = card.style.transform.match(/translate\([^,]+,\s*([^)]+)px/);
+  var dy = mY ? parseFloat(mY[1]) : 0;
+  
+  card.style.transform = '';
+  var ll = document.getElementById('like-label');
+  var nl = document.getElementById('nope-label');
+  if (ll) ll.style.opacity = 0;
+  if (nl) nl.style.opacity = 0;
+  
+  // Увеличенные пороги
+  if (dx > 100) { openLikeModal(); }
+  else if (dx < -100) { swipe('left'); }
+  else if (dy < -150) { nextProfile(); }
+}
+// ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
+
+function swipe(direction) {
+  var card = document.getElementById('current-card');
+  if (!card) return;
+  card.style.transition = 'transform 0.3s, opacity 0.3s';
+  card.style.transform = 'translate(' + (direction === 'left' ? '-120%' : '120%') + 'px, 0) rotate(' + (direction === 'left' ? -20 : 20) + 'deg)';
+  card.style.opacity = '0';
+  setTimeout(nextProfile, 300);
 }
 
 function nextProfile() {
-  var card = document.getElementById('current-card');
-  if (!card) return;
-  card.classList.add('fly-up');
-  setTimeout(function() {
-    currentIndex++;
-    renderFeed();
-  }, 400);
+  currentIndex++;
+  renderCard();
+}
+
+function skipProfile() {
+  swipe('left');
 }
 
 function openLikeModal() {
-  if (!profiles[currentIndex]) return;
+  if (currentIndex >= profiles.length) return;
+  pendingLikeId = profiles[currentIndex].id;
   document.getElementById('like-comment').value = '';
   document.getElementById('like-modal').classList.add('show');
 }
 
 function closeLikeModal() {
   document.getElementById('like-modal').classList.remove('show');
+  pendingLikeId = null;
 }
 
-async function confirmLike() {
+async function sendLike() {
+  if (!pendingLikeId) return;
   var comment = document.getElementById('like-comment').value.trim();
-  closeLikeModal();
-  await swipe('right', comment);
-}
-
-async function swipe(dir, comment) {
-  var card = document.getElementById('current-card');
-  if (!card) return;
-  var profile = profiles[currentIndex];
-  if (!profile || !currentUser) return;
-  card.classList.add(dir === 'right' ? 'fly-right' : 'fly-left');
-
-  var isLike = dir === 'right';
-
+  
   await db.from('likes').upsert({
     from_user: currentUser.id,
-    to_user: profile.id,
-    is_like: isLike,
-    comment: isLike ? (comment || null) : null
+    to_user: pendingLikeId,
+    is_like: true,
+    comment: comment || null
   }, { onConflict: 'from_user,to_user' });
-
-  likesMap[profile.id] = isLike;
-
-  if (isLike) {
-    var { data: matchData } = await db.from('matches').select('*')
-      .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + profile.id + '),and(user1.eq.' + profile.id + ',user2.eq.' + currentUser.id + ')')
-      .single();
-    if (matchData) { currentMatchId = matchData.id; showMatch(profile); }
+  
+  // Проверяем матч
+  var { data: matchData } = await db.from('matches').select('*')
+    .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + pendingLikeId + '),and(user1.eq.' + pendingLikeId + ',user2.eq.' + currentUser.id + ')')
+    .maybeSingle();
+  
+  closeLikeModal();
+  
+  if (matchData) {
+    setTimeout(function() {
+      if (confirm('🎉 Это взаимный лайк! Перейти в чат?')) {
+        window.location.href = 'chat.html?match=' + matchData.id;
+      }
+    }, 300);
+  } else {
+    nextProfile();
   }
-
-  setTimeout(function() { currentIndex++; renderFeed(); }, 400);
 }
 
-function showMatch(profile) {
-  document.getElementById('match-popup').classList.add('show');
-  var ph = document.getElementById('match-photos');
-  ph.innerHTML =
-    (currentProfile && currentProfile.photo_url ? '<img class="match-photo" src="' + currentProfile.photo_url + '">' : '<div class="match-photo-placeholder">👤</div>') +
-    (profile.photo_url ? '<img class="match-photo" src="' + profile.photo_url + '">' : '<div class="match-photo-placeholder">👤</div>');
-}
-
-function closeMatch() { document.getElementById('match-popup').classList.remove('show'); }
-
-function goToChat() {
-  if (currentMatchId) window.location.href = 'chat.html?match=' + currentMatchId;
-  closeMatch();
+function openFilters() {
+  alert('Фильтры скоро будут!');
 }
 
 init();
