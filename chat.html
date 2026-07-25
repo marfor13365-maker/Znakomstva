@@ -20,12 +20,12 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
 .msg-bubble{max-width:75%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;word-wrap:break-word;position:relative}
 .msg-bubble.me{align-self:flex-end;background:var(--accent);color:white;border-bottom-right-radius:4px}
 .msg-bubble.them{align-self:flex-start;background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px}
-.msg-time{font-size:10px;opacity:0.7;margin-top:4px;text-align:right}
+.msg-time{font-size:10px;opacity:0.7;margin-top:4px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px}
 .msg-bubble.them .msg-time{color:var(--muted)}
-.msg-delete-btn{background:none;border:none;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;padding:2px 6px;margin-left:8px;border-radius:4px;transition:all 0.2s}
-.msg-delete-btn:hover{background:rgba(255,255,255,0.1);color:var(--accent)}
+.msg-delete-btn{background:none;border:none;color:rgba(255,255,255,0.6);font-size:16px;cursor:pointer;padding:2px 4px;border-radius:4px;transition:all 0.2s;line-height:1;display:inline-flex;align-items:center}
+.msg-delete-btn:hover{background:rgba(255,255,255,0.15);color:#ff4444}
 .msg-bubble.them .msg-delete-btn{color:var(--muted)}
-.msg-bubble.them .msg-delete-btn:hover{background:var(--input-bg);color:var(--accent)}
+.msg-bubble.them .msg-delete-btn:hover{background:var(--input-bg);color:#ff4444}
 .empty-chat{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;height:100%}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
@@ -145,6 +145,7 @@ var mediaRecorder = null;
 var audioChunks = [];
 var recInterval = null;
 var recSeconds = 0;
+var uploadProgressTimer = null;
 
 function getParam(name) {
   var url = new URL(window.location.href);
@@ -243,10 +244,10 @@ function appendMessageToDOM(msg) {
   if (msg.voice_url) contentHtml += '<div class="msg-audio"><audio controls src="' + msg.voice_url + '"></audio></div>';
   if (msg.text) contentHtml += '<div>' + escapeHtml(msg.text) + '</div>';
   
-  contentHtml += '<div class="msg-time">' + time;
+  contentHtml += '<div class="msg-time"><span>' + time + '</span>';
   
   if (isMe) {
-    contentHtml += ' <button class="msg-delete-btn" onclick="deleteMessage(\'' + msg.id + '\')">✕</button>';
+    contentHtml += ' <button class="msg-delete-btn" onclick="deleteMessage(\'' + msg.id + '\')" title="Удалить">🗑️</button>';
   }
   
   contentHtml += '</div>';
@@ -349,64 +350,117 @@ function showProgress(percent) {
     setTimeout(function() {
       container.style.display = 'none';
       bar.style.width = '0%';
-    }, 500);
+    }, 800);
   }
+}
+
+// Анимация прогресса (чтобы не стоял на месте)
+function animateProgress(target) {
+  var bar = document.getElementById('upload-bar');
+  var current = parseInt(bar.style.width) || 0;
+  if (current >= target) return;
+  var step = Math.max(1, Math.floor((target - current) / 10));
+  var interval = setInterval(function() {
+    current += step;
+    if (current >= target) {
+      current = target;
+      clearInterval(interval);
+    }
+    bar.style.width = current + '%';
+  }, 100);
+  return interval;
 }
 
 async function handleFileSelect(input) {
   var file = input.files[0];
   if (!file) return;
   
+  // Проверка размера для видео
+  if (fileType === 'video' && file.size > 20 * 1024 * 1024) {
+    alert('Видео не более 20 МБ. Пожалуйста, выберите файл поменьше.');
+    input.value = '';
+    return;
+  }
+  
+  if (fileType === 'image' && file.size > 10 * 1024 * 1024) {
+    alert('Фото не более 10 МБ.');
+    input.value = '';
+    return;
+  }
+  
   var ext = file.name.split('.').pop().toLowerCase();
   var fileName = Date.now() + '_' + Math.random().toString(36).slice(2) + '.' + ext;
   var bucket = fileType === 'image' ? 'chat-photos' : fileType === 'video' ? 'chat-videos' : 'chat-files';
   
-  showProgress(30);
+  // Показываем прогресс с анимацией
+  var container = document.getElementById('upload-progress');
+  var bar = document.getElementById('upload-bar');
+  container.style.display = 'block';
+  bar.style.width = '0%';
   
-  var { data: uploadData, error: uploadError } = await db.storage
-    .from(bucket)
-    .upload(fileName, file);
+  // Анимируем прогресс от 0 до 90% (пока загрузка)
+  var progressInterval = animateProgress(90);
   
-  if (uploadError) { 
-    alert('Ошибка загрузки: ' + uploadError.message); 
+  try {
+    var { data: uploadData, error: uploadError } = await db.storage
+      .from(bucket)
+      .upload(fileName, file);
+    
+    if (progressInterval) clearInterval(progressInterval);
+    
+    if (uploadError) { 
+      alert('Ошибка загрузки: ' + uploadError.message); 
+      showProgress(0);
+      input.value = '';
+      return; 
+    }
+    
+    // Быстро добиваем до 100%
+    bar.style.width = '100%';
+    
+    var { data: urlData } = db.storage.from(bucket).getPublicUrl(fileName);
+    var publicUrl = urlData.publicUrl;
+    
+    var payload = {
+      match_id: matchId,
+      sender_id: currentUser.id,
+      text: null
+    };
+    
+    if (fileType === 'image') payload.photo_url = publicUrl;
+    else if (fileType === 'video') payload.video_url = publicUrl;
+    else {
+      payload.file_url = publicUrl;
+      payload.file_name = file.name;
+    }
+    
+    var { error: insertError } = await db.from('messages').insert(payload);
+    if (insertError) { alert('Ошибка: ' + insertError.message); return; }
+    
+    // Скрываем прогресс через секунду
+    setTimeout(function() {
+      container.style.display = 'none';
+      bar.style.width = '0%';
+    }, 500);
+    
+    input.value = '';
+    
+    appendMessageToDOM({
+      id: 'temp_' + Date.now(),
+      sender_id: currentUser.id,
+      created_at: new Date().toISOString(),
+      photo_url: payload.photo_url || null,
+      video_url: payload.video_url || null,
+      file_url: payload.file_url || null,
+      file_name: payload.file_name || null,
+      text: null
+    });
+  } catch (e) {
+    if (progressInterval) clearInterval(progressInterval);
+    alert('Ошибка загрузки: ' + e.message);
     showProgress(0);
-    return; 
+    input.value = '';
   }
-  
-  showProgress(80);
-  
-  var { data: urlData } = db.storage.from(bucket).getPublicUrl(fileName);
-  var publicUrl = urlData.publicUrl;
-  
-  var payload = {
-    match_id: matchId,
-    sender_id: currentUser.id,
-    text: null
-  };
-  
-  if (fileType === 'image') payload.photo_url = publicUrl;
-  else if (fileType === 'video') payload.video_url = publicUrl;
-  else {
-    payload.file_url = publicUrl;
-    payload.file_name = file.name;
-  }
-  
-  var { error: insertError } = await db.from('messages').insert(payload);
-  if (insertError) { alert('Ошибка: ' + insertError.message); return; }
-  
-  showProgress(100);
-  input.value = '';
-  
-  appendMessageToDOM({
-    id: 'temp_' + Date.now(),
-    sender_id: currentUser.id,
-    created_at: new Date().toISOString(),
-    photo_url: payload.photo_url || null,
-    video_url: payload.video_url || null,
-    file_url: payload.file_url || null,
-    file_name: payload.file_name || null,
-    text: null
-  });
 }
 
 // ===== ГОЛОСОВЫЕ =====
@@ -456,38 +510,70 @@ function stopVoiceRecording() {
 async function uploadVoiceMessage(blob) {
   var fileName = Date.now() + '_voice.webm';
   
-  showProgress(30);
+  var container = document.getElementById('upload-progress');
+  var bar = document.getElementById('upload-bar');
+  container.style.display = 'block';
+  bar.style.width = '0%';
   
-  var { data: uploadData, error: uploadError } = await db.storage
-    .from('chat-voices')
-    .upload(fileName, blob);
+  var progressInterval = animateProgress(90);
   
-  if (uploadError) { 
-    alert('Ошибка загрузки голосового: ' + uploadError.message); 
+  try {
+    var { data: uploadData, error: uploadError } = await db.storage
+      .from('chat-voices')
+      .upload(fileName, blob);
+    
+    if (progressInterval) clearInterval(progressInterval);
+    
+    if (uploadError) { 
+      alert('Ошибка загрузки голосового: ' + uploadError.message); 
+      showProgress(0);
+      return; 
+    }
+    
+    bar.style.width = '100%';
+    
+    var { data: urlData } = db.storage.from('chat-voices').getPublicUrl(fileName);
+    
+    // Проверяем, есть ли колонка voice_url
+    var { error: insertError } = await db.from('messages').insert({
+      match_id: matchId,
+      sender_id: currentUser.id,
+      voice_url: urlData.publicUrl,
+      text: '🎤 Голосовое сообщение'
+    });
+    
+    // Если ошибка "column voice_url does not exist" — используем file_url
+    if (insertError && insertError.message && insertError.message.includes('voice_url')) {
+      var { error: insertError2 } = await db.from('messages').insert({
+        match_id: matchId,
+        sender_id: currentUser.id,
+        file_url: urlData.publicUrl,
+        file_name: 'Голосовое сообщение.webm',
+        text: '🎤 Голосовое сообщение'
+      });
+      if (insertError2) { alert('Ошибка: ' + insertError2.message); return; }
+    } else if (insertError) {
+      alert('Ошибка: ' + insertError.message);
+      return;
+    }
+    
+    setTimeout(function() {
+      container.style.display = 'none';
+      bar.style.width = '0%';
+    }, 500);
+    
+    appendMessageToDOM({
+      id: 'temp_' + Date.now(),
+      sender_id: currentUser.id,
+      created_at: new Date().toISOString(),
+      voice_url: urlData.publicUrl,
+      text: '🎤 Голосовое сообщение'
+    });
+  } catch (e) {
+    if (progressInterval) clearInterval(progressInterval);
+    alert('Ошибка: ' + e.message);
     showProgress(0);
-    return; 
   }
-  
-  showProgress(80);
-  
-  var { data: urlData } = db.storage.from('chat-voices').getPublicUrl(fileName);
-  
-  var { error: insertError } = await db.from('messages').insert({
-    match_id: matchId,
-    sender_id: currentUser.id,
-    voice_url: urlData.publicUrl
-  });
-  
-  if (insertError) { alert('Ошибка: ' + insertError.message); return; }
-  
-  showProgress(100);
-  
-  appendMessageToDOM({
-    id: 'temp_' + Date.now(),
-    sender_id: currentUser.id,
-    created_at: new Date().toISOString(),
-    voice_url: urlData.publicUrl
-  });
 }
 
 window.addEventListener('beforeunload', function() {
