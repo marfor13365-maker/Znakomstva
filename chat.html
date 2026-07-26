@@ -64,7 +64,8 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
 
 .msg-photo{max-width:100%;border-radius:12px;margin-bottom:4px;cursor:pointer}
 .msg-video{max-width:100%;border-radius:12px;margin-bottom:4px}
-.msg-file{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.3);border-radius:8px;margin-bottom:4px}
+.msg-file{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.3);border-radius:8px;margin-bottom:4px;cursor:pointer;transition:background 0.2s}
+.msg-file:hover{background:rgba(255,255,255,0.1)}
 .msg-file .file-icon{font-size:20px}
 .msg-file .file-name{font-size:12px;word-break:break-all}
 .msg-audio audio{max-width:100%}
@@ -238,11 +239,47 @@ function appendMessageToDOM(msg) {
   var time = new Date(msg.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
   
   var contentHtml = '';
-  if (msg.photo_url) contentHtml += '<img class="msg-photo" src="' + msg.photo_url + '" onclick="window.open(this.src)">';
-  if (msg.video_url) contentHtml += '<video class="msg-video" src="' + msg.video_url + '" controls></video>';
-  if (msg.file_url) contentHtml += '<div class="msg-file"><span class="file-icon">📄</span><span class="file-name">' + escapeHtml(msg.file_name || 'Файл') + '</span></div>';
-  if (msg.voice_url) contentHtml += '<div class="msg-audio"><audio controls src="' + msg.voice_url + '"></audio></div>';
-  if (msg.text) contentHtml += '<div>' + escapeHtml(msg.text) + '</div>';
+  
+  // Фото
+  if (msg.photo_url) {
+    contentHtml += '<img class="msg-photo" src="' + msg.photo_url + '" onclick="window.open(this.src)">';
+  }
+  
+  // Видео
+  if (msg.video_url) {
+    contentHtml += '<video class="msg-video" src="' + msg.video_url + '" controls></video>';
+  }
+  
+  // Файлы (PDF, документы и т.д.) — кликабельные
+  if (msg.file_url) {
+    var fileLink = msg.file_url;
+    var fileName = escapeHtml(msg.file_name || 'Файл');
+    // Определяем иконку по расширению
+    var icon = '📄';
+    var ext = (msg.file_name || '').split('.').pop().toLowerCase();
+    if (ext === 'pdf') icon = '📕';
+    else if (['doc', 'docx'].includes(ext)) icon = '📘';
+    else if (['xls', 'xlsx'].includes(ext)) icon = '📊';
+    else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) icon = '🖼️';
+    else if (['zip', 'rar', '7z'].includes(ext)) icon = '📦';
+    else if (['mp3', 'wav', 'aac'].includes(ext)) icon = '🎵';
+    else if (['mp4', 'avi', 'mkv'].includes(ext)) icon = '🎬';
+    
+    contentHtml += '<div class="msg-file" onclick="window.open(\'' + fileLink + '\', \'_blank\')">' +
+      '<span class="file-icon">' + icon + '</span>' +
+      '<span class="file-name">' + fileName + '</span>' +
+      '</div>';
+  }
+  
+  // Голосовые
+  if (msg.voice_url) {
+    contentHtml += '<div class="msg-audio"><audio controls src="' + msg.voice_url + '"></audio></div>';
+  }
+  
+  // Текст
+  if (msg.text) {
+    contentHtml += '<div>' + escapeHtml(msg.text) + '</div>';
+  }
   
   contentHtml += '<div class="msg-time"><span>' + time + '</span>';
   
