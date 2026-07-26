@@ -5,8 +5,6 @@
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  // Когда появится свой TURN — добавить сюда:
-  // { urls: 'turn:your-turn-server.example.com:3478', username: 'user', credential: 'pass' },
 ];
 
 var BLIZKO_API_URL = (typeof window !== 'undefined' && window.BLIZKO_API_URL) ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
@@ -38,6 +36,43 @@ export function initCallModule(supabaseClient, myUserId) {
   _client = supabaseClient;
   _myUserId = myUserId;
   injectStyles();
+}
+
+// Глобальный слушатель входящих звонков на всех страницах
+export function initGlobalCallListener(supabaseClient, myUserId, getMatchIds, getProfileInfo) {
+  _client = supabaseClient;
+  _myUserId = myUserId;
+  injectStyles();
+
+  const matchIds = getMatchIds();
+  matchIds.forEach((matchId) => {
+    const ch = _client.channel(channelNameFor(matchId), {
+      config: { broadcast: { self: false } },
+    });
+
+    ch.on('broadcast', { event: 'call-offer' }, (payload) => {
+      const { fromUserId, callId, sdp } = payload.payload;
+      if (fromUserId === _myUserId) return;
+      log('входящий звонок (глобальный)', matchId, callId);
+      currentCallId = callId;
+      callChannel = ch;
+      isIncomingCall = true;
+      incomingCallData = { matchId, callId, sdp, fromUserId };
+
+      const info = (getProfileInfo && getProfileInfo(fromUserId)) || {};
+      showIncomingScreen(info.name || 'Пользователь', info.avatarUrl, {
+        onAccept: () => acceptCurrentCall(matchId, callId, sdp),
+        onDecline: () => {
+          sendEnd();
+          hideCallScreen();
+          isIncomingCall = false;
+          incomingCallData = null;
+        },
+      });
+    });
+
+    ch.subscribe();
+  });
 }
 
 // matchIds — массив id мэтчей пользователя.
@@ -296,20 +331,24 @@ function injectStyles() {
     #call-screen-overlay{position:fixed;inset:0;background:linear-gradient(180deg,#1a0a12,#0d0d0d);z-index:9999;
       display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:60px 24px 50px;
       font-family:'Inter',sans-serif;color:#f0f0f0;text-align:center}
-    #call-screen-overlay .call-top{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:20px;width:100%}
-    #call-avatar-img, .call-avatar-fallback{width:120px;height:120px;border-radius:50%;object-fit:cover;
-      background:#2a2a2a;border:3px solid #ff4d6d;display:flex;align-items:center;justify-content:center;font-size:48px;margin:0 auto}
-    #call-name-text{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600}
-    #call-status-text{color:#888;font-size:14px}
-    #call-duration-text{color:#ff8fa3;font-size:14px;font-variant-numeric:tabular-nums}
-    .call-controls-row{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;width:100%}
-    .call-btn{width:64px;height:64px;border-radius:50%;border:none;font-size:26px;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;transition:opacity 0.2s;background:#2a2a2a;color:#f0f0f0}
-    .call-btn:active{opacity:0.7}
+    #call-screen-overlay .call-top{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:20px}
+    #call-avatar-img, .call-avatar-fallback{width:140px;height:140px;border-radius:50%;object-fit:cover;
+      background:#2a2a2a;border:4px solid #ff4d6d;display:flex;align-items:center;justify-content:center;font-size:56px;
+      box-shadow:0 0 40px rgba(255,77,109,0.3)}
+    #call-name-text{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:600;margin-top:4px}
+    #call-status-text{color:#888;font-size:15px;margin-top:2px}
+    #call-duration-text{color:#ff8fa3;font-size:16px;font-variant-numeric:tabular-nums;margin-top:4px}
+    .call-controls-row{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;width:100%}
+    .call-btn{width:68px;height:68px;border-radius:50%;border:none;font-size:28px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:#2a2a2a;color:#f0f0f0;
+      box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+    .call-btn:active{transform:scale(0.92)}
     .call-btn.secondary.active{background:#ff4d6d;color:white}
-    .call-btn.hangup{background:#ff2d4d;color:white;width:72px;height:72px;font-size:30px}
-    .call-incoming-actions{display:flex;gap:48px;justify-content:center;width:100%}
-    .call-incoming-actions .call-btn.accept{background:#2ecc71;color:white;width:72px;height:72px;font-size:30px}
+    .call-btn.hangup{background:#ff2d4d;color:white;width:76px;height:76px;font-size:32px;box-shadow:0 4px 24px rgba(255,45,77,0.4)}
+    .call-incoming-actions{display:flex;gap:56px;justify-content:center;width:100%;margin-top:20px}
+    .call-incoming-actions .call-btn.accept{background:#2ecc71;color:white;width:76px;height:76px;font-size:32px;box-shadow:0 4px 24px rgba(46,204,113,0.4)}
+    .call-incoming-actions .call-btn.hangup{box-shadow:0 4px 24px rgba(255,45,77,0.4)}
+    .call-btn .label{display:block;font-size:10px;font-weight:500;margin-top:4px;color:var(--muted)}
   `;
   document.head.appendChild(style);
 }
@@ -335,7 +374,7 @@ function showOutgoingScreen(name, avatarUrl) {
     <div class="call-top">
       ${avatarHtml(avatarUrl)}
       <div id="call-name-text">${name}</div>
-      <div id="call-status-text">Вызов...</div>
+      <div id="call-status-text">📞 Вызов...</div>
     </div>
     <div class="call-controls-row">
       <button class="call-btn hangup" onclick="window.__callHangup()">📵</button>
@@ -349,7 +388,7 @@ function showIncomingScreen(name, avatarUrl, { onAccept, onDecline }) {
     <div class="call-top">
       ${avatarHtml(avatarUrl)}
       <div id="call-name-text">${name}</div>
-      <div id="call-status-text">Входящий звонок...</div>
+      <div id="call-status-text">📞 Входящий звонок...</div>
     </div>
     <div class="call-incoming-actions">
       <button class="call-btn hangup" onclick="window.__callDeclineBtn()">📵</button>
