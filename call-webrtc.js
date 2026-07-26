@@ -1,12 +1,11 @@
 // call-webrtc.js
 // Аудиозвонки в Blizko: WebRTC + Supabase Realtime (broadcast) как сигналинг.
-// Полноэкранный UI звонка встроен прямо в модуль — подключающей странице
-// достаточно вызвать initCallModule(), initIncomingCallListener() и startCall().
+// Полноэкранный UI звонка встроен прямо в модуль.
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  // Когда появится свой TURN (coturn на VPS) — добавить сюда:
+  // Когда появится свой TURN — добавить сюда:
   // { urls: 'turn:your-turn-server.example.com:3478', username: 'user', credential: 'pass' },
 ];
 
@@ -22,6 +21,8 @@ let connectedAt = null;
 let durationTimer = null;
 let isMuted = false;
 let speakerOn = false;
+let isIncomingCall = false;
+let incomingCallData = null;
 
 function channelNameFor(matchId) {
   return `call-${matchId}`;
@@ -40,8 +41,13 @@ export function initCallModule(supabaseClient, myUserId) {
 }
 
 // matchIds — массив id мэтчей пользователя.
-// getProfileInfo(otherUserId) должна вернуть { name, avatarUrl } (синхронно, из уже загруженных данных страницы).
+// getProfileInfo(otherUserId) должна вернуть { name, avatarUrl }
 export function initIncomingCallListener(matchIds, getProfileInfo) {
+  if (!_client) {
+    console.warn('[call] initCallModule не вызван');
+    return;
+  }
+  
   matchIds.forEach((matchId) => {
     const ch = _client.channel(channelNameFor(matchId), {
       config: { broadcast: { self: false } },
@@ -53,6 +59,8 @@ export function initIncomingCallListener(matchIds, getProfileInfo) {
       log('входящий звонок', matchId, callId);
       currentCallId = callId;
       callChannel = ch;
+      isIncomingCall = true;
+      incomingCallData = { matchId, callId, sdp, fromUserId };
 
       const info = (getProfileInfo && getProfileInfo(fromUserId)) || {};
       showIncomingScreen(info.name || 'Пользователь', info.avatarUrl, {
@@ -60,6 +68,8 @@ export function initIncomingCallListener(matchIds, getProfileInfo) {
         onDecline: () => {
           sendEnd();
           hideCallScreen();
+          isIncomingCall = false;
+          incomingCallData = null;
         },
       });
     });
@@ -71,8 +81,13 @@ export function initIncomingCallListener(matchIds, getProfileInfo) {
 // ---------- Исходящий звонок ----------
 
 export async function startCall(matchId, calleeUserId, name, avatarUrl) {
+  if (!_client) {
+    throw new Error('call модуль не инициализирован. Сначала вызовите initCallModule');
+  }
+  
   const callId = crypto.randomUUID();
   currentCallId = callId;
+  isIncomingCall = false;
 
   showOutgoingScreen(name, avatarUrl);
 
@@ -80,7 +95,7 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   } catch (e) {
     hideCallScreen();
-    throw e;
+    throw new Error('Нет доступа к микрофону');
   }
 
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
@@ -103,7 +118,10 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
     catch (e) { log('ошибка ICE', e); }
   });
 
-  callChannel.on('broadcast', { event: 'call-end' }, () => cleanupCall());
+  callChannel.on('broadcast', { event: 'call-end' }, () => {
+    log('звонок завершён собеседником');
+    cleanupCall();
+  });
 
   await new Promise((resolve) => callChannel.subscribe((status) => {
     if (status === 'SUBSCRIBED') resolve();
@@ -118,7 +136,7 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
     payload: { callId, fromUserId: _myUserId, sdp: offer },
   });
 
-  notifyIncomingCallPush(matchId, calleeUserId, callId).catch((e) => log('push-уведомление о звонке не отправлено', e));
+  notifyIncomingCallPush(matchId, calleeUserId, callId).catch((e) => log('push-уведомление не отправлено', e));
 
   return callId;
 }
@@ -132,7 +150,7 @@ async function notifyIncomingCallPush(matchId, calleeUserId, callId) {
   try {
     var profResult = await _client.from('profiles').select('name').eq('id', _myUserId).single();
     if (profResult.data && profResult.data.name) callerName = profResult.data.name;
-  } catch (e) { /* используем дефолтное имя */ }
+  } catch (e) {}
 
   await fetch(BLIZKO_API_URL + '/api/calls/notify', {
     method: 'POST',
@@ -170,7 +188,10 @@ async function acceptCurrentCall(matchId, callId, remoteSdp) {
     catch (e) { log('ошибка ICE', e); }
   });
 
-  callChannel.on('broadcast', { event: 'call-end' }, () => cleanupCall());
+  callChannel.on('broadcast', { event: 'call-end' }, () => {
+    log('звонок завершён собеседником');
+    cleanupCall();
+  });
 
   await pc.setRemoteDescription(new RTCSessionDescription(remoteSdp));
   const answer = await pc.createAnswer();
@@ -184,7 +205,16 @@ async function acceptCurrentCall(matchId, callId, remoteSdp) {
 }
 
 function wireConnectionEvents(name, avatarUrl) {
-  pc.ontrack = (event) => playRemoteAudio(event.streams[0]);
+  pc.ontrack = (event) => {
+    let audioEl = document.getElementById('call-remote-audio');
+    if (!audioEl) {
+      audioEl = document.createElement('audio');
+      audioEl.id = 'call-remote-audio';
+      audioEl.autoplay = true;
+      document.body.appendChild(audioEl);
+    }
+    audioEl.srcObject = event.streams[0];
+  };
 
   pc.onconnectionstatechange = () => {
     log('connection state', pc.connectionState);
@@ -194,6 +224,10 @@ function wireConnectionEvents(name, avatarUrl) {
     if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
       cleanupCall();
     }
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    log('ICE state', pc.iceConnectionState);
   };
 }
 
@@ -219,36 +253,26 @@ function cleanupCall() {
   currentCallId = null;
   isMuted = false;
   speakerOn = false;
+  isIncomingCall = false;
+  incomingCallData = null;
+  if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
+  connectedAt = null;
   hideCallScreen();
 }
 
-// ---------- Аудио ----------
+// ---------- Управление аудио ----------
 
-function playRemoteAudio(stream) {
-  let audioEl = document.getElementById('call-remote-audio');
-  if (!audioEl) {
-    audioEl = document.createElement('audio');
-    audioEl.id = 'call-remote-audio';
-    audioEl.autoplay = true;
-    document.body.appendChild(audioEl);
-  }
-  audioEl.srcObject = stream;
-}
-
-function toggleMute() {
+export function toggleMute() {
   if (!localStream) return;
   isMuted = !isMuted;
   localStream.getAudioTracks().forEach((t) => { t.enabled = !isMuted; });
   updateMuteButton();
 }
 
-// Переключение громкой связи: поддержка в Android Chrome ограничена
-// (нет официального API для earpiece/speaker), делаем best-effort через setSinkId,
-// если браузер поддерживает выбор устройства вывода.
-async function toggleSpeaker() {
+export async function toggleSpeaker() {
   const audioEl = document.getElementById('call-remote-audio');
   if (!audioEl || typeof audioEl.setSinkId !== 'function') {
-    alert('Переключение громкой связи не поддерживается этим браузером. Используй системную кнопку громкости/переключатель динамика в шторке звонка.');
+    alert('Переключение громкой связи не поддерживается этим браузером.');
     return;
   }
   try {
@@ -262,7 +286,7 @@ async function toggleSpeaker() {
   }
 }
 
-// ---------- Полноэкранный UI ----------
+// ---------- UI ----------
 
 function injectStyles() {
   if (document.getElementById('call-ui-styles')) return;
@@ -272,20 +296,19 @@ function injectStyles() {
     #call-screen-overlay{position:fixed;inset:0;background:linear-gradient(180deg,#1a0a12,#0d0d0d);z-index:9999;
       display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:60px 24px 50px;
       font-family:'Inter',sans-serif;color:#f0f0f0;text-align:center}
-    #call-screen-overlay .call-top{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:20px}
+    #call-screen-overlay .call-top{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:20px;width:100%}
     #call-avatar-img, .call-avatar-fallback{width:120px;height:120px;border-radius:50%;object-fit:cover;
-      background:#2a2a2a;border:3px solid #ff4d6d;display:flex;align-items:center;justify-content:center;font-size:48px}
+      background:#2a2a2a;border:3px solid #ff4d6d;display:flex;align-items:center;justify-content:center;font-size:48px;margin:0 auto}
     #call-name-text{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600}
     #call-status-text{color:#888;font-size:14px}
     #call-duration-text{color:#ff8fa3;font-size:14px;font-variant-numeric:tabular-nums}
-    .call-controls-row{display:flex;gap:24px;justify-content:center}
+    .call-controls-row{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;width:100%}
     .call-btn{width:64px;height:64px;border-radius:50%;border:none;font-size:26px;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;transition:opacity 0.2s}
+      display:flex;align-items:center;justify-content:center;transition:opacity 0.2s;background:#2a2a2a;color:#f0f0f0}
     .call-btn:active{opacity:0.7}
-    .call-btn.secondary{background:#2a2a2a;color:#f0f0f0}
     .call-btn.secondary.active{background:#ff4d6d;color:white}
     .call-btn.hangup{background:#ff2d4d;color:white;width:72px;height:72px;font-size:30px}
-    .call-incoming-actions{display:flex;gap:48px;justify-content:center}
+    .call-incoming-actions{display:flex;gap:48px;justify-content:center;width:100%}
     .call-incoming-actions .call-btn.accept{background:#2ecc71;color:white;width:72px;height:72px;font-size:30px}
   `;
   document.head.appendChild(style);
