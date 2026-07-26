@@ -224,10 +224,25 @@ input[type="file"]{display:none}
 <script src="photo-viewer.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Подключаем модуль звонков -->
+<script type="module">
+  import { initCallModule, initGlobalCallListener, startCall, endCall, declineCall, toggleMute, toggleSpeaker } from './call-webrtc.js';
+  
+  window.callModule = {
+    initCallModule,
+    initGlobalCallListener,
+    startCall,
+    endCall,
+    declineCall,
+    toggleMute,
+    toggleSpeaker
+  };
+</script>
+
 <script>
-// ===== ЕДИНСТВЕННОЕ ИЗМЕНЕНИЕ: создаём клиент так же, как в index.html =====
+// ===== СОЗДАЁМ КЛИЕНТ =====
 var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-// ==============================================================
 
 var BACKEND_URL = 'https://vector-chat-api.onrender.com';
 var currentUser = null;
@@ -249,7 +264,7 @@ function timeAgo(dateStr) {
   return d.toLocaleDateString('ru-RU');
 }
 
-// ===== ИНИЦИАЛИЗАЦИЯ (без автоматического редиректа) =====
+// ===== ИНИЦИАЛИЗАЦИЯ =====
 async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) {
@@ -274,6 +289,23 @@ async function init() {
   await loadFollowedAndMatches();
   await loadSeenData();
   await loadFeed();
+
+  // ===== ИНИЦИАЛИЗАЦИЯ ГЛОБАЛЬНОГО СЛУШАТЕЛЯ ЗВОНКОВ =====
+  if (typeof window.callModule !== 'undefined' && window.callModule.initGlobalCallListener) {
+    window.callModule.initCallModule(db, currentUser.id);
+    
+    // Получаем все matchId пользователя
+    var matchIdsList = Object.keys(matchIds);
+    if (matchIdsList.length > 0) {
+      window.callModule.initGlobalCallListener(db, currentUser.id, function() {
+        return matchIdsList;
+      }, function(userId) {
+        // Получаем имя собеседника
+        return { name: 'Собеседник', avatarUrl: '' };
+      });
+      console.log('[feed] Глобальный слушатель звонков активирован для', matchIdsList.length, 'чатов');
+    }
+  }
 }
 
 // ===== ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ) =====
@@ -897,4 +929,4 @@ async function notifyPostSubscribers() {
 init();
 </script>
 </body>
-  </html>
+</html>
