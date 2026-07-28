@@ -295,7 +295,7 @@ renderUnlockBox('reg');
 
 function spawnHearts(){var c=document.getElementById('hearts');var e=['❤️','🧡','💕','💖','💗','💓','💝'];for(var i=0;i<14;i++){var h=document.createElement('div');h.className='heart';h.textContent=e[Math.floor(Math.random()*e.length)];h.style.left=Math.random()*100+'vw';h.style.fontSize=(13+Math.random()*16)+'px';h.style.animationDuration=(8+Math.random()*10)+'s';h.style.animationDelay=(Math.random()*14)+'s';c.appendChild(h)}}
 
-var db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+var db=createBlizkoClient();
 
 // ===== УБРАН АВТО-РЕДИРЕКТ =====
 // Теперь index.html ВСЕГДА показывает форму входа
