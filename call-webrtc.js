@@ -1,6 +1,9 @@
 // call-webrtc.js
-// Аудиозвонки в Blizko: WebRTC + Supabase Realtime (broadcast) как сигналинг.
-// Полноэкранный UI звонка встроен прямо в модуль.
+// Аудиозвонки в Blizko: WebRTC + Supabase.
+// Сигналинг звонка (кто кому звонит, offer/answer) хранится в таблице `calls` —
+// это надёжно: звонок "виден" даже если собеседник открыл приложение чуть позже.
+// ICE-кандидаты (только пока звонок уже активен) идут через realtime broadcast — это ок,
+// т.к. оба участника уже онлайн на экране звонка в этот момент.
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -8,26 +11,29 @@ const ICE_SERVERS = [
 ];
 
 var BLIZKO_API_URL = (typeof window !== 'undefined' && window.BLIZKO_API_URL) ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
+var RING_TIMEOUT_MS = 45000;
 
 let pc = null;
 let localStream = null;
-let callChannel = null;
+let iceChannel = null;
+let activeCallRowChannel = null;
+let globalCallsChannel = null;
 let currentCallId = null;
+let currentMatchId = null;
 let _client = null;
 let _myUserId = null;
 let connectedAt = null;
 let durationTimer = null;
+let ringTimer = null;
 let isMuted = false;
 let speakerOn = false;
-let isIncomingCall = false;
-let incomingCallData = null;
-
-function channelNameFor(matchId) {
-  return `call-${matchId}`;
-}
 
 function log(...args) {
   console.log('[call]', ...args);
+}
+
+function iceChannelName(matchId) {
+  return `call-ice-${matchId}`;
 }
 
 // ---------- Инициализация ----------
@@ -38,91 +44,90 @@ export function initCallModule(supabaseClient, myUserId) {
   injectStyles();
 }
 
-// Глобальный слушатель входящих звонков на всех страницах
-export function initGlobalCallListener(supabaseClient, myUserId, getMatchIds, getProfileInfo) {
-  _client = supabaseClient;
-  _myUserId = myUserId;
-  injectStyles();
-
-  const matchIds = getMatchIds();
-  matchIds.forEach((matchId) => {
-    const ch = _client.channel(channelNameFor(matchId), {
-      config: { broadcast: { self: false } },
-    });
-
-    ch.on('broadcast', { event: 'call-offer' }, (payload) => {
-      const { fromUserId, callId, sdp } = payload.payload;
-      if (fromUserId === _myUserId) return;
-      log('входящий звонок (глобальный)', matchId, callId);
-      currentCallId = callId;
-      callChannel = ch;
-      isIncomingCall = true;
-      incomingCallData = { matchId, callId, sdp, fromUserId };
-
-      const info = (getProfileInfo && getProfileInfo(fromUserId)) || {};
-      showIncomingScreen(info.name || 'Пользователь', info.avatarUrl, {
-        onAccept: () => acceptCurrentCall(matchId, callId, sdp),
-        onDecline: () => {
-          sendEnd();
-          hideCallScreen();
-          isIncomingCall = false;
-          incomingCallData = null;
-        },
-      });
-    });
-
-    ch.subscribe();
-  });
-}
-
-// matchIds — массив id мэтчей пользователя.
-// getProfileInfo(otherUserId) должна вернуть { name, avatarUrl }
-export function initIncomingCallListener(matchIds, getProfileInfo) {
-  if (!_client) {
-    console.warn('[call] initCallModule не вызван');
+// Слушает ВСЕ входящие звонки для этого пользователя на любой странице приложения.
+// Вызывать один раз (после initCallModule) на каждой странице, где должен работать приём звонков.
+export async function initGlobalCallListener() {
+  if (!_client || !_myUserId) {
+    console.warn('[call] initCallModule не вызван перед initGlobalCallListener');
     return;
   }
-  
-  matchIds.forEach((matchId) => {
-    const ch = _client.channel(channelNameFor(matchId), {
-      config: { broadcast: { self: false } },
-    });
 
-    ch.on('broadcast', { event: 'call-offer' }, (payload) => {
-      const { fromUserId, callId, sdp } = payload.payload;
-      if (fromUserId === _myUserId) return;
-      log('входящий звонок', matchId, callId);
-      currentCallId = callId;
-      callChannel = ch;
-      isIncomingCall = true;
-      incomingCallData = { matchId, callId, sdp, fromUserId };
+  // 1) Может звонок уже "звонит", а мы только что открыли страницу
+  try {
+    const cutoff = new Date(Date.now() - RING_TIMEOUT_MS).toISOString();
+    const { data: pending } = await _client
+      .from('calls')
+      .select('*')
+      .eq('callee_id', _myUserId)
+      .eq('status', 'ringing')
+      .gt('created_at', cutoff)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (pending && pending.length > 0) {
+      handleIncomingCallRow(pending[0]);
+    }
+  } catch (e) { log('ошибка проверки текущих звонков', e); }
 
-      const info = (getProfileInfo && getProfileInfo(fromUserId)) || {};
-      showIncomingScreen(info.name || 'Пользователь', info.avatarUrl, {
-        onAccept: () => acceptCurrentCall(matchId, callId, sdp),
-        onDecline: () => {
-          sendEnd();
-          hideCallScreen();
-          isIncomingCall = false;
-          incomingCallData = null;
-        },
-      });
-    });
+  // 2) Слушаем новые звонки и изменения статуса в реальном времени
+  if (globalCallsChannel) return;
+  globalCallsChannel = _client.channel('calls-listener-' + _myUserId)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'calls',
+      filter: 'callee_id=eq.' + _myUserId,
+    }, (payload) => {
+      handleIncomingCallRow(payload.new);
+    })
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'calls',
+      filter: 'callee_id=eq.' + _myUserId,
+    }, (payload) => {
+      if (payload.new.status !== 'ringing' && payload.new.id === currentCallId && !pc) {
+        hideCallScreen();
+        currentCallId = null;
+      }
+    })
+    .subscribe();
+}
 
-    ch.subscribe();
+async function handleIncomingCallRow(row) {
+  if (!row || row.status !== 'ringing') return;
+  if (currentCallId) return; // уже обрабатываем какой-то звонок
+  currentCallId = row.id;
+  currentMatchId = row.match_id;
+
+  let name = 'Пользователь';
+  let avatarUrl = '';
+  try {
+    const { data: prof } = await _client.from('profiles').select('name, photo_url').eq('id', row.caller_id).single();
+    if (prof) { name = prof.name || name; avatarUrl = prof.photo_url || ''; }
+  } catch (e) {}
+
+  showIncomingScreen(name, avatarUrl, {
+    onAccept: () => acceptCurrentCall(row),
+    onDecline: () => declineIncomingCall(row.id),
   });
+
+  clearTimeout(ringTimer);
+  ringTimer = setTimeout(() => {
+    if (currentCallId === row.id && !pc) {
+      hideCallScreen();
+      currentCallId = null;
+    }
+  }, RING_TIMEOUT_MS);
 }
 
 // ---------- Исходящий звонок ----------
 
 export async function startCall(matchId, calleeUserId, name, avatarUrl) {
-  if (!_client) {
-    throw new Error('call модуль не инициализирован. Сначала вызовите initCallModule');
-  }
-  
+  if (!_client) throw new Error('call модуль не инициализирован. Сначала вызовите initCallModule');
+
   const callId = crypto.randomUUID();
   currentCallId = callId;
-  isIncomingCall = false;
+  currentMatchId = matchId;
 
   showOutgoingScreen(name, avatarUrl);
 
@@ -130,48 +135,62 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   } catch (e) {
     hideCallScreen();
+    currentCallId = null;
     throw new Error('Нет доступа к микрофону');
   }
 
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
-
-  callChannel = _client.channel(channelNameFor(matchId), {
-    config: { broadcast: { self: false } },
-  });
-
   wireConnectionEvents(name, avatarUrl);
-
-  callChannel.on('broadcast', { event: 'call-answer' }, async (payload) => {
-    if (payload.payload.callId !== callId) return;
-    await pc.setRemoteDescription(new RTCSessionDescription(payload.payload.sdp));
-  });
-
-  callChannel.on('broadcast', { event: 'ice-candidate' }, async (payload) => {
-    if (payload.payload.callId !== callId || payload.payload.fromUserId === _myUserId) return;
-    try { await pc.addIceCandidate(new RTCIceCandidate(payload.payload.candidate)); }
-    catch (e) { log('ошибка ICE', e); }
-  });
-
-  callChannel.on('broadcast', { event: 'call-end' }, () => {
-    log('звонок завершён собеседником');
-    cleanupCall();
-  });
-
-  await new Promise((resolve) => callChannel.subscribe((status) => {
-    if (status === 'SUBSCRIBED') resolve();
-  }));
+  openIceChannel(matchId, callId);
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
-  callChannel.send({
-    type: 'broadcast',
-    event: 'call-offer',
-    payload: { callId, fromUserId: _myUserId, sdp: offer },
+  const { error: insertErr } = await _client.from('calls').insert({
+    id: callId,
+    match_id: matchId,
+    caller_id: _myUserId,
+    callee_id: calleeUserId,
+    offer_sdp: offer,
+    status: 'ringing',
   });
+  if (insertErr) {
+    log('ошибка записи звонка в БД', insertErr);
+    cleanupCall();
+    throw new Error('Не удалось начать звонок: ' + insertErr.message);
+  }
+
+  activeCallRowChannel = _client.channel('call-row-' + callId)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'calls',
+      filter: 'id=eq.' + callId,
+    }, async (payload) => {
+      const row = payload.new;
+      if (row.status === 'accepted' && row.answer_sdp && pc && !pc.currentRemoteDescription) {
+        await pc.setRemoteDescription(new RTCSessionDescription(row.answer_sdp));
+      } else if (row.status === 'declined') {
+        showDeclinedScreen(name, avatarUrl);
+        setTimeout(() => cleanupCall(), 1600);
+      } else if (row.status === 'ended' || row.status === 'missed') {
+        cleanupCall();
+      }
+    })
+    .subscribe();
 
   notifyIncomingCallPush(matchId, calleeUserId, callId).catch((e) => log('push-уведомление не отправлено', e));
+
+  clearTimeout(ringTimer);
+  ringTimer = setTimeout(async () => {
+    if (currentCallId === callId && !connectedAt) {
+      try {
+        await _client.from('calls').update({ status: 'missed', updated_at: new Date().toISOString() }).eq('id', callId);
+      } catch (e) {}
+      cleanupCall();
+    }
+  }, RING_TIMEOUT_MS);
 
   return callId;
 }
@@ -201,7 +220,8 @@ async function notifyIncomingCallPush(matchId, calleeUserId, callId) {
   });
 }
 
-async function acceptCurrentCall(matchId, callId, remoteSdp) {
+async function acceptCurrentCall(row) {
+  clearTimeout(ringTimer);
   const infoName = document.getElementById('call-name-text')?.textContent || 'Пользователь';
   const infoAvatar = document.getElementById('call-avatar-img')?.src || '';
 
@@ -209,37 +229,56 @@ async function acceptCurrentCall(matchId, callId, remoteSdp) {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   } catch (e) {
     hideCallScreen();
+    currentCallId = null;
     return;
   }
 
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
-
   wireConnectionEvents(infoName, infoAvatar);
+  openIceChannel(row.match_id, row.id);
 
-  callChannel.on('broadcast', { event: 'ice-candidate' }, async (payload) => {
+  await pc.setRemoteDescription(new RTCSessionDescription(row.offer_sdp));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+
+  await _client.from('calls').update({
+    answer_sdp: answer,
+    status: 'accepted',
+    updated_at: new Date().toISOString(),
+  }).eq('id', row.id);
+}
+
+async function declineIncomingCall(callId) {
+  clearTimeout(ringTimer);
+  try {
+    await _client.from('calls').update({ status: 'declined', updated_at: new Date().toISOString() }).eq('id', callId);
+  } catch (e) {}
+  hideCallScreen();
+  if (currentCallId === callId) currentCallId = null;
+}
+
+function openIceChannel(matchId, callId) {
+  iceChannel = _client.channel(iceChannelName(matchId) + '-' + callId, { config: { broadcast: { self: false } } });
+  iceChannel.on('broadcast', { event: 'ice-candidate' }, async (payload) => {
     if (payload.payload.callId !== callId || payload.payload.fromUserId === _myUserId) return;
     try { await pc.addIceCandidate(new RTCIceCandidate(payload.payload.candidate)); }
     catch (e) { log('ошибка ICE', e); }
   });
-
-  callChannel.on('broadcast', { event: 'call-end' }, () => {
-    log('звонок завершён собеседником');
-    cleanupCall();
-  });
-
-  await pc.setRemoteDescription(new RTCSessionDescription(remoteSdp));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-
-  callChannel.send({
-    type: 'broadcast',
-    event: 'call-answer',
-    payload: { callId, sdp: answer },
-  });
+  iceChannel.subscribe();
 }
 
 function wireConnectionEvents(name, avatarUrl) {
+  pc.onicecandidate = (event) => {
+    if (event.candidate && iceChannel && currentCallId) {
+      iceChannel.send({
+        type: 'broadcast',
+        event: 'ice-candidate',
+        payload: { callId: currentCallId, fromUserId: _myUserId, candidate: event.candidate },
+      });
+    }
+  };
+
   pc.ontrack = (event) => {
     let audioEl = document.getElementById('call-remote-audio');
     if (!audioEl) {
@@ -254,6 +293,7 @@ function wireConnectionEvents(name, avatarUrl) {
   pc.onconnectionstatechange = () => {
     log('connection state', pc.connectionState);
     if (pc.connectionState === 'connected') {
+      clearTimeout(ringTimer);
       showConnectedScreen(name, avatarUrl);
     }
     if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
@@ -266,30 +306,27 @@ function wireConnectionEvents(name, avatarUrl) {
   };
 }
 
-function sendEnd() {
-  if (callChannel && currentCallId) {
-    callChannel.send({ type: 'broadcast', event: 'call-end', payload: { callId: currentCallId } });
-  }
-}
-
 export function endCall() {
-  sendEnd();
+  if (currentCallId && _client) {
+    _client.from('calls').update({ status: 'ended', updated_at: new Date().toISOString() }).eq('id', currentCallId).then(() => {}, () => {});
+  }
   cleanupCall();
 }
 
 export function declineCall() {
-  sendEnd();
-  cleanupCall();
+  if (currentCallId) declineIncomingCall(currentCallId);
 }
 
 function cleanupCall() {
+  clearTimeout(ringTimer);
   if (pc) { pc.close(); pc = null; }
   if (localStream) { localStream.getTracks().forEach((t) => t.stop()); localStream = null; }
+  if (iceChannel && _client) { _client.removeChannel(iceChannel); iceChannel = null; }
+  if (activeCallRowChannel && _client) { _client.removeChannel(activeCallRowChannel); activeCallRowChannel = null; }
   currentCallId = null;
+  currentMatchId = null;
   isMuted = false;
   speakerOn = false;
-  isIncomingCall = false;
-  incomingCallData = null;
   if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
   connectedAt = null;
   hideCallScreen();
@@ -397,6 +434,17 @@ function showIncomingScreen(name, avatarUrl, { onAccept, onDecline }) {
   `);
   window.__callAcceptBtn = () => onAccept();
   window.__callDeclineBtn = () => onDecline();
+}
+
+function showDeclinedScreen(name, avatarUrl) {
+  renderOverlay(`
+    <div class="call-top">
+      ${avatarHtml(avatarUrl)}
+      <div id="call-name-text">${name}</div>
+      <div id="call-status-text">❌ Звонок отклонён</div>
+    </div>
+    <div></div>
+  `);
 }
 
 function showConnectedScreen(name, avatarUrl) {
