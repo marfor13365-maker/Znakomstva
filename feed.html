@@ -268,6 +268,10 @@ function timeAgo(dateStr) {
 async function init() {
   var r = await db.auth.getSession();
   if (!r.data.session) {
+    var restored = await restoreLastVaultSession(db);
+    if (restored) r = await db.auth.getSession();
+  }
+  if (!r.data.session) {
     var wrap = document.getElementById('grid-wrap');
     if (wrap) {
       wrap.innerHTML = `
@@ -293,18 +297,8 @@ async function init() {
   // ===== ИНИЦИАЛИЗАЦИЯ ГЛОБАЛЬНОГО СЛУШАТЕЛЯ ЗВОНКОВ =====
   if (typeof window.callModule !== 'undefined' && window.callModule.initGlobalCallListener) {
     window.callModule.initCallModule(db, currentUser.id);
-    
-    // Получаем все matchId пользователя
-    var matchIdsList = Object.keys(matchIds);
-    if (matchIdsList.length > 0) {
-      window.callModule.initGlobalCallListener(db, currentUser.id, function() {
-        return matchIdsList;
-      }, function(userId) {
-        // Получаем имя собеседника
-        return { name: 'Собеседник', avatarUrl: '' };
-      });
-      console.log('[feed] Глобальный слушатель звонков активирован для', matchIdsList.length, 'чатов');
-    }
+    window.callModule.initGlobalCallListener();
+    console.log('[feed] Глобальный слушатель звонков активирован');
   }
 }
 
