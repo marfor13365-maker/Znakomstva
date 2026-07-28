@@ -242,7 +242,7 @@ input[type="file"]{display:none}
 
 <script>
 // ===== СОЗДАЁМ КЛИЕНТ =====
-var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var db = createBlizkoClient();
 
 var BACKEND_URL = 'https://vector-chat-api.onrender.com';
 var currentUser = null;
