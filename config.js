@@ -53,6 +53,26 @@ async function switchToVaultAccount(client, userId) {
   return !error;
 }
 
+// Если в этой вкладке нет активной сессии (sessionStorage пуст — например, вкладка
+// открыта заново после закрытия приложения), пробуем незаметно восстановить последний
+// использованный аккаунт из сейфа (localStorage), вместо того чтобы сразу считать
+// пользователя разлогиненным. Возвращает true, если сессию удалось восстановить.
+async function restoreLastVaultSession(client) {
+  var vault = getAccountVault();
+  if (!vault || vault.length === 0) return false;
+  vault.sort(function (a, b) { return (b.updated_at || 0) - (a.updated_at || 0); });
+  var last = vault[0];
+  try {
+    var { error } = await client.auth.setSession({
+      access_token: last.access_token,
+      refresh_token: last.refresh_token
+    });
+    return !error;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Создаёт Supabase-клиент с сессией в sessionStorage (своя для КАЖДОЙ вкладки) —
 // чинит путаницу аккаунтов между вкладками. Плюс автоматически подпитывает сейф аккаунтов
 // свежими токенами при каждом входе/обновлении токена в этой вкладке.
