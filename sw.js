@@ -31,6 +31,7 @@ self.addEventListener('push', function (event) {
       url: data.url || '/',
       type: data.type || 'message',
       callId: data.callId || null,
+      matchId: data.matchId || data.match_id || null,
       fromUserId: data.fromUserId || null
     },
     vibrate: data.type === 'call' ? [300, 200, 300, 200, 300] : [200],
@@ -53,13 +54,14 @@ self.addEventListener('notificationclick', function (event) {
   var targetUrl = data.url || '/';
 
   if (data.type === 'call') {
-    if (event.action === 'decline') {
-      // Просто закрываем уведомление, отдельный сигнал отказа отправит сама страница при открытии,
-      // либо можно расширить позже через fetch() прямо отсюда.
-      return;
+    // И "Принять", и "Отклонить", и обычный тап — открывают сам чат.
+    // Полноэкранный экран звонка (Accept/Decline) там появится сам —
+    // звонок хранится в БД, а не только в push, так что он не потеряется.
+    if (data.matchId) {
+      targetUrl = 'chat.html?match=' + data.matchId + (data.callId ? '&call=' + data.callId : '');
+    } else {
+      targetUrl = data.url || '/';
     }
-    // 'accept' или просто тап по уведомлению — открываем страницу звонка
-    targetUrl = data.url || ('/call.html?call=' + data.callId + '&from=' + data.fromUserId);
   }
 
   event.waitUntil(
@@ -77,4 +79,3 @@ self.addEventListener('notificationclick', function (event) {
     })
   );
 });
-
