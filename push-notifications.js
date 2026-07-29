@@ -1,6 +1,13 @@
 // push-notifications.js
 // Подписка на Web Push (звонки, сообщения, лайки, мэтчи) + настройки включения/выключения по типам.
 // Использование: BlizkoPush.init(dbClient, userId) — вызвать по кнопке "Включить уведомления".
+//
+// ИЗМЕНЕНО: init() теперь возвращает объект { ok: true } или { ok: false, reason, detail }
+// вместо простого true/false. Раньше при ЛЮБОЙ ошибке (включая ошибку сохранения в базу,
+// то есть отсутствие таблицы push_subscriptions) показывался один и тот же текст "проверь
+// разрешение браузера" — что сбивало с толку, если разрешение было ни при чём. Теперь видно
+// точную причину: не поддерживается браузером / нет разрешения / не удалось зарегистрировать
+// Service Worker / не удалось подписаться / не удалось сохранить подписку в БД.
 
 (function () {
   var VAPID_PUBLIC_KEY = 'BACW1lr_W9Oyo50LRLjQeCfjS7TmzR-BwXDSjQ-7aXLLuKVbsaaqRqZHZ1LtrME3YLKqz49juqypy2lpo1beLeA';
@@ -16,57 +23,67 @@
     return outputArray;
   }
 
-  function arrayBufferToBase64Url(buffer) {
-    var bytes = new Uint8Array(buffer);
-    var binary = '';
-    for (var i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  }
-
   // Регистрирует sw.js (если ещё не зарегистрирован) и возвращает готовую registration.
   async function ensureServiceWorker() {
     if (!('serviceWorker' in navigator)) {
       throw new Error('Service Worker не поддерживается этим браузером');
     }
     var existing = await navigator.serviceWorker.getRegistration('/');
-    if (existing) return existing;
+    if (existing) {
+      // Подтягиваем свежую версию sw.js, если она поменялась на сервере.
+      existing.update().catch(function () {});
+      return existing;
+    }
     return await navigator.serviceWorker.register('/sw.js');
   }
 
   // Основная функция — вызывается по нажатию на колокольчик.
-  // Возвращает true/false (успех), как и ожидает profile.html.
+  // Возвращает { ok: true } или { ok: false, reason, detail }.
   async function init(dbClient, userId) {
     if (!('Notification' in window) || !('PushManager' in window)) {
-      console.warn('Push-уведомления не поддерживаются этим браузером/устройством');
-      return false;
+      return { ok: false, reason: 'unsupported', detail: 'Push API/Notification API не поддерживаются этим браузером.' };
     }
 
-    var permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      return false;
-    }
-
+    var permission;
     try {
-      var registration = await ensureServiceWorker();
-      await navigator.serviceWorker.ready;
+      permission = await Notification.requestPermission();
+    } catch (e) {
+      return { ok: false, reason: 'permission-error', detail: e && e.message };
+    }
+    if (permission !== 'granted') {
+      return { ok: false, reason: 'permission-denied', detail: 'Текущий статус разрешения: ' + permission };
+    }
 
+    var registration;
+    try {
+      registration = await ensureServiceWorker();
+      await navigator.serviceWorker.ready;
+    } catch (e) {
+      console.error('Ошибка регистрации Service Worker:', e);
+      return { ok: false, reason: 'sw-failed', detail: e && e.message };
+    }
+
+    var subscription;
+    try {
       var existingSub = await registration.pushManager.getSubscription();
-      var subscription = existingSub || await registration.pushManager.subscribe({
+      subscription = existingSub || await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
+    } catch (e) {
+      console.error('Ошибка подписки на push:', e);
+      return { ok: false, reason: 'subscribe-failed', detail: e && e.message };
+    }
 
-      var subJson = subscription.toJSON();
-      var p256dh = subJson.keys && subJson.keys.p256dh;
-      var authKey = subJson.keys && subJson.keys.auth;
+    var subJson = subscription.toJSON();
+    var p256dh = subJson.keys && subJson.keys.p256dh;
+    var authKey = subJson.keys && subJson.keys.auth;
 
-      if (!p256dh || !authKey) {
-        console.error('Подписка не содержит ключей шифрования');
-        return false;
-      }
+    if (!p256dh || !authKey) {
+      return { ok: false, reason: 'subscribe-failed', detail: 'Подписка не содержит ключей шифрования (p256dh/auth).' };
+    }
 
+    try {
       var { error } = await dbClient.from('push_subscriptions').upsert({
         user_id: userId,
         endpoint: subscription.endpoint,
@@ -76,14 +93,14 @@
 
       if (error) {
         console.error('Не удалось сохранить подписку в Supabase:', error);
-        return false;
+        return { ok: false, reason: 'db-error', detail: error.message };
       }
-
-      return true;
     } catch (e) {
-      console.error('Ошибка подписки на push:', e);
-      return false;
+      console.error('Ошибка сохранения подписки:', e);
+      return { ok: false, reason: 'db-error', detail: e && e.message };
     }
+
+    return { ok: true };
   }
 
   // Отписаться от push полностью (например, если пользователь передумал).
