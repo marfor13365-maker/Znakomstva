@@ -1,11 +1,15 @@
 // call-webrtc.js
 // Аудиозвонки в Blizko: WebRTC + Supabase.
 //
-// ВАЖНОЕ ИЗМЕНЕНИЕ: иконки кнопок звонка переведены с эмодзи на SVG (currentColor).
-// Причина бага "кнопка то в тему, то нет": у emoji-глифов (📞🎙️📵🔊 и т.д.) в некоторых
-// шрифтах Android зашит собственный белый/серый фон-подложка — он перекрывает цвет темы
-// снаружи независимо от CSS. SVG всегда наследует цвет через currentColor, поэтому
-// теперь совпадение с темой гарантировано, а не "как повезёт с шрифтом эмодзи".
+// КРИТИЧНЫЙ ФИКС: раньше принимающая сторона подписывалась на канал ICE-кандидатов
+// только ПОСЛЕ нажатия "Принять". Но звонящий начинает рассылать свои кандидаты сразу
+// после звонка (пока идут гудки) — и Supabase broadcast НЕ хранит историю сообщений,
+// то есть все кандидаты, отправленные до ответа, безвозвратно терялись. Signaling (SDP)
+// проходил успешно, из-за чего казалось что "принял, но не соединяется" — а по факту
+// соединять было нечем, ни один ICE-кандидат до accept не долетал.
+// Теперь: канал открывается сразу при появлении звонка (до нажатия кнопки), а кандидаты,
+// пришедшие до создания RTCPeerConnection, складываются в буфер и применяются сразу
+// после создания pc.
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -20,6 +24,7 @@ let pc = null;
 let localStream = null;
 let remoteStream = null;
 let iceChannel = null;
+let pendingIceCandidates = [];
 let activeCallRowChannel = null;
 let globalCallsChannel = null;
 let currentCallId = null;
@@ -185,6 +190,7 @@ export async function initGlobalCallListener() {
     }, (payload) => {
       if (payload.new.status !== 'ringing' && payload.new.id === currentCallId && !pc) {
         stopRingtone();
+        closeIceChannel();
         hideCallScreen();
         currentCallId = null;
       }
@@ -197,6 +203,10 @@ async function handleIncomingCallRow(row) {
   if (currentCallId) return;
   currentCallId = row.id;
   currentMatchId = row.match_id;
+
+  // Подписываемся на ICE-канал СРАЗУ, ещё до того как человек нажмёт "Принять" —
+  // это и есть фикс потери кандидатов, из-за которой звонки не соединялись.
+  openIceChannel(row.match_id, row.id);
 
   let name = 'Пользователь';
   let avatarUrl = '';
@@ -215,6 +225,7 @@ async function handleIncomingCallRow(row) {
   ringTimer = setTimeout(() => {
     if (currentCallId === row.id && !pc) {
       stopRingtone();
+      closeIceChannel();
       hideCallScreen();
       currentCallId = null;
     }
@@ -222,9 +233,6 @@ async function handleIncomingCallRow(row) {
 }
 
 // Расширенный набор аудио-constraint'ов против эха/скрипа.
-// echoCancellation/noiseSuppression/autoGainControl — стандартные (важнее всего).
-// goog*-поля — легаси-подсказки для Chrome/Android, современные версии их просто
-// игнорируют если не поддерживают, вреда не будет.
 function micConstraints() {
   return {
     audio: {
@@ -267,6 +275,7 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
   wireConnectionEvents(name, avatarUrl);
   openIceChannel(matchId, callId);
+  flushPendingIceCandidates();
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
@@ -295,6 +304,7 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
       const row = payload.new;
       if (row.status === 'accepted' && row.answer_sdp && pc && !pc.currentRemoteDescription) {
         await pc.setRemoteDescription(new RTCSessionDescription(row.answer_sdp));
+        flushPendingIceCandidates();
       } else if (row.status === 'declined') {
         showDeclinedScreen(name, avatarUrl);
         setTimeout(() => cleanupCall(), 1600);
@@ -362,9 +372,11 @@ async function acceptCurrentCall(row) {
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
   wireConnectionEvents(infoName, infoAvatar);
-  openIceChannel(row.match_id, row.id);
+  // ICE-канал уже открыт в handleIncomingCallRow — здесь просто ждём appear pc.
 
   await pc.setRemoteDescription(new RTCSessionDescription(row.offer_sdp));
+  flushPendingIceCandidates();
+
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
 
@@ -381,18 +393,40 @@ async function declineIncomingCall(callId) {
   try {
     await _client.from('calls').update({ status: 'declined', updated_at: new Date().toISOString() }).eq('id', callId);
   } catch (e) {}
+  closeIceChannel();
   hideCallScreen();
   if (currentCallId === callId) currentCallId = null;
 }
 
 function openIceChannel(matchId, callId) {
+  if (iceChannel) return; // уже открыт — не дублируем подписку
   iceChannel = _client.channel(iceChannelName(matchId) + '-' + callId, { config: { broadcast: { self: false } } });
   iceChannel.on('broadcast', { event: 'ice-candidate' }, async (payload) => {
     if (payload.payload.callId !== callId || payload.payload.fromUserId === _myUserId) return;
+    if (!pc) {
+      // RTCPeerConnection ещё не создан (например, входящий звонок ещё не принят) —
+      // сохраняем кандидата, применим сразу после создания pc.
+      pendingIceCandidates.push(payload.payload.candidate);
+      return;
+    }
     try { await pc.addIceCandidate(new RTCIceCandidate(payload.payload.candidate)); }
     catch (e) { log('ошибка ICE', e); }
   });
   iceChannel.subscribe();
+}
+
+function flushPendingIceCandidates() {
+  if (!pc || pendingIceCandidates.length === 0) return;
+  var toFlush = pendingIceCandidates;
+  pendingIceCandidates = [];
+  toFlush.forEach(function (c) {
+    pc.addIceCandidate(new RTCIceCandidate(c)).catch(function (e) { log('ошибка ICE (flush)', e); });
+  });
+}
+
+function closeIceChannel() {
+  if (iceChannel && _client) { _client.removeChannel(iceChannel); iceChannel = null; }
+  pendingIceCandidates = [];
 }
 
 function wireConnectionEvents(name, avatarUrl) {
@@ -462,7 +496,7 @@ function cleanupCall() {
   if (pc) { pc.close(); pc = null; }
   if (localStream) { localStream.getTracks().forEach((t) => t.stop()); localStream = null; }
   remoteStream = null;
-  if (iceChannel && _client) { _client.removeChannel(iceChannel); iceChannel = null; }
+  closeIceChannel();
   if (activeCallRowChannel && _client) { _client.removeChannel(activeCallRowChannel); activeCallRowChannel = null; }
   currentCallId = null;
   currentMatchId = null;
@@ -522,8 +556,6 @@ function stopRingtone() {
   if (ringOscInterval) { clearInterval(ringOscInterval); ringOscInterval = null; }
   if (vibrateInterval) { clearInterval(vibrateInterval); vibrateInterval = null; }
   if (navigator.vibrate) navigator.vibrate(0);
-  // Отпускаем аудиоконтекст рингтона, чтобы он не делил аудио-пайплайн устройства
-  // с активным WebRTC-звонком (на части телефонов это одна из причин скрипа/эха).
   if (audioCtx && audioCtx.state === 'running' && !pc) {
     try { audioCtx.suspend(); } catch (e) {}
   }
@@ -683,8 +715,6 @@ function renderOverlay(innerHtml) {
   overlay.innerHTML = innerHtml;
 }
 
-// Единый ряд кнопок с подписями. Запись/громкая связь активны только когда звонок
-// реально соединён (connected=true) — до этого показаны, но неактивны (не спрятаны).
 function controlsRowHtml(connected) {
   var disabledCls = connected ? '' : ' disabled';
   var speakerOk = speakerSupported();
