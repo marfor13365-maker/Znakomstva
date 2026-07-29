@@ -41,6 +41,11 @@ function removeFromAccountVault(userId) {
 
 // Переключает АКТИВНУЮ сессию текущей вкладки на другой аккаунт из сейфа, без пароля.
 // Возвращает true/false.
+//
+// ФИКС: access_token живёт ~1 час. Если аккаунт из сейфа давно не открывали, setSession
+// с протухшим access_token может сразу вернуть ошибку, даже не дойдя до обновления по
+// refresh_token (который живёт неделями). Поэтому если первая попытка не удалась —
+// пробуем восстановить сессию только по refresh_token через refreshSession().
 async function switchToVaultAccount(client, userId) {
   var vault = getAccountVault();
   var entry = vault.find(function (a) { return a.user_id === userId; });
@@ -50,7 +55,15 @@ async function switchToVaultAccount(client, userId) {
     access_token: entry.access_token,
     refresh_token: entry.refresh_token
   });
-  return !error;
+  if (!error) return true;
+
+  try {
+    var refreshResult = await client.auth.refreshSession({ refresh_token: entry.refresh_token });
+    if (refreshResult.error) return false;
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 // Если в этой вкладке нет активной сессии (sessionStorage пуст — например, вкладка
@@ -67,7 +80,10 @@ async function restoreLastVaultSession(client) {
       access_token: last.access_token,
       refresh_token: last.refresh_token
     });
-    return !error;
+    if (!error) return true;
+
+    var refreshResult = await client.auth.refreshSession({ refresh_token: last.refresh_token });
+    return !refreshResult.error;
   } catch (e) {
     return false;
   }
