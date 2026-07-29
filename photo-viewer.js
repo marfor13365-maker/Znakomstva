@@ -1,7 +1,17 @@
 // photo-viewer.js — просмотрщик фото с зумом
-// Добавлено: pinch-to-zoom двумя пальцами, двойной тап для зума, панорамирование
-// увеличенного фото одним пальцем, зум колёсиком на десктопе.
-// Одиночный тап без зума по-прежнему переключает immersive-режим (как раньше).
+//
+// КРИТИЧНЫЙ ФИКС: раньше reset(el) полностью УДАЛЯЛ все обработчики жестов (pointerdown/
+// move/up и т.д.). Но страницы (feed.html, profile.html) вызывают attach() один раз за
+// сессию, а затем на КАЖДОЕ открытие фото — reset(). То есть сразу после первого же
+// открытия фото слушатели навешивались и тут же срывались, а флаг "уже прикреплено"
+// не давал навесить их снова. В итоге зум (и вообще любые жесты) переставали работать
+// после первого просмотра — оставался только "мёртвый" touch-action:none, из-за чего
+// фото не реагировало вообще ни на что ("только одно положение").
+// Теперь reset() лишь сбрасывает масштаб/позицию (визуальное состояние), а полное
+// снятие обработчиков вынесено в отдельную detach() — её страницы не вызывают.
+//
+// Плюс: pinch-to-zoom двумя пальцами, двойной тап для зума, панорамирование увеличенного
+// фото одним пальцем, зум колёсиком на десктопе.
 window.BlizkoPhotoViewer = (function() {
   var DRAG_THRESHOLD = window.matchMedia('(pointer: coarse)').matches ? 12 : 6;
   var MIN_SCALE = 1;
@@ -41,6 +51,7 @@ window.BlizkoPhotoViewer = (function() {
       state.scale = 1;
       state.tx = 0;
       state.ty = 0;
+      state.immersive = 0; // страница сама сбрасывает CSS-класс immersive при смене фото — держим внутреннее состояние в синхроне
       applyTransform();
     }
 
@@ -230,7 +241,22 @@ window.BlizkoPhotoViewer = (function() {
     };
   }
 
+  // Сбрасывает ТОЛЬКО визуальное состояние (масштаб/позицию/immersive) перед показом
+  // нового фото. НЕ трогает обработчики событий — attach() достаточно вызвать один раз
+  // за всё время жизни страницы.
   function reset(el) {
+    if (el._blizkoPhotoViewer && el._blizkoPhotoViewer.resetZoom) {
+      el._blizkoPhotoViewer.resetZoom();
+    } else {
+      el.style.transform = '';
+    }
+    el.style.cursor = 'grab';
+  }
+
+  // Полностью снимает обработчики жестов — вызывать только если элемент действительно
+  // уничтожается/заменяется и больше не будет использоваться (обычные страницы Blizko
+  // это не делают, элемент модалки переиспользуется).
+  function detach(el) {
     if (el._blizkoPhotoViewer) {
       el.removeEventListener('pointerdown', el._blizkoPhotoViewer.onPointerDown);
       el.removeEventListener('pointermove', el._blizkoPhotoViewer.onPointerMove);
@@ -242,10 +268,12 @@ window.BlizkoPhotoViewer = (function() {
     }
     el.style.transform = '';
     el.style.cursor = '';
+    el.style.touchAction = '';
   }
 
   return {
     attach: attach,
-    reset: reset
+    reset: reset,
+    detach: detach
   };
 })();
