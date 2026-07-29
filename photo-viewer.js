@@ -1,81 +1,235 @@
-// photo-viewer.js — исправленный просмотрщик фото
+// photo-viewer.js — просмотрщик фото с зумом
+// Добавлено: pinch-to-zoom двумя пальцами, двойной тап для зума, панорамирование
+// увеличенного фото одним пальцем, зум колёсиком на десктопе.
+// Одиночный тап без зума по-прежнему переключает immersive-режим (как раньше).
 window.BlizkoPhotoViewer = (function() {
   var DRAG_THRESHOLD = window.matchMedia('(pointer: coarse)').matches ? 12 : 6;
-  
+  var MIN_SCALE = 1;
+  var MAX_SCALE = 4;
+  var DOUBLE_TAP_MS = 300;
+  var DOUBLE_TAP_DIST = 30;
+  var DOUBLE_TAP_ZOOM = 2.5;
+
   function attach(el, options) {
     options = options || {};
-    el.style.touchAction = 'pan-y'; // разрешаем вертикальный скролл
+    el.style.touchAction = 'none'; // сами обрабатываем и пан, и зум, и тап-жесты
     el.style.cursor = 'grab';
-    
+
+    var pointers = new Map(); // pointerId -> {x, y}
+
     var state = {
+      scale: 1,
+      tx: 0, ty: 0,
       dragging: false,
+      moved: false,
       startX: 0, startY: 0,
-      dx: 0, dy: 0,
-      immersive: 0 // 0 = обычный, 1 = полный
+      startTx: 0, startTy: 0,
+      pinching: false,
+      startDist: 0,
+      startScale: 1,
+      immersive: 0,
+      lastTapTime: 0,
+      lastTapX: 0, lastTapY: 0,
+      suppressNextTap: false,
     };
-    
+
+    function applyTransform() {
+      el.style.transform = 'translate(' + state.tx + 'px,' + state.ty + 'px) scale(' + state.scale + ')';
+    }
+
+    function resetZoom() {
+      state.scale = 1;
+      state.tx = 0;
+      state.ty = 0;
+      applyTransform();
+    }
+
+    function distance(p1, p2) {
+      var dx = p1.x - p2.x, dy = p1.y - p2.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function midpoint(p1, p2) {
+      return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    }
+
+    // Меняет масштаб так, чтобы точка (clientX, clientY) на экране осталась под пальцем/курсором.
+    function zoomToward(clientX, clientY, targetScale) {
+      var newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, targetScale));
+      if (newScale === state.scale) return;
+
+      var rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) { state.scale = newScale; applyTransform(); return; }
+
+      var fracX = (clientX - rect.left) / rect.width;
+      var fracY = (clientY - rect.top) / rect.height;
+      var newWidth = rect.width * (newScale / state.scale);
+      var newHeight = rect.height * (newScale / state.scale);
+      var newLeft = clientX - fracX * newWidth;
+      var newTop = clientY - fracY * newHeight;
+
+      state.tx += (newLeft - rect.left);
+      state.ty += (newTop - rect.top);
+      state.scale = newScale;
+
+      if (state.scale <= 1.001) {
+        resetZoom();
+      } else {
+        applyTransform();
+      }
+    }
+
     function onPointerDown(e) {
-      // Не обрабатывать, если клик по кнопкам или ссылкам внутри модалки
       if (e.target.closest('.modal-topbar') || e.target.closest('.modal-footer') || e.target.closest('button') || e.target.closest('a')) {
         return;
       }
-      
-      state.dragging = true;
-      state.startX = e.clientX;
-      state.startY = e.clientY;
+
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       el.setPointerCapture(e.pointerId);
-      el.style.cursor = 'grabbing';
-    }
-    
-    function onPointerMove(e) {
-      if (!state.dragging) return;
-      state.dx = e.clientX - state.startX;
-      state.dy = e.clientY - state.startY;
-      
-      // Если движение больше порога — считаем drag, не тап
-      if (Math.abs(state.dx) > DRAG_THRESHOLD || Math.abs(state.dy) > DRAG_THRESHOLD) {
-        el.style.transform = 'translate(' + state.dx + 'px, ' + state.dy + 'px)';
+
+      if (pointers.size === 1) {
+        var now = Date.now();
+        var dx = e.clientX - state.lastTapX;
+        var dy = e.clientY - state.lastTapY;
+        var isDoubleTap = (now - state.lastTapTime) < DOUBLE_TAP_MS
+          && Math.abs(dx) < DOUBLE_TAP_DIST && Math.abs(dy) < DOUBLE_TAP_DIST;
+
+        state.lastTapTime = now;
+        state.lastTapX = e.clientX;
+        state.lastTapY = e.clientY;
+
+        if (isDoubleTap) {
+          state.suppressNextTap = true;
+          state.lastTapTime = 0;
+          if (state.scale > 1) {
+            resetZoom();
+          } else {
+            zoomToward(e.clientX, e.clientY, DOUBLE_TAP_ZOOM);
+          }
+        } else {
+          state.suppressNextTap = false;
+        }
+
+        state.dragging = true;
+        state.moved = false;
+        state.startX = e.clientX;
+        state.startY = e.clientY;
+        state.startTx = state.tx;
+        state.startTy = state.ty;
+        el.style.cursor = 'grabbing';
+      } else if (pointers.size === 2) {
+        state.pinching = true;
+        state.dragging = false;
+        state.suppressNextTap = true;
+        var pts = Array.from(pointers.values());
+        state.startDist = distance(pts[0], pts[1]);
+        state.startScale = state.scale;
       }
     }
-    
+
+    function onPointerMove(e) {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (state.pinching && pointers.size >= 2) {
+        var pts = Array.from(pointers.values());
+        var newDist = distance(pts[0], pts[1]);
+        var mid = midpoint(pts[0], pts[1]);
+        if (state.startDist > 0) {
+          var targetScale = state.startScale * (newDist / state.startDist);
+          zoomToward(mid.x, mid.y, targetScale);
+        }
+        return;
+      }
+
+      if (state.dragging && pointers.size === 1) {
+        var dx = e.clientX - state.startX;
+        var dy = e.clientY - state.startY;
+        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+          state.moved = true;
+        }
+
+        if (state.scale > 1) {
+          state.tx = state.startTx + dx;
+          state.ty = state.startTy + dy;
+          applyTransform();
+        } else {
+          // Как и раньше — небольшой визуальный сдвиг при обычном (не увеличенном) фото.
+          el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+        }
+      }
+    }
+
     function onPointerEnd(e) {
+      pointers.delete(e.pointerId);
+
+      if (state.pinching) {
+        if (pointers.size < 2) {
+          state.pinching = false;
+          state.startDist = 0;
+          if (pointers.size === 1) {
+            var remaining = Array.from(pointers.values())[0];
+            state.dragging = true;
+            state.moved = true;
+            state.startX = remaining.x;
+            state.startY = remaining.y;
+            state.startTx = state.tx;
+            state.startTy = state.ty;
+          }
+        }
+        return;
+      }
+
       if (!state.dragging) return;
+      if (pointers.size > 0) return; // ждём отпускания всех пальцев
+
       state.dragging = false;
       el.style.cursor = 'grab';
+
+      if (state.scale > 1) {
+        applyTransform(); // фиксируем панораму, ничего не сбрасываем
+        state.suppressNextTap = false;
+        return;
+      }
+
       el.style.transform = '';
-      
-      // Проверяем, был ли это тап (короткое движение)
-      var isTap = Math.abs(state.dx) < DRAG_THRESHOLD && Math.abs(state.dy) < DRAG_THRESHOLD;
-      
-      if (isTap) {
+
+      var isTap = !state.moved;
+      if (isTap && !state.suppressNextTap) {
         cycleImmersive();
       }
-      
-      state.dx = 0;
-      state.dy = 0;
+      state.suppressNextTap = false;
     }
-    
+
     function cycleImmersive() {
-      state.immersive = (state.immersive + 1) % 2; // 0 → 1 → 0
+      state.immersive = (state.immersive + 1) % 2;
       if (options.onImmersiveChange) {
         options.onImmersiveChange(state.immersive);
       }
     }
-    
+
+    function onWheel(e) {
+      e.preventDefault();
+      var targetScale = state.scale - e.deltaY * 0.0025;
+      zoomToward(e.clientX, e.clientY, targetScale);
+    }
+
     el.addEventListener('pointerdown', onPointerDown);
     el.addEventListener('pointermove', onPointerMove);
     el.addEventListener('pointerup', onPointerEnd);
     el.addEventListener('pointercancel', onPointerEnd);
-    el.addEventListener('pointerleave', onPointerEnd); // ← важно для мобильных
-    
-    // Сохраняем ссылки для removeEventListener если понадобится
+    el.addEventListener('pointerleave', onPointerEnd);
+    el.addEventListener('wheel', onWheel, { passive: false });
+
     el._blizkoPhotoViewer = {
       onPointerDown: onPointerDown,
       onPointerMove: onPointerMove,
-      onPointerEnd: onPointerEnd
+      onPointerEnd: onPointerEnd,
+      onWheel: onWheel,
+      resetZoom: resetZoom,
     };
   }
-  
+
   function reset(el) {
     if (el._blizkoPhotoViewer) {
       el.removeEventListener('pointerdown', el._blizkoPhotoViewer.onPointerDown);
@@ -83,12 +237,13 @@ window.BlizkoPhotoViewer = (function() {
       el.removeEventListener('pointerup', el._blizkoPhotoViewer.onPointerEnd);
       el.removeEventListener('pointercancel', el._blizkoPhotoViewer.onPointerEnd);
       el.removeEventListener('pointerleave', el._blizkoPhotoViewer.onPointerEnd);
+      el.removeEventListener('wheel', el._blizkoPhotoViewer.onWheel);
       delete el._blizkoPhotoViewer;
     }
     el.style.transform = '';
     el.style.cursor = '';
   }
-  
+
   return {
     attach: attach,
     reset: reset
