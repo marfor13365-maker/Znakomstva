@@ -4,6 +4,16 @@
 // это надёжно: звонок "виден" даже если собеседник открыл приложение чуть позже.
 // ICE-кандидаты (только пока звонок уже активен) идут через realtime broadcast — это ок,
 // т.к. оба участника уже онлайн на экране звонка в этот момент.
+//
+// НОВОЕ:
+// - Запись звонка (локальный + удалённый звук сводятся через Web Audio API, сохраняются в Supabase Storage
+//   в бакет "call-recordings" и добавляются файлом в чат). Бакет нужно создать вручную в Supabase (Public).
+// - Все кнопки звонка видны сразу — во время дозвона мьют работает сразу, запись/громкая связь
+//   активируются как только звонок реально соединился.
+// - Рингтон + вибро на входящем звонке, режим (звук/вибро/тихо) хранится в localStorage
+//   и синхронизируется с Service Worker'ом, чтобы фоновые push-уведомления тоже его учитывали.
+// - Экран звонка больше не хардкодит цвета — использует CSS-переменные темы сайта (--accent, --bg, --text и т.д.),
+//   поэтому всегда совпадает с выбранной темой/цветом, а не только иногда.
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -12,9 +22,11 @@ const ICE_SERVERS = [
 
 var BLIZKO_API_URL = (typeof window !== 'undefined' && window.BLIZKO_API_URL) ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
 var RING_TIMEOUT_MS = 45000;
+var RING_MODE_KEY = 'blizko_ring_mode'; // 'sound' | 'vibrate' | 'silent'
 
 let pc = null;
 let localStream = null;
+let remoteStream = null;
 let iceChannel = null;
 let activeCallRowChannel = null;
 let globalCallsChannel = null;
@@ -28,6 +40,16 @@ let ringTimer = null;
 let isMuted = false;
 let speakerOn = false;
 
+// --- рингтон/вибро ---
+let audioCtx = null;
+let ringOscInterval = null;
+let vibrateInterval = null;
+
+// --- запись звонка ---
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+
 function log(...args) {
   console.log('[call]', ...args);
 }
@@ -36,12 +58,42 @@ function iceChannelName(matchId) {
   return `call-ice-${matchId}`;
 }
 
+// ---------- Режим звонка (звук / вибро / тихо) ----------
+
+export function getRingMode() {
+  var m = null;
+  try { m = localStorage.getItem(RING_MODE_KEY); } catch (e) {}
+  return (m === 'vibrate' || m === 'silent') ? m : 'sound';
+}
+
+export function setRingMode(mode) {
+  if (['sound', 'vibrate', 'silent'].indexOf(mode) === -1) return;
+  try { localStorage.setItem(RING_MODE_KEY, mode); } catch (e) {}
+  notifyServiceWorkerRingMode();
+}
+
+function notifyServiceWorkerRingMode() {
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'ring-mode', mode: getRingMode() });
+    }
+  } catch (e) {}
+}
+
 // ---------- Инициализация ----------
 
 export function initCallModule(supabaseClient, myUserId) {
   _client = supabaseClient;
   _myUserId = myUserId;
   injectStyles();
+
+  // Сообщаем Service Worker'у текущий режим звонка (звук/вибро/тихо),
+  // чтобы фоновые push-уведомления о звонках его тоже учитывали.
+  notifyServiceWorkerRingMode();
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.ready.then(function () { notifyServiceWorkerRingMode(); }).catch(function () {});
+    navigator.serviceWorker.addEventListener('controllerchange', notifyServiceWorkerRingMode);
+  }
 }
 
 // Слушает ВСЕ входящие звонки для этого пользователя на любой странице приложения.
@@ -86,6 +138,7 @@ export async function initGlobalCallListener() {
       filter: 'callee_id=eq.' + _myUserId,
     }, (payload) => {
       if (payload.new.status !== 'ringing' && payload.new.id === currentCallId && !pc) {
+        stopRingtone();
         hideCallScreen();
         currentCallId = null;
       }
@@ -107,13 +160,15 @@ async function handleIncomingCallRow(row) {
   } catch (e) {}
 
   showIncomingScreen(name, avatarUrl, {
-    onAccept: () => acceptCurrentCall(row),
-    onDecline: () => declineIncomingCall(row.id),
+    onAccept: () => { stopRingtone(); acceptCurrentCall(row); },
+    onDecline: () => { stopRingtone(); declineIncomingCall(row.id); },
   });
+  startRingtone();
 
   clearTimeout(ringTimer);
   ringTimer = setTimeout(() => {
     if (currentCallId === row.id && !pc) {
+      stopRingtone();
       hideCallScreen();
       currentCallId = null;
     }
@@ -132,12 +187,17 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
   showOutgoingScreen(name, avatarUrl);
 
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      video: false,
+    });
   } catch (e) {
     hideCallScreen();
     currentCallId = null;
     throw new Error('Нет доступа к микрофону');
   }
+
+  updateMuteButton();
 
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
@@ -226,12 +286,17 @@ async function acceptCurrentCall(row) {
   const infoAvatar = document.getElementById('call-avatar-img')?.src || '';
 
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      video: false,
+    });
   } catch (e) {
     hideCallScreen();
     currentCallId = null;
     return;
   }
+
+  updateMuteButton();
 
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
@@ -251,6 +316,7 @@ async function acceptCurrentCall(row) {
 
 async function declineIncomingCall(callId) {
   clearTimeout(ringTimer);
+  stopRingtone();
   try {
     await _client.from('calls').update({ status: 'declined', updated_at: new Date().toISOString() }).eq('id', callId);
   } catch (e) {}
@@ -280,6 +346,7 @@ function wireConnectionEvents(name, avatarUrl) {
   };
 
   pc.ontrack = (event) => {
+    remoteStream = event.streams[0];
     let audioEl = document.getElementById('call-remote-audio');
     if (!audioEl) {
       audioEl = document.createElement('audio');
@@ -287,16 +354,28 @@ function wireConnectionEvents(name, avatarUrl) {
       audioEl.autoplay = true;
       document.body.appendChild(audioEl);
     }
-    audioEl.srcObject = event.streams[0];
+    audioEl.srcObject = remoteStream;
   };
 
+  let disconnectTimer = null;
   pc.onconnectionstatechange = () => {
     log('connection state', pc.connectionState);
     if (pc.connectionState === 'connected') {
       clearTimeout(ringTimer);
+      clearTimeout(disconnectTimer);
+      stopRingtone();
       showConnectedScreen(name, avatarUrl);
     }
-    if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
+    if (pc.connectionState === 'disconnected') {
+      // Даём шанс на восстановление (смена сети/аудио-маршрута иногда даёт кратковременный disconnect) —
+      // раньше звонок обрывался сразу при любом временном сбое.
+      clearTimeout(disconnectTimer);
+      disconnectTimer = setTimeout(() => {
+        if (pc && pc.connectionState === 'disconnected') cleanupCall();
+      }, 6000);
+    }
+    if (['failed', 'closed'].includes(pc.connectionState)) {
+      clearTimeout(disconnectTimer);
       cleanupCall();
     }
   };
@@ -319,8 +398,11 @@ export function declineCall() {
 
 function cleanupCall() {
   clearTimeout(ringTimer);
+  stopRingtone();
+  if (isRecording) stopRecording();
   if (pc) { pc.close(); pc = null; }
   if (localStream) { localStream.getTracks().forEach((t) => t.stop()); localStream = null; }
+  remoteStream = null;
   if (iceChannel && _client) { _client.removeChannel(iceChannel); iceChannel = null; }
   if (activeCallRowChannel && _client) { _client.removeChannel(activeCallRowChannel); activeCallRowChannel = null; }
   currentCallId = null;
@@ -330,6 +412,57 @@ function cleanupCall() {
   if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
   connectedAt = null;
   hideCallScreen();
+}
+
+// ---------- Рингтон / вибро на входящем звонке ----------
+
+function beep(freq, startTime, duration) {
+  if (!audioCtx) return;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.frequency.value = freq;
+  osc.type = 'sine';
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.2, startTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.05);
+}
+
+function playRingCycle() {
+  if (!audioCtx) return;
+  var t = audioCtx.currentTime;
+  beep(950, t, 0.35);
+  beep(950, t + 0.45, 0.35);
+}
+
+function startRingtone() {
+  var mode = getRingMode();
+  if (mode === 'silent') return;
+
+  if (mode === 'sound') {
+    try {
+      if (!audioCtx || audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      playRingCycle();
+      clearInterval(ringOscInterval);
+      ringOscInterval = setInterval(playRingCycle, 1800);
+    } catch (e) { log('ringtone error', e); }
+  }
+
+  if ((mode === 'sound' || mode === 'vibrate') && navigator.vibrate) {
+    navigator.vibrate([400, 200, 400]);
+    clearInterval(vibrateInterval);
+    vibrateInterval = setInterval(function () { navigator.vibrate([400, 200, 400]); }, 1800);
+  }
+}
+
+function stopRingtone() {
+  if (ringOscInterval) { clearInterval(ringOscInterval); ringOscInterval = null; }
+  if (vibrateInterval) { clearInterval(vibrateInterval); vibrateInterval = null; }
+  if (navigator.vibrate) navigator.vibrate(0);
 }
 
 // ---------- Управление аудио ----------
@@ -344,7 +477,8 @@ export function toggleMute() {
 export async function toggleSpeaker() {
   const audioEl = document.getElementById('call-remote-audio');
   if (!audioEl || typeof audioEl.setSinkId !== 'function') {
-    alert('Переключение громкой связи не поддерживается этим браузером.');
+    // Переключение в громкую связь через браузер поддерживается не везде (в т.ч. Chrome для Android
+    // это в принципе не умеет) — поэтому кнопка вместо алерта просто выключена, пока не соединились.
     return;
   }
   try {
@@ -358,6 +492,81 @@ export async function toggleSpeaker() {
   }
 }
 
+function speakerSupported() {
+  var el = document.createElement('audio');
+  return typeof el.setSinkId === 'function';
+}
+
+// ---------- Запись звонка ----------
+
+export async function toggleRecording() {
+  if (isRecording) {
+    stopRecording();
+    return;
+  }
+  if (!localStream || !remoteStream || !pc || pc.connectionState !== 'connected') return;
+
+  try {
+    if (!audioCtx || audioCtx.state === 'closed') audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    var dest = audioCtx.createMediaStreamDestination();
+    var srcLocal = audioCtx.createMediaStreamSource(localStream);
+    var srcRemote = audioCtx.createMediaStreamSource(remoteStream);
+    srcLocal.connect(dest);
+    srcRemote.connect(dest);
+
+    recordedChunks = [];
+    var mimeType = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
+      ? 'audio/webm;codecs=opus' : 'audio/webm';
+    mediaRecorder = new MediaRecorder(dest.stream, { mimeType: mimeType });
+    mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = uploadRecording;
+    mediaRecorder.start();
+    isRecording = true;
+    updateRecordButton();
+  } catch (e) {
+    log('не удалось начать запись', e);
+    alert('Не удалось начать запись звонка.');
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try { mediaRecorder.stop(); } catch (e) {}
+  }
+  isRecording = false;
+  updateRecordButton();
+}
+
+async function uploadRecording() {
+  var chunks = recordedChunks;
+  recordedChunks = [];
+  if (!chunks.length || !_client || !currentMatchId) return;
+
+  var blob = new Blob(chunks, { type: 'audio/webm' });
+  var fileName = 'call_' + Date.now() + '.webm';
+
+  try {
+    var up = await _client.storage.from('call-recordings').upload(fileName, blob);
+    if (up.error) {
+      log('ошибка загрузки записи', up.error);
+      alert('Не удалось сохранить запись звонка: ' + up.error.message + '\n(проверь, что в Supabase Storage есть публичный бакет "call-recordings")');
+      return;
+    }
+    var url = _client.storage.from('call-recordings').getPublicUrl(fileName).data.publicUrl;
+    await _client.from('messages').insert({
+      match_id: currentMatchId,
+      sender_id: _myUserId,
+      file_url: url,
+      file_name: 'Запись звонка.webm',
+      text: '🎙️ Запись звонка',
+    });
+  } catch (e) {
+    log('ошибка сохранения записи', e);
+  }
+}
+
 // ---------- UI ----------
 
 function injectStyles() {
@@ -365,27 +574,34 @@ function injectStyles() {
   const style = document.createElement('style');
   style.id = 'call-ui-styles';
   style.textContent = `
-    #call-screen-overlay{position:fixed;inset:0;background:linear-gradient(180deg,#1a0a12,#0d0d0d);z-index:9999;
+    #call-screen-overlay{position:fixed;inset:0;background:linear-gradient(180deg,var(--card,#161616),var(--bg,#0d0d0d));z-index:9999;
       display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:60px 24px 50px;
-      font-family:'Inter',sans-serif;color:#f0f0f0;text-align:center}
+      font-family:'Inter',sans-serif;color:var(--text,#f0f0f0);text-align:center}
     #call-screen-overlay .call-top{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:20px}
     #call-avatar-img, .call-avatar-fallback{width:140px;height:140px;border-radius:50%;object-fit:cover;
-      background:#2a2a2a;border:4px solid #ff4d6d;display:flex;align-items:center;justify-content:center;font-size:56px;
-      box-shadow:0 0 40px rgba(255,77,109,0.3)}
+      background:var(--input-bg,#2a2a2a);border:4px solid var(--accent,#ff4d6d);display:flex;align-items:center;justify-content:center;font-size:56px;
+      box-shadow:0 0 40px rgba(0,0,0,0.4)}
     #call-name-text{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:600;margin-top:4px}
-    #call-status-text{color:#888;font-size:15px;margin-top:2px}
-    #call-duration-text{color:#ff8fa3;font-size:16px;font-variant-numeric:tabular-nums;margin-top:4px}
-    .call-controls-row{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;width:100%}
-    .call-btn{width:68px;height:68px;border-radius:50%;border:none;font-size:28px;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:#2a2a2a;color:#f0f0f0;
+    #call-status-text{color:var(--muted,#888);font-size:15px;margin-top:2px}
+    #call-status-text.ringing-pulse{animation:callRingPulse 1.4s ease-in-out infinite}
+    @keyframes callRingPulse{0%,100%{opacity:1}50%{opacity:0.4}}
+    #call-duration-text{color:var(--accent2,#ff8fa3);font-size:16px;font-variant-numeric:tabular-nums;margin-top:4px}
+    #call-rec-indicator{display:none;align-items:center;gap:6px;justify-content:center;color:#ff4d4d;font-size:12px;font-weight:600;margin-top:8px}
+    #call-rec-indicator.show{display:flex}
+    #call-rec-indicator .dot{width:8px;height:8px;border-radius:50%;background:#ff4d4d;animation:callRecBlink 1s ease-in-out infinite}
+    @keyframes callRecBlink{0%,100%{opacity:1}50%{opacity:0.25}}
+    .call-controls-row{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;width:100%}
+    .call-btn{width:64px;height:64px;border-radius:50%;border:none;font-size:26px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:var(--input-bg,#2a2a2a);color:var(--text,#f0f0f0);
       box-shadow:0 4px 16px rgba(0,0,0,0.3)}
     .call-btn:active{transform:scale(0.92)}
-    .call-btn.secondary.active{background:#ff4d6d;color:white}
+    .call-btn.secondary.active{background:var(--accent,#ff4d6d);color:white}
+    .call-btn.secondary.disabled{opacity:0.35;pointer-events:none}
     .call-btn.hangup{background:#ff2d4d;color:white;width:76px;height:76px;font-size:32px;box-shadow:0 4px 24px rgba(255,45,77,0.4)}
     .call-incoming-actions{display:flex;gap:56px;justify-content:center;width:100%;margin-top:20px}
     .call-incoming-actions .call-btn.accept{background:#2ecc71;color:white;width:76px;height:76px;font-size:32px;box-shadow:0 4px 24px rgba(46,204,113,0.4)}
     .call-incoming-actions .call-btn.hangup{box-shadow:0 4px 24px rgba(255,45,77,0.4)}
-    .call-btn .label{display:block;font-size:10px;font-weight:500;margin-top:4px;color:var(--muted)}
+    .call-btn .label{display:block;font-size:10px;font-weight:500;margin-top:4px;color:var(--muted,#888)}
   `;
   document.head.appendChild(style);
 }
@@ -406,18 +622,39 @@ function renderOverlay(innerHtml) {
   overlay.innerHTML = innerHtml;
 }
 
+// Единый ряд кнопок — показывается сразу целиком; запись и громкая связь
+// активны только когда звонок реально соединён (connected=true).
+function controlsRowHtml(connected) {
+  var secondaryState = connected ? '' : ' disabled';
+  var speakerOk = speakerSupported();
+  return '<div class="call-controls-row">' +
+    '<button class="call-btn secondary" id="call-mute-btn" onclick="window.__callToggleMute()" title="Микрофон">🎙️</button>' +
+    '<button class="call-btn secondary' + secondaryState + '" id="call-record-btn" onclick="window.__callToggleRecord()" title="Записать звонок">⏺</button>' +
+    '<button class="call-btn hangup" onclick="window.__callHangup()" title="Завершить">📵</button>' +
+    (speakerOk
+      ? '<button class="call-btn secondary' + secondaryState + '" id="call-speaker-btn" onclick="window.__callToggleSpeaker()" title="Громкая связь">🔊</button>'
+      : '') +
+  '</div>';
+}
+
+function wireCommonHandlers() {
+  window.__callHangup = () => endCall();
+  window.__callToggleMute = () => toggleMute();
+  window.__callToggleSpeaker = () => toggleSpeaker();
+  window.__callToggleRecord = () => toggleRecording();
+}
+
 function showOutgoingScreen(name, avatarUrl) {
   renderOverlay(`
     <div class="call-top">
       ${avatarHtml(avatarUrl)}
       <div id="call-name-text">${name}</div>
-      <div id="call-status-text">📞 Вызов...</div>
+      <div id="call-status-text" class="ringing-pulse">📞 Вызов...</div>
     </div>
-    <div class="call-controls-row">
-      <button class="call-btn hangup" onclick="window.__callHangup()">📵</button>
-    </div>
+    ${controlsRowHtml(false)}
   `);
-  window.__callHangup = () => endCall();
+  wireCommonHandlers();
+  updateMuteButton();
 }
 
 function showIncomingScreen(name, avatarUrl, { onAccept, onDecline }) {
@@ -425,7 +662,7 @@ function showIncomingScreen(name, avatarUrl, { onAccept, onDecline }) {
     <div class="call-top">
       ${avatarHtml(avatarUrl)}
       <div id="call-name-text">${name}</div>
-      <div id="call-status-text">📞 Входящий звонок...</div>
+      <div id="call-status-text" class="ringing-pulse">📞 Входящий звонок...</div>
     </div>
     <div class="call-incoming-actions">
       <button class="call-btn hangup" onclick="window.__callDeclineBtn()">📵</button>
@@ -454,16 +691,14 @@ function showConnectedScreen(name, avatarUrl) {
       ${avatarHtml(avatarUrl)}
       <div id="call-name-text">${name}</div>
       <div id="call-duration-text">00:00</div>
+      <div id="call-rec-indicator"><span class="dot"></span><span>Идёт запись</span></div>
     </div>
-    <div class="call-controls-row">
-      <button class="call-btn secondary" id="call-mute-btn" onclick="window.__callToggleMute()">🎙️</button>
-      <button class="call-btn hangup" onclick="window.__callHangup()">📵</button>
-      <button class="call-btn secondary" id="call-speaker-btn" onclick="window.__callToggleSpeaker()">🔊</button>
-    </div>
+    ${controlsRowHtml(true)}
   `);
-  window.__callHangup = () => endCall();
-  window.__callToggleMute = () => toggleMute();
-  window.__callToggleSpeaker = () => toggleSpeaker();
+  wireCommonHandlers();
+  updateMuteButton();
+  updateSpeakerButton();
+  updateRecordButton();
 
   if (durationTimer) clearInterval(durationTimer);
   durationTimer = setInterval(() => {
@@ -487,6 +722,16 @@ function updateSpeakerButton() {
   const btn = document.getElementById('call-speaker-btn');
   if (!btn) return;
   btn.classList.toggle('active', speakerOn);
+}
+
+function updateRecordButton() {
+  const btn = document.getElementById('call-record-btn');
+  if (btn) {
+    btn.classList.toggle('active', isRecording);
+    btn.title = isRecording ? 'Остановить запись' : 'Записать звонок';
+  }
+  const indicator = document.getElementById('call-rec-indicator');
+  if (indicator) indicator.classList.toggle('show', isRecording);
 }
 
 function hideCallScreen() {
