@@ -227,8 +227,8 @@ input[type="file"]{display:none}
 
 <!-- Подключаем модуль звонков -->
 <script type="module">
-  import { initCallModule, initGlobalCallListener, startCall, endCall, declineCall, toggleMute, toggleSpeaker } from './call-webrtc.js';
-  
+  import { initCallModule, initGlobalCallListener, startCall, endCall, declineCall, toggleMute, toggleSpeaker, toggleRecording, setRingMode, getRingMode } from './call-webrtc.js';
+
   window.callModule = {
     initCallModule,
     initGlobalCallListener,
@@ -236,7 +236,10 @@ input[type="file"]{display:none}
     endCall,
     declineCall,
     toggleMute,
-    toggleSpeaker
+    toggleSpeaker,
+    toggleRecording,
+    setRingMode,
+    getRingMode
   };
 </script>
 
