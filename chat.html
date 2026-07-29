@@ -141,7 +141,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
 
 <!-- Подключаем модуль звонков -->
 <script type="module">
-  import { initCallModule, initGlobalCallListener, startCall, endCall, declineCall, toggleMute, toggleSpeaker } from './call-webrtc.js';
+  import { initCallModule, initGlobalCallListener, startCall, endCall, declineCall, toggleMute, toggleSpeaker, toggleRecording, setRingMode, getRingMode } from './call-webrtc.js';
 
   window.callModule = {
     initCallModule,
@@ -150,7 +150,10 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
     endCall,
     declineCall,
     toggleMute,
-    toggleSpeaker
+    toggleSpeaker,
+    toggleRecording,
+    setRingMode,
+    getRingMode
   };
 </script>
 
