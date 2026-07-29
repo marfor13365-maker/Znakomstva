@@ -30,6 +30,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .color-row{display:flex;gap:10px}
 .color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s}
 .color-swatch.active{border-color:var(--text)}
+.ring-mode-row{display:flex;gap:8px}
+.ring-mode-btn{flex:1;padding:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;transition:all 0.2s}
+.ring-mode-btn.active{border-color:var(--accent);background:rgba(255,77,109,0.15)}
 .account-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border)}
 .account-row:last-child{border-bottom:none}
 .account-email{font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;background:none;border:none;color:var(--text);cursor:pointer;padding:0}
@@ -155,6 +158,12 @@ input[type="file"]{display:none}
           <button class="color-swatch" id="color-tiffany-btn" style="background:linear-gradient(135deg,#00bfb3,#00e6d6)" onclick="selectColor('tiffany')"></button>
           <button class="color-swatch" id="color-green-btn" style="background:linear-gradient(135deg,#00c853,#43ea69)" onclick="selectColor('green')"></button>
         </div>
+        <div class="settings-menu-label">Звонки</div>
+        <div class="ring-mode-row">
+          <button class="ring-mode-btn" id="ring-sound-btn" onclick="selectRingMode('sound')">🔊 Звук</button>
+          <button class="ring-mode-btn" id="ring-vibrate-btn" onclick="selectRingMode('vibrate')">📳 Вибро</button>
+          <button class="ring-mode-btn" id="ring-silent-btn" onclick="selectRingMode('silent')">🔕 Тихо</button>
+        </div>
       </div>
       <div class="settings-menu-section" id="account-switch-section" style="display:none">
         <div class="settings-menu-label">Мои аккаунты на этом устройстве</div>
@@ -276,7 +285,7 @@ input[type="file"]{display:none}
 
 <!-- Подключаем модуль звонков -->
 <script type="module">
-  import { initCallModule, initGlobalCallListener, startCall, endCall, declineCall, toggleMute, toggleSpeaker } from './call-webrtc.js';
+  import { initCallModule, initGlobalCallListener, startCall, endCall, declineCall, toggleMute, toggleSpeaker, toggleRecording, setRingMode, getRingMode } from './call-webrtc.js';
 
   window.callModule = {
     initCallModule,
@@ -285,7 +294,10 @@ input[type="file"]{display:none}
     endCall,
     declineCall,
     toggleMute,
-    toggleSpeaker
+    toggleSpeaker,
+    toggleRecording,
+    setRingMode,
+    getRingMode
   };
 </script>
 
@@ -322,6 +334,7 @@ async function init() {
   if (typeof window.callModule !== 'undefined' && window.callModule.initCallModule) {
     window.callModule.initCallModule(db, currentUser.id);
     window.callModule.initGlobalCallListener();
+    updateRingModeButtons();
   }
 }
 
@@ -453,6 +466,20 @@ function selectMode(mode) {
 function selectColor(color) {
   window.BlizkoTheme.setColor(color);
   updateThemeButtons();
+}
+
+function updateRingModeButtons() {
+  if (typeof window.callModule === 'undefined' || !window.callModule.getRingMode) return;
+  var mode = window.callModule.getRingMode();
+  document.getElementById('ring-sound-btn').classList.toggle('active', mode === 'sound');
+  document.getElementById('ring-vibrate-btn').classList.toggle('active', mode === 'vibrate');
+  document.getElementById('ring-silent-btn').classList.toggle('active', mode === 'silent');
+}
+
+function selectRingMode(mode) {
+  if (typeof window.callModule === 'undefined' || !window.callModule.setRingMode) return;
+  window.callModule.setRingMode(mode);
+  updateRingModeButtons();
 }
 
 function showAvatar(url) {
@@ -748,12 +775,23 @@ async function publishFromProfile() {
 
 async function enablePushNotifications() {
   toggleSettingsMenu();
-  var ok = await BlizkoPush.init(db, currentUser.id);
-  if (ok) {
+  var result = await BlizkoPush.init(db, currentUser.id);
+  if (result && result.ok) {
     alert('Уведомления включены! Теперь звонки и сообщения будут приходить даже когда сайт закрыт.');
-  } else {
-    alert('Не удалось включить уведомления. Проверь, что разрешение на уведомления для сайта дано в настройках браузера.');
+    return;
   }
+
+  var reason = result ? result.reason : 'unknown';
+  var detail = result ? result.detail : '';
+  var messages = {
+    'unsupported': 'Этот браузер не поддерживает push-уведомления.',
+    'permission-denied': 'Разрешение на уведомления не выдано. Открой настройки сайта в браузере (значок рядом с адресной строкой) и разреши уведомления вручную, затем попробуй снова.',
+    'permission-error': 'Не удалось запросить разрешение на уведомления.',
+    'sw-failed': 'Не удалось зарегистрировать фоновый обработчик (sw.js). Проверь, что файл sw.js лежит в корне сайта.',
+    'subscribe-failed': 'Не удалось подписаться на push-сервис браузера.',
+    'db-error': 'Подписка на устройстве создана, но не сохранилась на сервере — скорее всего, в базе не настроена таблица push_subscriptions.'
+  };
+  alert((messages[reason] || 'Не удалось включить уведомления.') + (detail ? '\n\n' + detail : ''));
 }
 
 function toggleSettingsMenu() {
