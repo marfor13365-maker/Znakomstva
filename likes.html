@@ -141,8 +141,12 @@ async function loadLikes() {
   }
 
   wrap.innerHTML = '';
-  for (var i = 0; i < likesData.length; i++) {
-    var like = likesData[i];
+  // ВАЖНО: используем let (а не var) для each-переменной цикла — иначе к моменту клика
+  // по карточке цикл уже завершён, и все onclick-обработчики ссылаются на ОДИН И ТОТ ЖЕ
+  // (последний) элемент массива. Именно это и было причиной "клик по любой карточке
+  // ведёт на последний профиль в списке".
+  for (let i = 0; i < likesData.length; i++) {
+    let like = likesData[i];
     var p = like.profiles || {};
     var alreadyMatched = myResponses.hasOwnProperty(like.from_user) && myResponses[like.from_user] === true;
 
