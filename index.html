@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Blizko - Dating</title>
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://js.hcaptcha.com">
+<link rel="preconnect" href="https://newassets.hcaptcha.com">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
@@ -43,6 +45,9 @@ input:focus{border-color:var(--accent)}
 .checkbox-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
 .checkbox-row input[type="checkbox"]{width:18px;height:18px;min-width:18px;accent-color:var(--accent);cursor:pointer;margin-top:1px}
 .checkbox-row span{font-size:12px;color:var(--text);line-height:1.5}
+.remember-row{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.remember-row input[type="checkbox"]{width:18px;height:18px;min-width:18px;accent-color:var(--accent);cursor:pointer}
+.remember-row span{font-size:13px;color:var(--text)}
 .btn{width:100%;padding:15px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:0.5px;transition:opacity 0.2s,transform 0.1s;margin-top:8px}
 .btn:active{transform:scale(0.98);opacity:0.9}
 .btn:disabled{opacity:0.4;cursor:not-allowed}
@@ -62,9 +67,18 @@ input:focus{border-color:var(--accent)}
 .footer-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;text-decoration:none;opacity:0.8;transition:opacity 0.2s}
 .footer-link:active{opacity:1}
 .footer-logo{width:16px;height:16px;border-radius:4px;object-fit:cover}
+.auto-login-overlay{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.auto-login-overlay.show{display:flex}
+.auto-login-overlay .spin{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.auto-login-overlay .txt{font-size:13px;color:var(--muted)}
 </style>
 </head>
 <body>
+<div class="auto-login-overlay" id="auto-login-overlay">
+  <div class="spin"></div>
+  <div class="txt" id="auto-login-txt">Входим...</div>
+</div>
 <div class="hearts-canvas" id="hearts"></div>
 <div class="lang-switch">
 <button class="lang-btn active" onclick="setLang('ru')">RU</button>
@@ -89,6 +103,10 @@ input:focus{border-color:var(--accent)}
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
 </button>
 </div>
+</div>
+<div class="remember-row">
+<input type="checkbox" id="remember-me" checked>
+<span id="lbl_remember">Запомнить меня на этом устройстве</span>
 </div>
 <div id="hcaptcha-login" style="margin-bottom:12px;display:flex;justify-content:center;min-height:78px"></div>
 <button class="btn" id="btn_login" onclick="doLogin()"></button>
@@ -136,11 +154,13 @@ input:focus{border-color:var(--accent)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var BLIZKO_API_URL = (typeof window.BLIZKO_API_URL !== 'undefined') ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
+var REMEMBER_KEY = 'blizko_remember_me';
 
 var T={ru:{
 tagline:'Настоящие знакомства рядом',
 tab_login:'Войти',tab_reg:'Регистрация',
 lbl_name:'Имя',lbl_pass:'Пароль',
+lbl_remember:'Запомнить меня на этом устройстве',
 btn_login:'Войти',btn_reg:'Создать аккаунт',
 consent_title:'Согласие на обработку данных',
 consent_text:'Регистрируясь, вы соглашаетесь на обработку персональных данных в соответствии с ФЗ №152. Данные используются только для работы сервиса.',
@@ -155,6 +175,7 @@ err_login:'Неверный email или пароль',
 ok_welcome:'Добро пожаловать!',ok_created:'Аккаунт создан!',
 ok_check_email:'Почти готово! Мы отправили письмо со ссылкой подтверждения на твой email. Перейди по ней, чтобы завершить регистрацию, потом сможешь войти.',
 loading_in:'Входим...',loading_reg:'Создаём аккаунт...',
+auto_login_txt:'Входим...',
 unlock_toggle_open:'Есть код разблокировки или доп.аккаунта?',
 unlock_toggle_close:'Скрыть',
 unlock_hint:'Код выдаётся после оплаты в Telegram-боте и действителен только на том устройстве, с которого была создана заявка на сайте. Каждый код можно использовать один раз.',
@@ -185,6 +206,7 @@ copy_password:'📋 Скопировать пароль'
 tagline:'Real connections near you',
 tab_login:'Sign in',tab_reg:'Register',
 lbl_name:'Name',lbl_pass:'Password',
+lbl_remember:'Remember me on this device',
 btn_login:'Sign in',btn_reg:'Create account',
 consent_title:'Data processing consent',
 consent_text:'By registering you agree to the processing of your personal data for the purpose of operating this service. Data is not shared with third parties.',
@@ -199,6 +221,7 @@ err_login:'Invalid email or password',
 ok_welcome:'Welcome!',ok_created:'Account created!',
 ok_check_email:'Almost done! We sent a confirmation link to your email. Click it to finish registration, then you can sign in.',
 loading_in:'Signing in...',loading_reg:'Creating account...',
+auto_login_txt:'Signing in...',
 unlock_toggle_open:'Have an unlock or extra-account code?',
 unlock_toggle_close:'Hide',
 unlock_hint:'The code is issued after payment in the Telegram bot and only works on the device the request was created from. Each code can be used once.',
@@ -275,6 +298,7 @@ document.getElementById('tab_reg').textContent=t.tab_reg;
 document.getElementById('lbl_name').textContent=t.lbl_name;
 document.getElementById('lbl_pass1').textContent=t.lbl_pass;
 document.getElementById('lbl_pass2').textContent=t.lbl_pass;
+document.getElementById('lbl_remember').textContent=t.lbl_remember;
 document.getElementById('btn_login').textContent=t.btn_login;
 document.getElementById('reg-btn').textContent=t.btn_reg;
 document.getElementById('consent_title').textContent=t.consent_title;
@@ -289,6 +313,7 @@ document.getElementById('unlock-toggle-login').textContent=t.unlock_toggle_open;
 document.getElementById('unlock-toggle-reg').textContent=t.unlock_toggle_open;
 document.getElementById('footer_text').textContent=t.footer_by;
 document.getElementById('rules_link').textContent=t.rules_link;
+document.getElementById('auto-login-txt').textContent=t.auto_login_txt;
 renderUnlockBox('login');
 renderUnlockBox('reg');
 }
@@ -297,10 +322,30 @@ function spawnHearts(){var c=document.getElementById('hearts');var e=['❤️','
 
 var db=createBlizkoClient();
 
-// ===== УБРАН АВТО-РЕДИРЕКТ =====
-// Теперь index.html ВСЕГДА показывает форму входа
-// Пользователь сам решает — войти или нет
-// ======================================
+// ===== АВТОВХОД ("Запомнить меня") =====
+// Если на этом устройстве уже есть сохранённый в сейфе аккаунт (localStorage) и человек
+// не снимал галочку "запомнить меня" — пробуем войти автоматически, без ввода пароля.
+async function tryAutoLogin(){
+  var remembered = localStorage.getItem(REMEMBER_KEY);
+  if (remembered === 'off') return; // пользователь явно отключил автовход
+
+  var r = await db.auth.getSession();
+  if (r.data.session) {
+    window.location.href = 'feed.html';
+    return;
+  }
+
+  var overlay = document.getElementById('auto-login-overlay');
+  overlay.classList.add('show');
+
+  var restored = await restoreLastVaultSession(db);
+  if (restored) {
+    window.location.href = 'feed.html';
+    return;
+  }
+
+  overlay.classList.remove('show');
+}
 
 function switchTab(tab){
   document.querySelectorAll('.tab').forEach(function(t,i){
@@ -477,6 +522,7 @@ async function doLogin(){
 var t=T[lang];
 var email=document.getElementById('login-email').value.trim();
 var pass=document.getElementById('login-pass').value;
+var remember=document.getElementById('remember-me').checked;
 var captchaToken=(typeof hcaptcha!=='undefined'&&loginCaptchaId!==null)?hcaptcha.getResponse(loginCaptchaId):'';
 if(!email||!pass){setMsg('login-msg',t.err_fill,'error');return}
 if(!captchaToken){setMsg('login-msg',t.err_captcha,'error');return}
@@ -486,6 +532,7 @@ if(r.error){
 setMsg('login-msg',t.err_login,'error');
 if(typeof hcaptcha!=='undefined'&&loginCaptchaId!==null)hcaptcha.reset(loginCaptchaId);
 }else{
+localStorage.setItem(REMEMBER_KEY, remember ? 'on' : 'off');
 setMsg('login-msg',t.ok_welcome,'success');
 setTimeout(function(){window.location.href='feed.html'},800)
 }
@@ -575,7 +622,7 @@ loginForm.insertBefore(box, loginForm.firstChild);
 }catch(e){}
 }
 
-spawnHearts();setLang(lang);loadDeviceAccounts();
+spawnHearts();setLang(lang);loadDeviceAccounts();tryAutoLogin();
 </script>
 </body>
 </html>
