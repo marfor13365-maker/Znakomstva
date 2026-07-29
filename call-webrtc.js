@@ -1,19 +1,11 @@
 // call-webrtc.js
 // Аудиозвонки в Blizko: WebRTC + Supabase.
-// Сигналинг звонка (кто кому звонит, offer/answer) хранится в таблице `calls` —
-// это надёжно: звонок "виден" даже если собеседник открыл приложение чуть позже.
-// ICE-кандидаты (только пока звонок уже активен) идут через realtime broadcast — это ок,
-// т.к. оба участника уже онлайн на экране звонка в этот момент.
 //
-// НОВОЕ:
-// - Запись звонка (локальный + удалённый звук сводятся через Web Audio API, сохраняются в Supabase Storage
-//   в бакет "call-recordings" и добавляются файлом в чат). Бакет нужно создать вручную в Supabase (Public).
-// - Все кнопки звонка видны сразу — во время дозвона мьют работает сразу, запись/громкая связь
-//   активируются как только звонок реально соединился.
-// - Рингтон + вибро на входящем звонке, режим (звук/вибро/тихо) хранится в localStorage
-//   и синхронизируется с Service Worker'ом, чтобы фоновые push-уведомления тоже его учитывали.
-// - Экран звонка больше не хардкодит цвета — использует CSS-переменные темы сайта (--accent, --bg, --text и т.д.),
-//   поэтому всегда совпадает с выбранной темой/цветом, а не только иногда.
+// ВАЖНОЕ ИЗМЕНЕНИЕ: иконки кнопок звонка переведены с эмодзи на SVG (currentColor).
+// Причина бага "кнопка то в тему, то нет": у emoji-глифов (📞🎙️📵🔊 и т.д.) в некоторых
+// шрифтах Android зашит собственный белый/серый фон-подложка — он перекрывает цвет темы
+// снаружи независимо от CSS. SVG всегда наследует цвет через currentColor, поэтому
+// теперь совпадение с темой гарантировано, а не "как повезёт с шрифтом эмодзи".
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -58,6 +50,65 @@ function iceChannelName(matchId) {
   return `call-ice-${matchId}`;
 }
 
+// ---------- Локализация подписей кнопок ----------
+
+var LABELS = {
+  ru: {
+    calling: '📞 Вызов...',
+    incoming: '📞 Входящий звонок...',
+    declined: '❌ Звонок отклонён',
+    mute: 'Микрофон',
+    unmute: 'Без звука',
+    record: 'Запись',
+    recording: 'Идёт запись',
+    stopRecord: 'Стоп запись',
+    hangup: 'Сброс',
+    speaker: 'Громкая',
+    accept: 'Принять',
+    decline: 'Отклонить',
+  },
+  en: {
+    calling: '📞 Calling...',
+    incoming: '📞 Incoming call...',
+    declined: '❌ Call declined',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    record: 'Record',
+    recording: 'Recording',
+    stopRecord: 'Stop rec.',
+    hangup: 'End',
+    speaker: 'Speaker',
+    accept: 'Accept',
+    decline: 'Decline',
+  },
+};
+
+function getLang() {
+  var l = null;
+  try { l = localStorage.getItem('blizko_lang'); } catch (e) {}
+  return l === 'en' ? 'en' : 'ru';
+}
+
+function t(key) {
+  var dict = LABELS[getLang()] || LABELS.ru;
+  return dict[key] || key;
+}
+
+// ---------- SVG-иконки (наследуют цвет кнопки через currentColor) ----------
+
+var ICONS = {
+  phone: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  phoneOff: '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45c.86.31 1.76.53 2.67.65A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+  mic: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+  micOff: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+  record: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>',
+  speaker: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
+};
+
+function iconEl(name) {
+  return ICONS[name] || '';
+}
+
 // ---------- Режим звонка (звук / вибро / тихо) ----------
 
 export function getRingMode() {
@@ -87,8 +138,6 @@ export function initCallModule(supabaseClient, myUserId) {
   _myUserId = myUserId;
   injectStyles();
 
-  // Сообщаем Service Worker'у текущий режим звонка (звук/вибро/тихо),
-  // чтобы фоновые push-уведомления о звонках его тоже учитывали.
   notifyServiceWorkerRingMode();
   if (navigator.serviceWorker) {
     navigator.serviceWorker.ready.then(function () { notifyServiceWorkerRingMode(); }).catch(function () {});
@@ -97,14 +146,12 @@ export function initCallModule(supabaseClient, myUserId) {
 }
 
 // Слушает ВСЕ входящие звонки для этого пользователя на любой странице приложения.
-// Вызывать один раз (после initCallModule) на каждой странице, где должен работать приём звонков.
 export async function initGlobalCallListener() {
   if (!_client || !_myUserId) {
     console.warn('[call] initCallModule не вызван перед initGlobalCallListener');
     return;
   }
 
-  // 1) Может звонок уже "звонит", а мы только что открыли страницу
   try {
     const cutoff = new Date(Date.now() - RING_TIMEOUT_MS).toISOString();
     const { data: pending } = await _client
@@ -120,7 +167,6 @@ export async function initGlobalCallListener() {
     }
   } catch (e) { log('ошибка проверки текущих звонков', e); }
 
-  // 2) Слушаем новые звонки и изменения статуса в реальном времени
   if (globalCallsChannel) return;
   globalCallsChannel = _client.channel('calls-listener-' + _myUserId)
     .on('postgres_changes', {
@@ -148,7 +194,7 @@ export async function initGlobalCallListener() {
 
 async function handleIncomingCallRow(row) {
   if (!row || row.status !== 'ringing') return;
-  if (currentCallId) return; // уже обрабатываем какой-то звонок
+  if (currentCallId) return;
   currentCallId = row.id;
   currentMatchId = row.match_id;
 
@@ -175,6 +221,27 @@ async function handleIncomingCallRow(row) {
   }, RING_TIMEOUT_MS);
 }
 
+// Расширенный набор аудио-constraint'ов против эха/скрипа.
+// echoCancellation/noiseSuppression/autoGainControl — стандартные (важнее всего).
+// goog*-поля — легаси-подсказки для Chrome/Android, современные версии их просто
+// игнорируют если не поддерживают, вреда не будет.
+function micConstraints() {
+  return {
+    audio: {
+      echoCancellation: { ideal: true },
+      noiseSuppression: { ideal: true },
+      autoGainControl: { ideal: true },
+      channelCount: 1,
+      googEchoCancellation: true,
+      googAutoGainControl: true,
+      googNoiseSuppression: true,
+      googHighpassFilter: true,
+      googTypingNoiseDetection: true,
+    },
+    video: false,
+  };
+}
+
 // ---------- Исходящий звонок ----------
 
 export async function startCall(matchId, calleeUserId, name, avatarUrl) {
@@ -187,10 +254,7 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
   showOutgoingScreen(name, avatarUrl);
 
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: false,
-    });
+    localStream = await navigator.mediaDevices.getUserMedia(micConstraints());
   } catch (e) {
     hideCallScreen();
     currentCallId = null;
@@ -286,10 +350,7 @@ async function acceptCurrentCall(row) {
   const infoAvatar = document.getElementById('call-avatar-img')?.src || '';
 
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: false,
-    });
+    localStream = await navigator.mediaDevices.getUserMedia(micConstraints());
   } catch (e) {
     hideCallScreen();
     currentCallId = null;
@@ -367,8 +428,6 @@ function wireConnectionEvents(name, avatarUrl) {
       showConnectedScreen(name, avatarUrl);
     }
     if (pc.connectionState === 'disconnected') {
-      // Даём шанс на восстановление (смена сети/аудио-маршрута иногда даёт кратковременный disconnect) —
-      // раньше звонок обрывался сразу при любом временном сбое.
       clearTimeout(disconnectTimer);
       disconnectTimer = setTimeout(() => {
         if (pc && pc.connectionState === 'disconnected') cleanupCall();
@@ -463,6 +522,11 @@ function stopRingtone() {
   if (ringOscInterval) { clearInterval(ringOscInterval); ringOscInterval = null; }
   if (vibrateInterval) { clearInterval(vibrateInterval); vibrateInterval = null; }
   if (navigator.vibrate) navigator.vibrate(0);
+  // Отпускаем аудиоконтекст рингтона, чтобы он не делил аудио-пайплайн устройства
+  // с активным WebRTC-звонком (на части телефонов это одна из причин скрипа/эха).
+  if (audioCtx && audioCtx.state === 'running' && !pc) {
+    try { audioCtx.suspend(); } catch (e) {}
+  }
 }
 
 // ---------- Управление аудио ----------
@@ -476,11 +540,7 @@ export function toggleMute() {
 
 export async function toggleSpeaker() {
   const audioEl = document.getElementById('call-remote-audio');
-  if (!audioEl || typeof audioEl.setSinkId !== 'function') {
-    // Переключение в громкую связь через браузер поддерживается не везде (в т.ч. Chrome для Android
-    // это в принципе не умеет) — поэтому кнопка вместо алерта просто выключена, пока не соединились.
-    return;
-  }
+  if (!audioEl || typeof audioEl.setSinkId !== 'function') return;
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const speaker = devices.find((d) => d.kind === 'audiooutput' && /speaker/i.test(d.label));
@@ -527,7 +587,7 @@ export async function toggleRecording() {
     updateRecordButton();
   } catch (e) {
     log('не удалось начать запись', e);
-    alert('Не удалось начать запись звонка.');
+    alert(getLang() === 'en' ? 'Could not start recording.' : 'Не удалось начать запись звонка.');
   }
 }
 
@@ -551,7 +611,7 @@ async function uploadRecording() {
     var up = await _client.storage.from('call-recordings').upload(fileName, blob);
     if (up.error) {
       log('ошибка загрузки записи', up.error);
-      alert('Не удалось сохранить запись звонка: ' + up.error.message + '\n(проверь, что в Supabase Storage есть публичный бакет "call-recordings")');
+      alert((getLang() === 'en' ? 'Could not save call recording: ' : 'Не удалось сохранить запись звонка: ') + up.error.message);
       return;
     }
     var url = _client.storage.from('call-recordings').getPublicUrl(fileName).data.publicUrl;
@@ -559,8 +619,8 @@ async function uploadRecording() {
       match_id: currentMatchId,
       sender_id: _myUserId,
       file_url: url,
-      file_name: 'Запись звонка.webm',
-      text: '🎙️ Запись звонка',
+      file_name: 'call-recording.webm',
+      text: '🎙️ ' + (getLang() === 'en' ? 'Call recording' : 'Запись звонка'),
     });
   } catch (e) {
     log('ошибка сохранения записи', e);
@@ -590,18 +650,19 @@ function injectStyles() {
     #call-rec-indicator.show{display:flex}
     #call-rec-indicator .dot{width:8px;height:8px;border-radius:50%;background:#ff4d4d;animation:callRecBlink 1s ease-in-out infinite}
     @keyframes callRecBlink{0%,100%{opacity:1}50%{opacity:0.25}}
-    .call-controls-row{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;width:100%}
-    .call-btn{width:64px;height:64px;border-radius:50%;border:none;font-size:26px;cursor:pointer;
+    .call-controls-row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;width:100%}
+    .call-btn-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+    .call-btn-wrap .call-btn-label{font-size:11px;color:var(--muted,#888);font-weight:500}
+    .call-btn{width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;
       display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:var(--input-bg,#2a2a2a);color:var(--text,#f0f0f0);
       box-shadow:0 4px 16px rgba(0,0,0,0.3)}
     .call-btn:active{transform:scale(0.92)}
     .call-btn.secondary.active{background:var(--accent,#ff4d6d);color:white}
-    .call-btn.secondary.disabled{opacity:0.35;pointer-events:none}
-    .call-btn.hangup{background:#ff2d4d;color:white;width:76px;height:76px;font-size:32px;box-shadow:0 4px 24px rgba(255,45,77,0.4)}
+    .call-btn-wrap.disabled{opacity:0.35;pointer-events:none}
+    .call-btn.hangup{background:#ff2d4d;color:white;width:72px;height:72px;box-shadow:0 4px 24px rgba(255,45,77,0.4)}
     .call-incoming-actions{display:flex;gap:56px;justify-content:center;width:100%;margin-top:20px}
-    .call-incoming-actions .call-btn.accept{background:#2ecc71;color:white;width:76px;height:76px;font-size:32px;box-shadow:0 4px 24px rgba(46,204,113,0.4)}
+    .call-incoming-actions .call-btn.accept{background:#2ecc71;color:white;width:72px;height:72px;box-shadow:0 4px 24px rgba(46,204,113,0.4)}
     .call-incoming-actions .call-btn.hangup{box-shadow:0 4px 24px rgba(255,45,77,0.4)}
-    .call-btn .label{display:block;font-size:10px;font-weight:500;margin-top:4px;color:var(--muted,#888)}
   `;
   document.head.appendChild(style);
 }
@@ -622,19 +683,25 @@ function renderOverlay(innerHtml) {
   overlay.innerHTML = innerHtml;
 }
 
-// Единый ряд кнопок — показывается сразу целиком; запись и громкая связь
-// активны только когда звонок реально соединён (connected=true).
+// Единый ряд кнопок с подписями. Запись/громкая связь активны только когда звонок
+// реально соединён (connected=true) — до этого показаны, но неактивны (не спрятаны).
 function controlsRowHtml(connected) {
-  var secondaryState = connected ? '' : ' disabled';
+  var disabledCls = connected ? '' : ' disabled';
   var speakerOk = speakerSupported();
-  return '<div class="call-controls-row">' +
-    '<button class="call-btn secondary" id="call-mute-btn" onclick="window.__callToggleMute()" title="Микрофон">🎙️</button>' +
-    '<button class="call-btn secondary' + secondaryState + '" id="call-record-btn" onclick="window.__callToggleRecord()" title="Записать звонок">⏺</button>' +
-    '<button class="call-btn hangup" onclick="window.__callHangup()" title="Завершить">📵</button>' +
-    (speakerOk
-      ? '<button class="call-btn secondary' + secondaryState + '" id="call-speaker-btn" onclick="window.__callToggleSpeaker()" title="Громкая связь">🔊</button>'
-      : '') +
-  '</div>';
+  var html = '<div class="call-controls-row">';
+
+  html += '<div class="call-btn-wrap"><button class="call-btn secondary" id="call-mute-btn" onclick="window.__callToggleMute()">' + iconEl('mic') + '</button><span class="call-btn-label" id="call-mute-label">' + t('mute') + '</span></div>';
+
+  html += '<div class="call-btn-wrap' + disabledCls + '"><button class="call-btn secondary" id="call-record-btn" onclick="window.__callToggleRecord()">' + iconEl('record') + '</button><span class="call-btn-label">' + t('record') + '</span></div>';
+
+  html += '<div class="call-btn-wrap"><button class="call-btn hangup" onclick="window.__callHangup()">' + iconEl('phoneOff') + '</button><span class="call-btn-label">' + t('hangup') + '</span></div>';
+
+  if (speakerOk) {
+    html += '<div class="call-btn-wrap' + disabledCls + '"><button class="call-btn secondary" id="call-speaker-btn" onclick="window.__callToggleSpeaker()">' + iconEl('speaker') + '</button><span class="call-btn-label">' + t('speaker') + '</span></div>';
+  }
+
+  html += '</div>';
+  return html;
 }
 
 function wireCommonHandlers() {
@@ -649,7 +716,7 @@ function showOutgoingScreen(name, avatarUrl) {
     <div class="call-top">
       ${avatarHtml(avatarUrl)}
       <div id="call-name-text">${name}</div>
-      <div id="call-status-text" class="ringing-pulse">📞 Вызов...</div>
+      <div id="call-status-text" class="ringing-pulse">${t('calling')}</div>
     </div>
     ${controlsRowHtml(false)}
   `);
@@ -662,11 +729,11 @@ function showIncomingScreen(name, avatarUrl, { onAccept, onDecline }) {
     <div class="call-top">
       ${avatarHtml(avatarUrl)}
       <div id="call-name-text">${name}</div>
-      <div id="call-status-text" class="ringing-pulse">📞 Входящий звонок...</div>
+      <div id="call-status-text" class="ringing-pulse">${t('incoming')}</div>
     </div>
     <div class="call-incoming-actions">
-      <button class="call-btn hangup" onclick="window.__callDeclineBtn()">📵</button>
-      <button class="call-btn accept" onclick="window.__callAcceptBtn()">📞</button>
+      <div class="call-btn-wrap"><button class="call-btn hangup" onclick="window.__callDeclineBtn()">${iconEl('phoneOff')}</button><span class="call-btn-label">${t('decline')}</span></div>
+      <div class="call-btn-wrap"><button class="call-btn accept" onclick="window.__callAcceptBtn()">${iconEl('phone')}</button><span class="call-btn-label">${t('accept')}</span></div>
     </div>
   `);
   window.__callAcceptBtn = () => onAccept();
@@ -678,7 +745,7 @@ function showDeclinedScreen(name, avatarUrl) {
     <div class="call-top">
       ${avatarHtml(avatarUrl)}
       <div id="call-name-text">${name}</div>
-      <div id="call-status-text">❌ Звонок отклонён</div>
+      <div id="call-status-text">${t('declined')}</div>
     </div>
     <div></div>
   `);
@@ -691,7 +758,7 @@ function showConnectedScreen(name, avatarUrl) {
       ${avatarHtml(avatarUrl)}
       <div id="call-name-text">${name}</div>
       <div id="call-duration-text">00:00</div>
-      <div id="call-rec-indicator"><span class="dot"></span><span>Идёт запись</span></div>
+      <div id="call-rec-indicator"><span class="dot"></span><span>${t('recording')}</span></div>
     </div>
     ${controlsRowHtml(true)}
   `);
@@ -713,9 +780,11 @@ function showConnectedScreen(name, avatarUrl) {
 
 function updateMuteButton() {
   const btn = document.getElementById('call-mute-btn');
+  const label = document.getElementById('call-mute-label');
   if (!btn) return;
   btn.classList.toggle('active', isMuted);
-  btn.textContent = isMuted ? '🔇' : '🎙️';
+  btn.innerHTML = isMuted ? iconEl('micOff') : iconEl('mic');
+  if (label) label.textContent = isMuted ? t('unmute') : t('mute');
 }
 
 function updateSpeakerButton() {
@@ -725,10 +794,12 @@ function updateSpeakerButton() {
 }
 
 function updateRecordButton() {
-  const btn = document.getElementById('call-record-btn');
-  if (btn) {
-    btn.classList.toggle('active', isRecording);
-    btn.title = isRecording ? 'Остановить запись' : 'Записать звонок';
+  const recordBtn = document.getElementById('call-record-btn');
+  const wrap = recordBtn ? recordBtn.closest('.call-btn-wrap') : null;
+  if (recordBtn) recordBtn.classList.toggle('active', isRecording);
+  if (wrap) {
+    var label = wrap.querySelector('.call-btn-label');
+    if (label) label.textContent = isRecording ? t('stopRecord') : t('record');
   }
   const indicator = document.getElementById('call-rec-indicator');
   if (indicator) indicator.classList.toggle('show', isRecording);
