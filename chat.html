@@ -159,6 +159,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
 
 <script>
 var db = createBlizkoClient();
+var BACKEND_URL = 'https://vector-chat-api.onrender.com';
 var currentUser = null;
 var matchId = null;
 var otherUserId = null;
@@ -168,6 +169,30 @@ var mediaRecorder = null;
 var audioChunks = [];
 var recInterval = null;
 var recSeconds = 0;
+
+// Отправляет push-уведомление собеседнику о новом сообщении. Раньше этого не было вообще —
+// push отправлялся только для новых постов в ленте, сообщения в чате никого не будили.
+async function notifyNewMessage(preview) {
+  if (!otherUserId || !currentUser) return;
+  try {
+    var { data: myProfile } = await db.from('profiles').select('name').eq('id', currentUser.id).single();
+    var senderName = (myProfile && myProfile.name) ? myProfile.name : 'Кто-то';
+    await fetch(BACKEND_URL + '/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'QHSRzsipKinthY7dJdPVN-SGTX5iL4CmLOT1bcQU1AA' },
+      body: JSON.stringify({
+        to_user_id: otherUserId,
+        title: senderName,
+        body: preview || 'Новое сообщение',
+        type: 'message',
+        fromUserId: currentUser.id,
+        url: 'chat.html?match=' + matchId
+      })
+    });
+  } catch (e) {
+    console.error('notifyNewMessage error:', e);
+  }
+}
 
 function getParam(name) {
   var url = new URL(window.location.href);
@@ -397,6 +422,7 @@ async function sendMessage() {
   document.getElementById('send-btn').style.display = 'none';
   document.getElementById('voice-btn').style.display = 'flex';
   scrollBottom();
+  notifyNewMessage(text);
 }
 
 // ===== ВЛОЖЕНИЯ =====
@@ -526,6 +552,7 @@ async function handleFileSelect(input) {
       file_url: payload.file_url || null,
       file_name: payload.file_name || null
     });
+    notifyNewMessage(fileType === 'image' ? '📷 Фото' : fileType === 'video' ? '🎥 Видео' : '📄 Файл');
   } catch (e) {
     if (progressInterval) clearInterval(progressInterval);
     alert('Ошибка загрузки: ' + e.message);
@@ -647,6 +674,7 @@ async function uploadVoiceMessage(blob) {
       file_name: payload.file_name || null,
       text: payload.text || '🎤 Голосовое сообщение'
     });
+    notifyNewMessage('🎤 Голосовое сообщение');
   } catch (e) {
     if (progressInterval) clearInterval(progressInterval);
     alert('Ошибка: ' + e.message);
