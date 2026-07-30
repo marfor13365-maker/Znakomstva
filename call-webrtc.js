@@ -1,20 +1,17 @@
 // call-webrtc.js
 // Аудиозвонки в Blizko: WebRTC + Supabase.
 //
-// ФИКС 1 (синхронизация сброса): раньше только ЗВОНЯЩИЙ подписывался на изменения статуса
-// звонка после ответа. Принявший звонок узнавал о завершении со стороны собеседника только
-// косвенно — через таймаут обрыва WebRTC-соединения (до 6 секунд задержки). Теперь принявший
-// тоже подписывается на статус звонка и реагирует на 'ended'/'missed'/'declined' сразу.
+// КРИТИЧНЫЙ ФИКС ЭТОЙ ВЕРСИИ: кнопки оверлея звонка использовали класс `.call-btn` —
+// ТОЧНО ТАКОЙ ЖЕ, как кнопка "позвонить" в топбаре chat.html. Стили оверлея добавляются
+// в <head> через JS уже ПОСЛЕ того как страница загрузилась (при вызове initCallModule()),
+// поэтому при одинаковой специфичности CSS-правило оверлея (.call-btn{background:var(--input-bg)})
+// побеждало правило страницы (.call-btn{background:var(--accent)}) — топбар-кнопка звонка
+// перекрашивалась в серый именно в момент инициализации модуля звонков. Это и есть причина
+// "сначала в тему, потом перекрашивается". Теперь все кнопки оверлея используют уникальный
+// класс `.blizko-call-btn`, конфликтов с кнопками страниц больше нет.
 //
-// ФИКС 2 (громкая связь): кнопка "🔊" раньше пряталась, если браузер не поддерживает
-// HTMLMediaElement.setSinkId — а он НЕ поддерживается Chrome на Android вообще, поэтому
-// кнопка пропадала у всех мобильных пользователей без объяснения. Теперь кнопка видна
-// всегда; если функция недоступна — при нажатии показывается понятное объяснение вместо
-// молчаливого бездействия.
-//
-// (из прошлых версий также сохранены: буферизация ICE-кандидатов до создания
-// RTCPeerConnection, запись звонка, рингтон/вибро, режим звук/вибро/тихо, SVG-иконки
-// с наследованием цвета темы.)
+// (сохранены также: буферизация ICE-кандидатов, синхронизация сброса звонка у обеих сторон,
+// запись звонка, рингтон/вибро, режим звук/вибро/тихо, всегда видимая кнопка громкой связи.)
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -31,6 +28,7 @@ let remoteStream = null;
 let iceChannel = null;
 let pendingIceCandidates = [];
 let activeCallRowChannel = null;
+let declinedChannel = null;
 let globalCallsChannel = null;
 let currentCallId = null;
 let currentMatchId = null;
@@ -240,6 +238,12 @@ async function handleIncomingCallRow(row) {
 }
 
 // Расширенный набор аудио-constraint'ов против эха/скрипа.
+// ВАЖНО: echoCancellation борется только с "ближним" эхом — своим же звуком из динамика,
+// попавшим обратно в свой микрофон. Если оба телефона стоят рядом друг с другом на одном
+// столе во время теста — это классическая акустическая обратная связь между ДВУМЯ разными
+// устройствами (как микрофон у колонки на концерте), и её никаким software-эхоподавлением
+// с одной стороны не убрать. Для чистого теста звука разноси телефоны по разным комнатам
+// или используй наушники хотя бы на одном из них.
 function micConstraints() {
   return {
     audio: {
@@ -271,8 +275,6 @@ function watchCallRowStatus(callId, onAccepted) {
       const row = payload.new;
       if (row.status === 'accepted' && onAccepted) {
         await onAccepted(row);
-      } else if (row.status === 'declined' && onAccepted) {
-        // declined до соединения — обрабатывается отдельно у звонящего (showDeclinedScreen)
       }
       if (row.status === 'ended' || row.status === 'missed') {
         cleanupCall();
@@ -332,9 +334,8 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
     }
   });
 
-  // declined до ответа — отдельная обработка с экраном "звонок отклонён" (не входит в
-  // общий watchCallRowStatus, чтобы не путать с обычным завершением после соединения)
-  _client.channel('call-declined-' + callId)
+  // declined до ответа — отдельная обработка с экраном "звонок отклонён"
+  declinedChannel = _client.channel('call-declined-' + callId)
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
@@ -420,8 +421,8 @@ async function acceptCurrentCall(row) {
     updated_at: new Date().toISOString(),
   }).eq('id', row.id);
 
-  // ФИКС: принявший звонок тоже следит за статусом строки — чтобы сброс с любой стороны
-  // после соединения сразу закрывал экран у обоих, а не только у звонящего.
+  // Принявший тоже следит за статусом строки — чтобы сброс с любой стороны после
+  // соединения сразу закрывал экран у обоих.
   watchCallRowStatus(row.id, null);
 }
 
@@ -534,6 +535,7 @@ function cleanupCall() {
   remoteStream = null;
   closeIceChannel();
   if (activeCallRowChannel && _client) { _client.removeChannel(activeCallRowChannel); activeCallRowChannel = null; }
+  if (declinedChannel && _client) { _client.removeChannel(declinedChannel); declinedChannel = null; }
   currentCallId = null;
   currentMatchId = null;
   isMuted = false;
@@ -719,16 +721,16 @@ function injectStyles() {
     .call-controls-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;width:100%}
     .call-btn-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
     .call-btn-wrap .call-btn-label{font-size:11px;color:var(--muted,#888);font-weight:500}
-    .call-btn{width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
+    .blizko-call-btn{width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
       display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:var(--input-bg,#2a2a2a);color:var(--text,#f0f0f0);
       box-shadow:0 4px 16px rgba(0,0,0,0.3)}
-    .call-btn:active{transform:scale(0.92)}
-    .call-btn.secondary.active{background:var(--accent,#ff4d6d);color:white}
+    .blizko-call-btn:active{transform:scale(0.92)}
+    .blizko-call-btn.secondary.active{background:var(--accent,#ff4d6d);color:white}
     .call-btn-wrap.disabled{opacity:0.35;pointer-events:none}
-    .call-btn.hangup{background:#ff2d4d;color:white;width:72px;height:72px;box-shadow:0 4px 24px rgba(255,45,77,0.4)}
+    .blizko-call-btn.hangup{background:#ff2d4d;color:white;width:72px;height:72px;box-shadow:0 4px 24px rgba(255,45,77,0.4)}
     .call-incoming-actions{display:flex;gap:56px;justify-content:center;width:100%;margin-top:20px}
-    .call-incoming-actions .call-btn.accept{background:#2ecc71;color:white;width:72px;height:72px;box-shadow:0 4px 24px rgba(46,204,113,0.4)}
-    .call-incoming-actions .call-btn.hangup{box-shadow:0 4px 24px rgba(255,45,77,0.4)}
+    .call-incoming-actions .blizko-call-btn.accept{background:#2ecc71;color:white;width:72px;height:72px;box-shadow:0 4px 24px rgba(46,204,113,0.4)}
+    .call-incoming-actions .blizko-call-btn.hangup{box-shadow:0 4px 24px rgba(255,45,77,0.4)}
   `;
   document.head.appendChild(style);
 }
@@ -753,15 +755,13 @@ function controlsRowHtml(connected) {
   var disabledCls = connected ? '' : ' disabled';
   var html = '<div class="call-controls-row">';
 
-  html += '<div class="call-btn-wrap"><button class="call-btn secondary" id="call-mute-btn" onclick="window.__callToggleMute()">' + iconEl('mic') + '</button><span class="call-btn-label" id="call-mute-label">' + t('mute') + '</span></div>';
+  html += '<div class="call-btn-wrap"><button class="blizko-call-btn secondary" id="call-mute-btn" onclick="window.__callToggleMute()">' + iconEl('mic') + '</button><span class="call-btn-label" id="call-mute-label">' + t('mute') + '</span></div>';
 
-  html += '<div class="call-btn-wrap' + disabledCls + '"><button class="call-btn secondary" id="call-record-btn" onclick="window.__callToggleRecord()">' + iconEl('record') + '</button><span class="call-btn-label">' + t('record') + '</span></div>';
+  html += '<div class="call-btn-wrap' + disabledCls + '"><button class="blizko-call-btn secondary" id="call-record-btn" onclick="window.__callToggleRecord()">' + iconEl('record') + '</button><span class="call-btn-label">' + t('record') + '</span></div>';
 
-  html += '<div class="call-btn-wrap"><button class="call-btn hangup" onclick="window.__callHangup()">' + iconEl('phoneOff') + '</button><span class="call-btn-label">' + t('hangup') + '</span></div>';
+  html += '<div class="call-btn-wrap"><button class="blizko-call-btn hangup" onclick="window.__callHangup()">' + iconEl('phoneOff') + '</button><span class="call-btn-label">' + t('hangup') + '</span></div>';
 
-  // Кнопка громкой связи теперь показывается ВСЕГДА (раньше пряталась на Android, где
-  // setSinkId в принципе не поддерживается — из-за чего казалось, что кнопки вообще нет).
-  html += '<div class="call-btn-wrap"><button class="call-btn secondary" id="call-speaker-btn" onclick="window.__callToggleSpeaker()">' + iconEl('speaker') + '</button><span class="call-btn-label">' + t('speaker') + '</span></div>';
+  html += '<div class="call-btn-wrap"><button class="blizko-call-btn secondary" id="call-speaker-btn" onclick="window.__callToggleSpeaker()">' + iconEl('speaker') + '</button><span class="call-btn-label">' + t('speaker') + '</span></div>';
 
   html += '</div>';
   return html;
@@ -795,8 +795,8 @@ function showIncomingScreen(name, avatarUrl, { onAccept, onDecline }) {
       <div id="call-status-text" class="ringing-pulse">${t('incoming')}</div>
     </div>
     <div class="call-incoming-actions">
-      <div class="call-btn-wrap"><button class="call-btn hangup" onclick="window.__callDeclineBtn()">${iconEl('phoneOff')}</button><span class="call-btn-label">${t('decline')}</span></div>
-      <div class="call-btn-wrap"><button class="call-btn accept" onclick="window.__callAcceptBtn()">${iconEl('phone')}</button><span class="call-btn-label">${t('accept')}</span></div>
+      <div class="call-btn-wrap"><button class="blizko-call-btn hangup" onclick="window.__callDeclineBtn()">${iconEl('phoneOff')}</button><span class="call-btn-label">${t('decline')}</span></div>
+      <div class="call-btn-wrap"><button class="blizko-call-btn accept" onclick="window.__callAcceptBtn()">${iconEl('phone')}</button><span class="call-btn-label">${t('accept')}</span></div>
     </div>
   `);
   window.__callAcceptBtn = () => onAccept();
