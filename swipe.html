@@ -11,10 +11,10 @@
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 20px;position:fixed;top:0;left:0;right:0;background:var(--bg);z-index:10}
 .topbar-left{display:flex;align-items:center;gap:12px}
-.back-btn{background:rgba(0,0,0,0.55);border:1px solid var(--border);color:var(--text);border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;backdrop-filter:blur(4px)}
+.back-btn{background:var(--accent);border:none;color:white;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,0.4)}
 .back-btn:active{opacity:0.7}
 .logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.filter-btn{background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;flex-shrink:0}
+.filter-btn{background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;flex-shrink:0;position:relative}
 .card-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:76px 20px 24px;position:relative;overflow:hidden}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:360px;height:min(560px, calc(100vh - 120px));position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.5);transition:transform 0.1s;touch-action:none}
 .card.dragging{transition:none}
@@ -44,6 +44,16 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .like-modal-actions .send{background:var(--accent);color:white}
 .like-modal-actions .cancel{background:transparent;border:1px solid var(--border);color:var(--text)}
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.filter-row{margin-bottom:16px}
+.filter-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block}
+.filter-age-inputs{display:flex;align-items:center;gap:10px}
+.filter-age-inputs input{width:70px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;text-align:center}
+.filter-age-inputs input:focus{border-color:var(--accent)}
+.filter-age-sep{color:var(--muted);font-size:13px}
+.filter-city-input{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none}
+.filter-city-input:focus{border-color:var(--accent)}
+.filter-badge{position:absolute;top:-4px;right:-4px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);display:none}
+.filter-badge.show{display:block}
 </style>
 </head>
 <body>
@@ -52,11 +62,33 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
     <button class="back-btn" onclick="goBack()">←</button>
     <div class="logo">Blizko</div>
   </div>
-  <button class="filter-btn" onclick="openFilters()">⚙️ Фильтры</button>
+  <button class="filter-btn" onclick="openFilters()">⚙️ Фильтры<span class="filter-badge" id="filter-badge"></span></button>
 </div>
 
 <div class="card-wrap" id="card-wrap">
   <div class="loading" style="padding:40px;text-align:center;color:var(--muted)">⏳ Загрузка...</div>
+</div>
+
+<div class="like-modal" id="filters-modal">
+  <div class="like-modal-card">
+    <div class="like-modal-title">⚙️ Фильтры</div>
+    <div class="filter-row">
+      <span class="filter-label">Возраст</span>
+      <div class="filter-age-inputs">
+        <input type="number" id="filter-age-min" placeholder="18" min="18" max="99">
+        <span class="filter-age-sep">—</span>
+        <input type="number" id="filter-age-max" placeholder="99" min="18" max="99">
+      </div>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Город</span>
+      <input type="text" class="filter-city-input" id="filter-city" placeholder="Например: Москва">
+    </div>
+    <div class="like-modal-actions">
+      <button class="cancel" onclick="resetFilters()">Сбросить</button>
+      <button class="send" onclick="applyFilters()">Применить</button>
+    </div>
+  </div>
 </div>
 
 <div class="like-modal" id="like-modal">
@@ -81,6 +113,7 @@ var currentIndex = 0;
 var isDragging = false;
 var startX = 0, startY = 0;
 var pendingLikeId = null;
+var activeFilters = { ageMin: null, ageMax: null, city: '' };
 
 // Нижнего меню на этой странице больше нет (перекрывало кнопки лайк/пропустить на
 // коротких экранах) — вместо него кнопка "назад" сверху. Если попали сюда не из
@@ -125,16 +158,24 @@ async function init() {
 
 async function loadProfiles() {
   var wrap = document.getElementById('card-wrap');
-  var { data, error } = await db.from('profiles')
+  var query = db.from('profiles')
     .select('*, profile_photos(photo_url)')
-    .neq('id', currentUser.id)
-    .limit(20);
+    .neq('id', currentUser.id);
+
+  if (activeFilters.ageMin) query = query.gte('age', activeFilters.ageMin);
+  if (activeFilters.ageMax) query = query.lte('age', activeFilters.ageMax);
+  if (activeFilters.city) query = query.ilike('city', '%' + activeFilters.city + '%');
+
+  var { data, error } = await query.limit(20);
   
   if (error) { console.error(error); wrap.innerHTML = '<div class="empty-state"><p>Ошибка загрузки</p></div>'; return; }
   
   profiles = data || [];
   if (profiles.length === 0) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">😴</div><p>Пока никого нет рядом.<br>Попробуй позже!</p></div>';
+    var hasFilters = activeFilters.ageMin || activeFilters.ageMax || activeFilters.city;
+    wrap.innerHTML = hasFilters
+      ? '<div class="empty-state"><div class="icon">🔍</div><p>Под такие фильтры никого не нашлось.<br>Попробуй расширить критерии.</p></div>'
+      : '<div class="empty-state"><div class="icon">😴</div><p>Пока никого нет рядом.<br>Попробуй позже!</p></div>';
     return;
   }
   
@@ -292,7 +333,44 @@ async function sendLike() {
 }
 
 function openFilters() {
-  alert('Фильтры скоро будут!');
+  document.getElementById('filter-age-min').value = activeFilters.ageMin || '';
+  document.getElementById('filter-age-max').value = activeFilters.ageMax || '';
+  document.getElementById('filter-city').value = activeFilters.city || '';
+  document.getElementById('filters-modal').classList.add('show');
+}
+
+function closeFiltersModal() {
+  document.getElementById('filters-modal').classList.remove('show');
+}
+
+function updateFilterBadge() {
+  var badge = document.getElementById('filter-badge');
+  var hasFilters = !!(activeFilters.ageMin || activeFilters.ageMax || activeFilters.city);
+  badge.classList.toggle('show', hasFilters);
+}
+
+function applyFilters() {
+  var ageMin = parseInt(document.getElementById('filter-age-min').value, 10);
+  var ageMax = parseInt(document.getElementById('filter-age-max').value, 10);
+  var city = document.getElementById('filter-city').value.trim();
+
+  activeFilters.ageMin = isNaN(ageMin) ? null : ageMin;
+  activeFilters.ageMax = isNaN(ageMax) ? null : ageMax;
+  activeFilters.city = city;
+
+  closeFiltersModal();
+  updateFilterBadge();
+  loadProfiles();
+}
+
+function resetFilters() {
+  activeFilters = { ageMin: null, ageMax: null, city: '' };
+  document.getElementById('filter-age-min').value = '';
+  document.getElementById('filter-age-max').value = '';
+  document.getElementById('filter-city').value = '';
+  closeFiltersModal();
+  updateFilterBadge();
+  loadProfiles();
 }
 
 init();
