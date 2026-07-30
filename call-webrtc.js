@@ -1,15 +1,20 @@
 // call-webrtc.js
 // Аудиозвонки в Blizko: WebRTC + Supabase.
 //
-// КРИТИЧНЫЙ ФИКС: раньше принимающая сторона подписывалась на канал ICE-кандидатов
-// только ПОСЛЕ нажатия "Принять". Но звонящий начинает рассылать свои кандидаты сразу
-// после звонка (пока идут гудки) — и Supabase broadcast НЕ хранит историю сообщений,
-// то есть все кандидаты, отправленные до ответа, безвозвратно терялись. Signaling (SDP)
-// проходил успешно, из-за чего казалось что "принял, но не соединяется" — а по факту
-// соединять было нечем, ни один ICE-кандидат до accept не долетал.
-// Теперь: канал открывается сразу при появлении звонка (до нажатия кнопки), а кандидаты,
-// пришедшие до создания RTCPeerConnection, складываются в буфер и применяются сразу
-// после создания pc.
+// ФИКС 1 (синхронизация сброса): раньше только ЗВОНЯЩИЙ подписывался на изменения статуса
+// звонка после ответа. Принявший звонок узнавал о завершении со стороны собеседника только
+// косвенно — через таймаут обрыва WebRTC-соединения (до 6 секунд задержки). Теперь принявший
+// тоже подписывается на статус звонка и реагирует на 'ended'/'missed'/'declined' сразу.
+//
+// ФИКС 2 (громкая связь): кнопка "🔊" раньше пряталась, если браузер не поддерживает
+// HTMLMediaElement.setSinkId — а он НЕ поддерживается Chrome на Android вообще, поэтому
+// кнопка пропадала у всех мобильных пользователей без объяснения. Теперь кнопка видна
+// всегда; если функция недоступна — при нажатии показывается понятное объяснение вместо
+// молчаливого бездействия.
+//
+// (из прошлых версий также сохранены: буферизация ICE-кандидатов до создания
+// RTCPeerConnection, запись звонка, рингтон/вибро, режим звук/вибро/тихо, SVG-иконки
+// с наследованием цвета темы.)
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -71,6 +76,7 @@ var LABELS = {
     speaker: 'Громкая',
     accept: 'Принять',
     decline: 'Отклонить',
+    speakerUnsupported: 'Переключение громкой связи не поддерживается этим браузером. Попробуй воспользоваться системными кнопками громкости телефона во время звонка.',
   },
   en: {
     calling: '📞 Calling...',
@@ -85,6 +91,7 @@ var LABELS = {
     speaker: 'Speaker',
     accept: 'Accept',
     decline: 'Decline',
+    speakerUnsupported: 'Switching to loudspeaker is not supported by this browser. Try using your phone\'s volume buttons during the call.',
   },
 };
 
@@ -205,7 +212,7 @@ async function handleIncomingCallRow(row) {
   currentMatchId = row.match_id;
 
   // Подписываемся на ICE-канал СРАЗУ, ещё до того как человек нажмёт "Принять" —
-  // это и есть фикс потери кандидатов, из-за которой звонки не соединялись.
+  // иначе теряются кандидаты, отправленные звонящим во время гудков.
   openIceChannel(row.match_id, row.id);
 
   let name = 'Пользователь';
@@ -248,6 +255,30 @@ function micConstraints() {
     },
     video: false,
   };
+}
+
+// Общий обработчик изменений статуса звонка — используется ОБЕИМИ сторонами после
+// установления соединения, чтобы сброс с одной стороны сразу закрывал экран у другой.
+function watchCallRowStatus(callId, onAccepted) {
+  if (activeCallRowChannel) return;
+  activeCallRowChannel = _client.channel('call-row-' + callId)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'calls',
+      filter: 'id=eq.' + callId,
+    }, async (payload) => {
+      const row = payload.new;
+      if (row.status === 'accepted' && onAccepted) {
+        await onAccepted(row);
+      } else if (row.status === 'declined' && onAccepted) {
+        // declined до соединения — обрабатывается отдельно у звонящего (showDeclinedScreen)
+      }
+      if (row.status === 'ended' || row.status === 'missed') {
+        cleanupCall();
+      }
+    })
+    .subscribe();
 }
 
 // ---------- Исходящий звонок ----------
@@ -294,22 +325,25 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
     throw new Error('Не удалось начать звонок: ' + insertErr.message);
   }
 
-  activeCallRowChannel = _client.channel('call-row-' + callId)
+  watchCallRowStatus(callId, async (row) => {
+    if (row.answer_sdp && pc && !pc.currentRemoteDescription) {
+      await pc.setRemoteDescription(new RTCSessionDescription(row.answer_sdp));
+      flushPendingIceCandidates();
+    }
+  });
+
+  // declined до ответа — отдельная обработка с экраном "звонок отклонён" (не входит в
+  // общий watchCallRowStatus, чтобы не путать с обычным завершением после соединения)
+  _client.channel('call-declined-' + callId)
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
       table: 'calls',
       filter: 'id=eq.' + callId,
-    }, async (payload) => {
-      const row = payload.new;
-      if (row.status === 'accepted' && row.answer_sdp && pc && !pc.currentRemoteDescription) {
-        await pc.setRemoteDescription(new RTCSessionDescription(row.answer_sdp));
-        flushPendingIceCandidates();
-      } else if (row.status === 'declined') {
+    }, (payload) => {
+      if (payload.new.status === 'declined' && !connectedAt) {
         showDeclinedScreen(name, avatarUrl);
         setTimeout(() => cleanupCall(), 1600);
-      } else if (row.status === 'ended' || row.status === 'missed') {
-        cleanupCall();
       }
     })
     .subscribe();
@@ -372,7 +406,7 @@ async function acceptCurrentCall(row) {
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
   wireConnectionEvents(infoName, infoAvatar);
-  // ICE-канал уже открыт в handleIncomingCallRow — здесь просто ждём appear pc.
+  // ICE-канал уже открыт в handleIncomingCallRow.
 
   await pc.setRemoteDescription(new RTCSessionDescription(row.offer_sdp));
   flushPendingIceCandidates();
@@ -385,6 +419,10 @@ async function acceptCurrentCall(row) {
     status: 'accepted',
     updated_at: new Date().toISOString(),
   }).eq('id', row.id);
+
+  // ФИКС: принявший звонок тоже следит за статусом строки — чтобы сброс с любой стороны
+  // после соединения сразу закрывал экран у обоих, а не только у звонящего.
+  watchCallRowStatus(row.id, null);
 }
 
 async function declineIncomingCall(callId) {
@@ -404,8 +442,6 @@ function openIceChannel(matchId, callId) {
   iceChannel.on('broadcast', { event: 'ice-candidate' }, async (payload) => {
     if (payload.payload.callId !== callId || payload.payload.fromUserId === _myUserId) return;
     if (!pc) {
-      // RTCPeerConnection ещё не создан (например, входящий звонок ещё не принят) —
-      // сохраняем кандидата, применим сразу после создания pc.
       pendingIceCandidates.push(payload.payload.candidate);
       return;
     }
@@ -572,7 +608,10 @@ export function toggleMute() {
 
 export async function toggleSpeaker() {
   const audioEl = document.getElementById('call-remote-audio');
-  if (!audioEl || typeof audioEl.setSinkId !== 'function') return;
+  if (!audioEl || typeof audioEl.setSinkId !== 'function') {
+    alert(t('speakerUnsupported'));
+    return;
+  }
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const speaker = devices.find((d) => d.kind === 'audiooutput' && /speaker/i.test(d.label));
@@ -582,11 +621,6 @@ export async function toggleSpeaker() {
   } catch (e) {
     log('ошибка переключения динамика', e);
   }
-}
-
-function speakerSupported() {
-  var el = document.createElement('audio');
-  return typeof el.setSinkId === 'function';
 }
 
 // ---------- Запись звонка ----------
@@ -682,10 +716,10 @@ function injectStyles() {
     #call-rec-indicator.show{display:flex}
     #call-rec-indicator .dot{width:8px;height:8px;border-radius:50%;background:#ff4d4d;animation:callRecBlink 1s ease-in-out infinite}
     @keyframes callRecBlink{0%,100%{opacity:1}50%{opacity:0.25}}
-    .call-controls-row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;width:100%}
+    .call-controls-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;width:100%}
     .call-btn-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
     .call-btn-wrap .call-btn-label{font-size:11px;color:var(--muted,#888);font-weight:500}
-    .call-btn{width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;
+    .call-btn{width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
       display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:var(--input-bg,#2a2a2a);color:var(--text,#f0f0f0);
       box-shadow:0 4px 16px rgba(0,0,0,0.3)}
     .call-btn:active{transform:scale(0.92)}
@@ -717,7 +751,6 @@ function renderOverlay(innerHtml) {
 
 function controlsRowHtml(connected) {
   var disabledCls = connected ? '' : ' disabled';
-  var speakerOk = speakerSupported();
   var html = '<div class="call-controls-row">';
 
   html += '<div class="call-btn-wrap"><button class="call-btn secondary" id="call-mute-btn" onclick="window.__callToggleMute()">' + iconEl('mic') + '</button><span class="call-btn-label" id="call-mute-label">' + t('mute') + '</span></div>';
@@ -726,9 +759,9 @@ function controlsRowHtml(connected) {
 
   html += '<div class="call-btn-wrap"><button class="call-btn hangup" onclick="window.__callHangup()">' + iconEl('phoneOff') + '</button><span class="call-btn-label">' + t('hangup') + '</span></div>';
 
-  if (speakerOk) {
-    html += '<div class="call-btn-wrap' + disabledCls + '"><button class="call-btn secondary" id="call-speaker-btn" onclick="window.__callToggleSpeaker()">' + iconEl('speaker') + '</button><span class="call-btn-label">' + t('speaker') + '</span></div>';
-  }
+  // Кнопка громкой связи теперь показывается ВСЕГДА (раньше пряталась на Android, где
+  // setSinkId в принципе не поддерживается — из-за чего казалось, что кнопки вообще нет).
+  html += '<div class="call-btn-wrap"><button class="call-btn secondary" id="call-speaker-btn" onclick="window.__callToggleSpeaker()">' + iconEl('speaker') + '</button><span class="call-btn-label">' + t('speaker') + '</span></div>';
 
   html += '</div>';
   return html;
