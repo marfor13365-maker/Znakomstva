@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Blizko - Знакомства</title>
+<title>Znakomstor - Знакомства</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
@@ -14,6 +14,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .back-btn{background:var(--accent);border:none;color:white;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,0.4)}
 .back-btn:active{opacity:0.7}
 .logo{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.brand{display:flex;align-items:center;gap:8px;min-width:0}
+.brand-icon{flex-shrink:0;display:block}
+.brand-name{font-family:'Unbounded',sans-serif;font-size:17px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .filter-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;border-radius:10px;padding:8px 14px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;position:relative;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
 .filter-btn:active{opacity:0.8}
 .card-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:76px 20px 24px;position:relative;overflow:hidden}
@@ -61,7 +64,23 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <div class="topbar">
   <div class="topbar-left">
     <button class="back-btn" onclick="goBack()">←</button>
-    <div class="logo">Blizko</div>
+    <div class="brand">
+      <svg class="brand-icon" width="30" height="30" viewBox="0 0 100 100" aria-hidden="true">
+        <defs>
+          <linearGradient id="brandGreenSwipe" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#2fe37a"/>
+            <stop offset="1" stop-color="#0fa958"/>
+          </linearGradient>
+          <clipPath id="brandLeftSwipe"><rect x="0" y="0" width="50" height="100"/></clipPath>
+          <clipPath id="brandRightSwipe"><rect x="50" y="0" width="50" height="100"/></clipPath>
+        </defs>
+        <circle cx="50" cy="50" r="48" fill="url(#brandGreenSwipe)"/>
+        <path id="brandHeartSwipe" d="M50 76 C 26 58, 18 42, 27 30 C 34 21, 46 22, 50 33 C 54 22, 66 21, 73 30 C 82 42, 74 58, 50 76 Z"/>
+        <use href="#brandHeartSwipe" clip-path="url(#brandLeftSwipe)" fill="#3fb7ff"/>
+        <use href="#brandHeartSwipe" clip-path="url(#brandRightSwipe)" fill="#ff4d9d"/>
+      </svg>
+      <span class="brand-name">Znakomstor</span>
+    </div>
   </div>
   <button class="filter-btn" onclick="openFilters()">⚙️ Фильтры<span class="filter-badge" id="filter-badge"></span></button>
 </div>
