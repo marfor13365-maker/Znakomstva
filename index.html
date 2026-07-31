@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Blizko - Dating</title>
+<title>Znakomstor - Dating</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://js.hcaptcha.com">
 <link rel="preconnect" href="https://newassets.hcaptcha.com">
@@ -19,7 +19,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .lang-btn{padding:5px 11px;border:none;border-radius:16px;background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s}
 .lang-btn.active{background:var(--accent);color:white}
 .hero{text-align:center;margin-bottom:24px;position:relative;z-index:1}
-.logo-img{width:120px;height:auto;display:block;margin:0 auto 4px;filter:drop-shadow(0 4px 16px rgba(255,77,109,0.35))}
+.logo-img{width:88px;height:88px;display:block;margin:0 auto 8px;filter:drop-shadow(0 4px 16px rgba(0,0,0,0.4))}
 .logo{font-family:'Unbounded',sans-serif;font-size:26px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
 .tagline{color:var(--muted);font-size:14px;margin-top:6px}
 .pulse-wrap{display:flex;justify-content:center;margin-bottom:20px}
@@ -85,7 +85,21 @@ input:focus{border-color:var(--accent)}
 <button class="lang-btn" onclick="setLang('en')">EN</button>
 </div>
 <div class="hero">
-<img class="logo-img" src="logo.png" alt="Blizko">
+<svg class="logo-img" width="88" height="88" viewBox="0 0 100 100" role="img" aria-label="Znakomstor">
+  <defs>
+    <linearGradient id="brandGreenHero" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2fe37a"/>
+      <stop offset="1" stop-color="#0fa958"/>
+    </linearGradient>
+    <clipPath id="brandLeftHero"><rect x="0" y="0" width="50" height="100"/></clipPath>
+    <clipPath id="brandRightHero"><rect x="50" y="0" width="50" height="100"/></clipPath>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="url(#brandGreenHero)"/>
+  <path id="brandHeartHero" d="M50 76 C 26 58, 18 42, 27 30 C 34 21, 46 22, 50 33 C 54 22, 66 21, 73 30 C 82 42, 74 58, 50 76 Z"/>
+  <use href="#brandHeartHero" clip-path="url(#brandLeftHero)" fill="#3fb7ff"/>
+  <use href="#brandHeartHero" clip-path="url(#brandRightHero)" fill="#ff4d9d"/>
+</svg>
+<div class="logo">Znakomstor</div>
 <div class="tagline" id="tagline"></div>
 </div>
 <div class="card">
