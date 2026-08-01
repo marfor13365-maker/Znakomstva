@@ -126,7 +126,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var db = createBlizkoClient();
 var currentUser = null;
 var profiles = [];
 var currentIndex = 0;
@@ -160,7 +160,15 @@ async function init() {
       await new Promise(function(resolve) { setTimeout(resolve, 200); });
     }
   }
-  
+
+  if (!session) {
+    var restored = await restoreLastVaultSession(db);
+    if (restored) {
+      var r2 = await db.auth.getSession();
+      session = r2.data.session;
+    }
+  }
+
   if (!session) {
     wrap.innerHTML = 
       '<div class="empty-state" style="padding:60px 20px;">' +
