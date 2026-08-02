@@ -870,11 +870,33 @@ async function handlePostPhoto(input) {
   }
 }
 
+async function checkModerationOrAlert(photoUrl, mediaType) {
+  try {
+    var r = await fetch(BACKEND_URL + '/api/moderate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photo_url: photoUrl, media_type: mediaType })
+    });
+    var data = await r.json();
+    if (!data.safe) {
+      alert('Публикация отклонена модерацией' + (data.reason ? ': ' + data.reason : '') + '.');
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Ошибка проверки модерации (публикуем, не блокируем при сбое связи):', e);
+    return true;
+  }
+}
+
 async function publishPost() {
   if (!pendingPhotoUrl) return;
   var caption = document.getElementById('caption-input').value.trim();
   var btn = document.getElementById('publish-btn');
   btn.disabled = true; btn.textContent = '...';
+
+  var passedModeration = await checkModerationOrAlert(pendingPhotoUrl, pendingMediaType);
+  if (!passedModeration) { btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
 
   var profilePhotoId = null;
   var { count: galleryCount } = await db.from('profile_photos')
