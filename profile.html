@@ -748,6 +748,25 @@ async function handleProfilePostPhoto(input) {
   }
 }
 
+async function checkModerationOrAlert(photoUrl, mediaType) {
+  try {
+    var r = await fetch(BLIZKO_API_URL + '/api/moderate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photo_url: photoUrl, media_type: mediaType })
+    });
+    var data = await r.json();
+    if (!data.safe) {
+      alert('Публикация в ленту отклонена модерацией' + (data.reason ? ': ' + data.reason : '') + '.');
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Ошибка проверки модерации (публикуем, не блокируем при сбое связи):', e);
+    return true;
+  }
+}
+
 async function publishFromProfile() {
   if (!pendingProfilePhotoUrl) return;
   var caption = document.getElementById('post-caption-input').value.trim();
@@ -755,6 +774,9 @@ async function publishFromProfile() {
   btn.disabled = true; btn.textContent = '...';
 
   if (existingProfilePhotoId) {
+    var passedModeration = await checkModerationOrAlert(pendingProfilePhotoUrl, pendingProfileMediaType);
+    if (!passedModeration) { btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
+
     var { error: postErr } = await db.from('posts').insert({
       user_id: currentUser.id,
       photo_url: pendingProfilePhotoUrl,
@@ -779,6 +801,12 @@ async function publishFromProfile() {
 
   var alsoFeed = document.getElementById('post-also-feed').checked;
   if (alsoFeed) {
+    var passedModeration = await checkModerationOrAlert(pendingProfilePhotoUrl, pendingProfileMediaType);
+    if (!passedModeration) {
+      closePostUpload();
+      await loadMyPosts();
+      return;
+    }
     await db.from('posts').insert({
       user_id: currentUser.id,
       photo_url: pendingProfilePhotoUrl,
