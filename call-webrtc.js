@@ -10,6 +10,14 @@
 // "сначала в тему, потом перекрашивается". Теперь все кнопки оверлея используют уникальный
 // класс `.blizko-call-btn`, конфликтов с кнопками страниц больше нет.
 //
+// ФИКС: сообщение "громкая связь не поддерживается браузером" раньше показывалось через
+// нативный alert() — системный диалог, который выглядит пугающе и блокирует интерфейс.
+// Само сообщение технически верное: HTMLMediaElement.setSinkId() (переключение аудио-выхода)
+// действительно не поддерживается частью мобильных браузеров — это ограничение браузера,
+// а не баг. Но подавать эту информацию нативным alert() было грубо. Теперь вместо alert()
+// используется мягкий toast (showCallToast) — всплывающая подсказка внизу экрана, которая
+// сама исчезает через несколько секунд и не блокирует интерфейс звонка.
+//
 // (сохранены также: буферизация ICE-кандидатов, синхронизация сброса звонка у обеих сторон,
 // запись звонка, рингтон/вибро, режим звук/вибро/тихо, всегда видимая кнопка громкой связи.)
 
@@ -599,6 +607,24 @@ function stopRingtone() {
   }
 }
 
+// ---------- Мягкое уведомление вместо alert() ----------
+
+var _toastTimer = null;
+function showCallToast(message) {
+  var toast = document.getElementById('call-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'call-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function () {
+    toast.classList.remove('show');
+  }, 3800);
+}
+
 // ---------- Управление аудио ----------
 
 export function toggleMute() {
@@ -611,7 +637,7 @@ export function toggleMute() {
 export async function toggleSpeaker() {
   const audioEl = document.getElementById('call-remote-audio');
   if (!audioEl || typeof audioEl.setSinkId !== 'function') {
-    alert(t('speakerUnsupported'));
+    showCallToast(t('speakerUnsupported'));
     return;
   }
   try {
@@ -622,6 +648,7 @@ export async function toggleSpeaker() {
     updateSpeakerButton();
   } catch (e) {
     log('ошибка переключения динамика', e);
+    showCallToast(t('speakerUnsupported'));
   }
 }
 
@@ -655,7 +682,7 @@ export async function toggleRecording() {
     updateRecordButton();
   } catch (e) {
     log('не удалось начать запись', e);
-    alert(getLang() === 'en' ? 'Could not start recording.' : 'Не удалось начать запись звонка.');
+    showCallToast(getLang() === 'en' ? 'Could not start recording.' : 'Не удалось начать запись звонка.');
   }
 }
 
@@ -679,7 +706,7 @@ async function uploadRecording() {
     var up = await _client.storage.from('call-recordings').upload(fileName, blob);
     if (up.error) {
       log('ошибка загрузки записи', up.error);
-      alert((getLang() === 'en' ? 'Could not save call recording: ' : 'Не удалось сохранить запись звонка: ') + up.error.message);
+      showCallToast((getLang() === 'en' ? 'Could not save call recording: ' : 'Не удалось сохранить запись звонка: ') + up.error.message);
       return;
     }
     var url = _client.storage.from('call-recordings').getPublicUrl(fileName).data.publicUrl;
@@ -731,6 +758,11 @@ function injectStyles() {
     .call-incoming-actions{display:flex;gap:56px;justify-content:center;width:100%;margin-top:20px}
     .call-incoming-actions .blizko-call-btn.accept{background:#2ecc71;color:white;width:72px;height:72px;box-shadow:0 4px 24px rgba(46,204,113,0.4)}
     .call-incoming-actions .blizko-call-btn.hangup{box-shadow:0 4px 24px rgba(255,45,77,0.4)}
+    #call-toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);
+      background:rgba(20,20,20,0.95);color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;
+      max-width:85vw;text-align:center;line-height:1.4;z-index:10000;opacity:0;pointer-events:none;
+      transition:opacity 0.25s,transform 0.25s;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+    #call-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   `;
   document.head.appendChild(style);
 }
