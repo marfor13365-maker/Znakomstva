@@ -10,6 +10,36 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 var VAULT_KEY = 'blizko_account_vault';
 
+// ФИКС: раньше restoreLastVaultSession() при потере сессии вкладки восстанавливала
+// аккаунт с САМЫМ СВЕЖИМ updated_at — то есть тот, который последним где-либо на
+// устройстве обновил токен (в т.ч. фоновым автообновлением). На Android Chrome
+// sessionStorage вкладки нередко очищается системой, когда фоновая вкладка выгружается
+// из памяти (частый баг на слабых/старых телефонах, даже вопреки спецификации). При
+// следующем открытии вкладка теряла сессию и restoreLastVaultSession() могла молча
+// подставить ДРУГОЙ аккаунт с этого же устройства — если у него в этот момент оказался
+// более свежий updated_at, — а не тот, которым человек реально только что пользовался.
+// Дальше все действия (лайки, сообщения) уходили от имени чужого аккаунта, что и
+// объясняло путаницу с матчами между аккаунтами на одном устройстве.
+//
+// Теперь вместо угадывания "самый свежий" используется ЯВНЫЙ указатель "активный
+// аккаунт" — он выставляется только осознанно: при входе или через ручное
+// переключение в настройках, а не автообновлением токена в фоне.
+var ACTIVE_ACCOUNT_KEY = 'blizko_active_account';
+
+function getActiveAccountId() {
+  try {
+    return localStorage.getItem(ACTIVE_ACCOUNT_KEY) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function setActiveAccountId(userId) {
+  try {
+    localStorage.setItem(ACTIVE_ACCOUNT_KEY, userId);
+  } catch (e) {}
+}
+
 function getAccountVault() {
   try {
     return JSON.parse(localStorage.getItem(VAULT_KEY) || '[]');
@@ -18,7 +48,7 @@ function getAccountVault() {
   }
 }
 
-function saveSessionToVault(session) {
+function saveSessionToVault(session, markActive) {
   if (!session || !session.user) return;
   var vault = getAccountVault();
   var idx = vault.findIndex(function (a) { return a.user_id === session.user.id; });
@@ -32,11 +62,19 @@ function saveSessionToVault(session) {
   if (idx >= 0) vault[idx] = entry;
   else vault.push(entry);
   localStorage.setItem(VAULT_KEY, JSON.stringify(vault));
+  // markActive=false используется при фоновом автообновлении токена — оно НЕ должно
+  // само по себе менять, какой аккаунт считается "активным" на устройстве.
+  if (markActive !== false) {
+    setActiveAccountId(session.user.id);
+  }
 }
 
 function removeFromAccountVault(userId) {
   var vault = getAccountVault().filter(function (a) { return a.user_id !== userId; });
   localStorage.setItem(VAULT_KEY, JSON.stringify(vault));
+  if (getActiveAccountId() === userId) {
+    try { localStorage.removeItem(ACTIVE_ACCOUNT_KEY); } catch (e) {}
+  }
 }
 
 // Переключает АКТИВНУЮ сессию текущей вкладки на другой аккаунт из сейфа, без пароля.
@@ -55,11 +93,15 @@ async function switchToVaultAccount(client, userId) {
     access_token: entry.access_token,
     refresh_token: entry.refresh_token
   });
-  if (!error) return true;
+  if (!error) {
+    setActiveAccountId(userId);
+    return true;
+  }
 
   try {
     var refreshResult = await client.auth.refreshSession({ refresh_token: entry.refresh_token });
     if (refreshResult.error) return false;
+    setActiveAccountId(userId);
     return true;
   } catch (e) {
     return false;
@@ -67,23 +109,41 @@ async function switchToVaultAccount(client, userId) {
 }
 
 // Если в этой вкладке нет активной сессии (sessionStorage пуст — например, вкладка
-// открыта заново после закрытия приложения), пробуем незаметно восстановить последний
-// использованный аккаунт из сейфа (localStorage), вместо того чтобы сразу считать
-// пользователя разлогиненным. Возвращает true, если сессию удалось восстановить.
+// открыта заново после закрытия приложения, или система Android выгрузила вкладку из
+// памяти и очистила её sessionStorage), пробуем незаметно восстановить сессию, вместо
+// того чтобы сразу считать пользователя разлогиненным.
+//
+// Восстанавливаем ИМЕННО тот аккаунт, что явно выставлен активным (setActiveAccountId) —
+// а не "самый свежий по updated_at", чтобы фоновое обновление токена ДРУГОГО аккаунта
+// на этом же устройстве не могло подменить, кто сейчас залогинен в этой вкладке.
+// Если явного указателя нет (совсем старые данные до этого фикса) — по-прежнему
+// берём самый свежий как запасной вариант.
 async function restoreLastVaultSession(client) {
   var vault = getAccountVault();
   if (!vault || vault.length === 0) return false;
-  vault.sort(function (a, b) { return (b.updated_at || 0) - (a.updated_at || 0); });
-  var last = vault[0];
+
+  var activeId = getActiveAccountId();
+  var target = activeId ? vault.find(function (a) { return a.user_id === activeId; }) : null;
+
+  if (!target) {
+    vault.sort(function (a, b) { return (b.updated_at || 0) - (a.updated_at || 0); });
+    target = vault[0];
+  }
+
   try {
     var { error } = await client.auth.setSession({
-      access_token: last.access_token,
-      refresh_token: last.refresh_token
+      access_token: target.access_token,
+      refresh_token: target.refresh_token
     });
-    if (!error) return true;
+    if (!error) {
+      setActiveAccountId(target.user_id);
+      return true;
+    }
 
-    var refreshResult = await client.auth.refreshSession({ refresh_token: last.refresh_token });
-    return !refreshResult.error;
+    var refreshResult = await client.auth.refreshSession({ refresh_token: target.refresh_token });
+    if (refreshResult.error) return false;
+    setActiveAccountId(target.user_id);
+    return true;
   } catch (e) {
     return false;
   }
@@ -103,7 +163,10 @@ function createBlizkoClient() {
 
   client.auth.onAuthStateChange(function (event, session) {
     if (session && ['SIGNED_IN', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].indexOf(event) !== -1) {
-      saveSessionToVault(session);
+      // Фоновое автообновление токена (TOKEN_REFRESHED) не должно само по себе менять,
+      // какой аккаунт считается активным на устройстве — только реальный вход
+      // (SIGNED_IN/INITIAL_SESSION) или явное переключение через switchToVaultAccount.
+      saveSessionToVault(session, event !== 'TOKEN_REFRESHED');
     }
   });
 
