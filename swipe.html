@@ -188,7 +188,8 @@ async function loadProfiles() {
   var wrap = document.getElementById('card-wrap');
   var query = db.from('profiles')
     .select('*, profile_photos(photo_url)')
-    .neq('id', currentUser.id);
+    .neq('id', currentUser.id)
+    .eq('is_active', true);
 
   if (activeFilters.ageMin) query = query.gte('age', activeFilters.ageMin);
   if (activeFilters.ageMax) query = query.lte('age', activeFilters.ageMax);
