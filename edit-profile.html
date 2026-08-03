@@ -14,11 +14,22 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
 .content{padding:20px}
 
+.avatar-block{display:flex;flex-direction:column;align-items:center;padding-bottom:24px}
+.avatar-circle{width:110px;height:110px;border-radius:50%;background:var(--input-bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative}
+.avatar-circle.required{border-color:var(--accent)}
+.avatar-circle img{width:100%;height:100%;object-fit:cover}
+.avatar-circle .icon{font-size:30px;color:var(--muted)}
+.avatar-hint{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+.avatar-hint.required{color:var(--accent)}
+.upload-progress{width:140px;height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.upload-bar{height:100%;background:var(--accent);width:0%;transition:width 0.3s}
+
 .section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
 .section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:16px}
 .form-group{margin-bottom:16px}
 .form-group:last-child{margin-bottom:0}
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+label .req{color:var(--accent)}
 input[type="text"],input[type="number"],select,textarea{width:100%;padding:13px 14px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;outline:none;transition:border-color 0.2s;-webkit-appearance:none}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer}
 select option{background:#1e1e1e}
@@ -30,6 +41,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .msg{text-align:center;font-size:13px;margin-top:12px;min-height:20px}
 .msg.error{color:#ff6b6b}
 .msg.success{color:#6bffb8}
+input[type="file"]{display:none}
 </style>
 </head>
 <body>
@@ -40,11 +52,21 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 </div>
 
 <div class="content">
+  <div class="avatar-block">
+    <div class="avatar-circle" id="avatar-circle" onclick="document.getElementById('avatar-input').click()">
+      <span class="icon" id="avatar-placeholder">📷</span>
+      <img id="avatar-img" src="" style="display:none">
+    </div>
+    <div class="avatar-hint" id="avatar-hint">Фото анкеты — обязательно для публикации</div>
+    <div class="upload-progress" id="avatar-upload-progress"><div class="upload-bar" id="avatar-upload-bar"></div></div>
+    <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(this)">
+  </div>
+
   <div class="section">
     <div class="section-title">О себе</div>
-    <div class="form-group"><label>Имя</label><input type="text" id="name" maxlength="40" placeholder="Как тебя зовут?"></div>
+    <div class="form-group"><label>Имя <span class="req">*</span></label><input type="text" id="name" maxlength="40" placeholder="Как тебя зовут?"></div>
     <div class="row">
-      <div class="form-group"><label>Возраст</label><input type="number" id="age" min="18" max="99" placeholder="25"></div>
+      <div class="form-group"><label>Возраст <span class="req">*</span></label><input type="number" id="age" min="18" max="99" placeholder="25"></div>
       <div class="form-group"><label>Город</label><input type="text" id="city" maxlength="50" placeholder="Москва"></div>
     </div>
     <div class="form-group"><label>О себе</label><textarea id="about" placeholder="Расскажи о себе..."></textarea></div>
@@ -54,7 +76,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
     <div class="section-title">Предпочтения</div>
     <div class="row">
       <div class="form-group">
-        <label>Я</label>
+        <label>Я <span class="req">*</span></label>
         <select id="gender">
           <option value="">Выбери...</option>
           <option value="male">Мужчина</option>
@@ -63,7 +85,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
         </select>
       </div>
       <div class="form-group">
-        <label>Ищу</label>
+        <label>Ищу <span class="req">*</span></label>
         <select id="looking_for">
           <option value="">Выбери...</option>
           <option value="male">Мужчину</option>
@@ -86,7 +108,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
     </div>
   </div>
 
-  <button class="btn" onclick="saveProfile()">Сохранить анкету</button>
+  <button class="btn" onclick="publishProfile()" id="publish-btn">Опубликовать анкету</button>
   <div class="msg" id="msg"></div>
 </div>
 
@@ -96,6 +118,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 <script>
 var db = createBlizkoClient();
 var currentUser = null;
+var currentPhotoUrl = null;
 
 async function init() {
   var r = await db.auth.getSession();
@@ -111,10 +134,56 @@ async function init() {
     document.getElementById('gender').value = p.data.gender || '';
     document.getElementById('looking_for').value = p.data.looking_for || '';
     document.getElementById('profile_visibility').value = p.data.profile_visibility || 'matches';
+    if (p.data.photo_url) {
+      currentPhotoUrl = p.data.photo_url;
+      showAvatar(p.data.photo_url);
+    }
+    updatePublishButtonLabel(p.data.is_active === true);
   }
 }
 
-async function saveProfile() {
+function updatePublishButtonLabel(isActive) {
+  var btn = document.getElementById('publish-btn');
+  btn.textContent = isActive ? 'Обновить анкету' : 'Опубликовать анкету';
+}
+
+function showAvatar(url) {
+  document.getElementById('avatar-img').src = url;
+  document.getElementById('avatar-img').style.display = 'block';
+  document.getElementById('avatar-placeholder').style.display = 'none';
+  document.getElementById('avatar-circle').classList.remove('required');
+  document.getElementById('avatar-hint').classList.remove('required');
+  document.getElementById('avatar-hint').textContent = 'Нажми, чтобы сменить фото';
+}
+
+async function handleAvatarUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
+
+  document.getElementById('avatar-upload-progress').style.display = 'block';
+  document.getElementById('avatar-upload-bar').style.width = '40%';
+
+  var ext = file.name.split('.').pop();
+  var fileName = currentUser.id + '_' + Date.now() + '.' + ext;
+  try {
+    var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
+    document.getElementById('avatar-upload-bar').style.width = '100%';
+    setTimeout(function() { document.getElementById('avatar-upload-progress').style.display = 'none'; }, 500);
+    if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
+    var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+    currentPhotoUrl = url;
+    showAvatar(url);
+    await db.from('profiles').update({ photo_url: url }).eq('id', currentUser.id);
+    input.value = '';
+  } catch (e) {
+    document.getElementById('avatar-upload-progress').style.display = 'none';
+    document.getElementById('avatar-upload-bar').style.width = '0%';
+    alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой).\n\n' + (e && e.message ? e.message : e));
+  }
+}
+
+async function publishProfile() {
   var name = document.getElementById('name').value.trim();
   var age = parseInt(document.getElementById('age').value);
   var city = document.getElementById('city').value.trim();
@@ -123,19 +192,32 @@ async function saveProfile() {
   var looking_for = document.getElementById('looking_for').value;
   var profile_visibility = document.getElementById('profile_visibility').value;
 
+  if (!currentPhotoUrl) {
+    document.getElementById('avatar-circle').classList.add('required');
+    document.getElementById('avatar-hint').classList.add('required');
+    document.getElementById('avatar-hint').textContent = 'Добавь фото — без него анкету нельзя опубликовать';
+    setMsg('⚠️ Добавь фото анкеты', 'error');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
   if (!name) { setMsg('Введи имя', 'error'); return; }
   if (!age || age < 18) { setMsg('Укажи возраст от 18 лет', 'error'); return; }
   if (!gender) { setMsg('Укажи свой пол', 'error'); return; }
   if (!looking_for) { setMsg('Укажи кого ищешь', 'error'); return; }
 
-  setMsg('Сохраняем...', '');
+  setMsg('Публикуем...', '');
   var r = await db.from('profiles').upsert({
     id: currentUser.id, name, age, city, about, gender, looking_for, profile_visibility,
+    photo_url: currentPhotoUrl,
     is_active: true
   });
 
   if (r.error) { setMsg(r.error.message, 'error'); }
-  else { setMsg('Анкета сохранена! ✓', 'success'); setTimeout(function() { window.location.href = 'profile.html'; }, 1000); }
+  else {
+    setMsg('Анкета опубликована! ✓', 'success');
+    updatePublishButtonLabel(true);
+    setTimeout(function() { window.location.href = 'profile.html'; }, 1000);
+  }
 }
 
 function setMsg(text, type) {
