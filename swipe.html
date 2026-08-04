@@ -50,6 +50,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
 .filter-row{margin-bottom:16px}
 .filter-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block}
+.filter-gender-row{display:flex;gap:8px}
+.filter-gender-btn{flex:1;padding:10px 6px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;transition:all 0.2s}
+.filter-gender-btn.active{border-color:var(--accent);background:rgba(255,77,109,0.15);color:var(--accent2);font-weight:600}
 .filter-age-inputs{display:flex;align-items:center;gap:10px}
 .filter-age-inputs input{width:70px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;text-align:center}
 .filter-age-inputs input:focus{border-color:var(--accent)}
@@ -93,6 +96,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   <div class="like-modal-card">
     <div class="like-modal-title">⚙️ Фильтры</div>
     <div class="filter-row">
+      <span class="filter-label">Показывать</span>
+      <div class="filter-gender-row">
+        <button class="filter-gender-btn" id="filter-gender-male" onclick="selectGenderFilter('male')">Мужчины</button>
+        <button class="filter-gender-btn" id="filter-gender-female" onclick="selectGenderFilter('female')">Женщины</button>
+        <button class="filter-gender-btn" id="filter-gender-any" onclick="selectGenderFilter(null)">Все</button>
+      </div>
+    </div>
+    <div class="filter-row">
       <span class="filter-label">Возраст</span>
       <div class="filter-age-inputs">
         <input type="number" id="filter-age-min" placeholder="18" min="18" max="99">
@@ -133,7 +144,8 @@ var currentIndex = 0;
 var isDragging = false;
 var startX = 0, startY = 0;
 var pendingLikeId = null;
-var activeFilters = { ageMin: null, ageMax: null, city: '' };
+var activeFilters = { ageMin: null, ageMax: null, city: '', gender: null };
+var pendingGenderFilter = null;
 
 // Нижнего меню на этой странице больше нет (перекрывало кнопки лайк/пропустить на
 // коротких экранах) — вместо него кнопка "назад" сверху. Если попали сюда не из
@@ -181,6 +193,15 @@ async function init() {
   }
   
   currentUser = session.user;
+
+  try {
+    var { data: myProfile } = await db.from('profiles').select('looking_for').eq('id', currentUser.id).single();
+    if (myProfile && myProfile.looking_for && myProfile.looking_for !== 'any') {
+      activeFilters.gender = myProfile.looking_for;
+      updateFilterBadge();
+    }
+  } catch (e) {}
+
   await loadProfiles();
 }
 
@@ -194,6 +215,7 @@ async function loadProfiles() {
   if (activeFilters.ageMin) query = query.gte('age', activeFilters.ageMin);
   if (activeFilters.ageMax) query = query.lte('age', activeFilters.ageMax);
   if (activeFilters.city) query = query.ilike('city', '%' + activeFilters.city + '%');
+  if (activeFilters.gender) query = query.eq('gender', activeFilters.gender);
 
   var { data, error } = await query.limit(20);
   
@@ -361,10 +383,18 @@ async function sendLike() {
   }
 }
 
+function selectGenderFilter(value) {
+  pendingGenderFilter = value;
+  document.getElementById('filter-gender-male').classList.toggle('active', value === 'male');
+  document.getElementById('filter-gender-female').classList.toggle('active', value === 'female');
+  document.getElementById('filter-gender-any').classList.toggle('active', !value);
+}
+
 function openFilters() {
   document.getElementById('filter-age-min').value = activeFilters.ageMin || '';
   document.getElementById('filter-age-max').value = activeFilters.ageMax || '';
   document.getElementById('filter-city').value = activeFilters.city || '';
+  selectGenderFilter(activeFilters.gender);
   document.getElementById('filters-modal').classList.add('show');
 }
 
@@ -374,7 +404,7 @@ function closeFiltersModal() {
 
 function updateFilterBadge() {
   var badge = document.getElementById('filter-badge');
-  var hasFilters = !!(activeFilters.ageMin || activeFilters.ageMax || activeFilters.city);
+  var hasFilters = !!(activeFilters.ageMin || activeFilters.ageMax || activeFilters.city || activeFilters.gender);
   badge.classList.toggle('show', hasFilters);
 }
 
@@ -386,6 +416,7 @@ function applyFilters() {
   activeFilters.ageMin = isNaN(ageMin) ? null : ageMin;
   activeFilters.ageMax = isNaN(ageMax) ? null : ageMax;
   activeFilters.city = city;
+  activeFilters.gender = pendingGenderFilter;
 
   closeFiltersModal();
   updateFilterBadge();
@@ -393,10 +424,11 @@ function applyFilters() {
 }
 
 function resetFilters() {
-  activeFilters = { ageMin: null, ageMax: null, city: '' };
+  activeFilters = { ageMin: null, ageMax: null, city: '', gender: null };
   document.getElementById('filter-age-min').value = '';
   document.getElementById('filter-age-max').value = '';
   document.getElementById('filter-city').value = '';
+  selectGenderFilter(null);
   closeFiltersModal();
   updateFilterBadge();
   loadProfiles();
