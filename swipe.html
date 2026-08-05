@@ -146,6 +146,20 @@ var startX = 0, startY = 0;
 var pendingLikeId = null;
 var activeFilters = { ageMin: null, ageMax: null, city: '', gender: null };
 var pendingGenderFilter = null;
+var SWIPE_FILTERS_KEY = 'blizko_swipe_filters';
+
+function saveFiltersToStorage() {
+  try { localStorage.setItem(SWIPE_FILTERS_KEY, JSON.stringify(activeFilters)); } catch (e) {}
+}
+
+function loadFiltersFromStorage() {
+  try {
+    var raw = localStorage.getItem(SWIPE_FILTERS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
 
 // Нижнего меню на этой странице больше нет (перекрывало кнопки лайк/пропустить на
 // коротких экранах) — вместо него кнопка "назад" сверху. Если попали сюда не из
@@ -194,13 +208,20 @@ async function init() {
   
   currentUser = session.user;
 
-  try {
-    var { data: myProfile } = await db.from('profiles').select('looking_for').eq('id', currentUser.id).single();
-    if (myProfile && myProfile.looking_for && myProfile.looking_for !== 'any') {
-      activeFilters.gender = myProfile.looking_for;
-      updateFilterBadge();
-    }
-  } catch (e) {}
+  var savedFilters = loadFiltersFromStorage();
+  if (savedFilters) {
+    activeFilters = savedFilters;
+    updateFilterBadge();
+  } else {
+    try {
+      var { data: myProfile } = await db.from('profiles').select('looking_for').eq('id', currentUser.id).single();
+      if (myProfile && myProfile.looking_for && myProfile.looking_for !== 'any') {
+        activeFilters.gender = myProfile.looking_for;
+        updateFilterBadge();
+      }
+    } catch (e) {}
+    saveFiltersToStorage();
+  }
 
   await loadProfiles();
 }
@@ -418,6 +439,7 @@ function applyFilters() {
   activeFilters.city = city;
   activeFilters.gender = pendingGenderFilter;
 
+  saveFiltersToStorage();
   closeFiltersModal();
   updateFilterBadge();
   loadProfiles();
@@ -429,6 +451,7 @@ function resetFilters() {
   document.getElementById('filter-age-max').value = '';
   document.getElementById('filter-city').value = '';
   selectGenderFilter(null);
+  saveFiltersToStorage();
   closeFiltersModal();
   updateFilterBadge();
   loadProfiles();
