@@ -26,6 +26,22 @@ const ICE_SERVERS = [
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
 
+// Получает временные TURN-креды с бэкенда перед звонком (нужны, когда участники в
+// разных сетях — мобильный интернет обычно не пропускает прямое P2P-соединение
+// только через STUN). При сбое запроса тихо откатываемся на ICE_SERVERS (только
+// STUN) — звонок всё ещё может сработать в благоприятных сетевых условиях.
+async function getIceServers() {
+  try {
+    const r = await fetch(BLIZKO_API_URL + '/api/calls/turn-credentials');
+    if (!r.ok) throw new Error('bad status ' + r.status);
+    const data = await r.json();
+    if (data && data.iceServers && data.iceServers.length) return data.iceServers;
+  } catch (e) {
+    log('не удалось получить TURN-креды, используем только STUN', e);
+  }
+  return ICE_SERVERS;
+}
+
 var BLIZKO_API_URL = (typeof window !== 'undefined' && window.BLIZKO_API_URL) ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
 var RING_TIMEOUT_MS = 45000;
 var RING_MODE_KEY = 'blizko_ring_mode'; // 'sound' | 'vibrate' | 'silent'
@@ -312,7 +328,8 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
 
   updateMuteButton();
 
-  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  const iceServers = await getIceServers();
+  pc = new RTCPeerConnection({ iceServers: iceServers });
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
   wireConnectionEvents(name, avatarUrl);
   openIceChannel(matchId, callId);
@@ -412,7 +429,8 @@ async function acceptCurrentCall(row) {
 
   updateMuteButton();
 
-  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  const iceServers = await getIceServers();
+  pc = new RTCPeerConnection({ iceServers: iceServers });
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
   wireConnectionEvents(infoName, infoAvatar);
   // ICE-канал уже открыт в handleIncomingCallRow.
