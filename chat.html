@@ -72,6 +72,10 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
 .msg-file .file-name{font-size:12px;word-break:break-all}
 .msg-audio audio{max-width:100%}
 
+.msg-bubble.call-log{align-self:center;background:var(--input-bg);border:1px solid var(--border);color:var(--muted);border-radius:14px;font-size:12px;padding:8px 14px;text-align:center;max-width:70%}
+.msg-bubble.call-log .msg-time{justify-content:center;color:var(--muted)}
+.msg-bubble.call-log .msg-delete-btn{color:var(--muted)}
+
 #upload-progress{position:fixed;bottom:60px;left:0;right:0;padding:0 16px;z-index:20;display:none}
 #upload-progress .progress-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
 #upload-progress .progress-bar{height:100%;width:0%;background:var(--accent);transition:width 0.3s ease}
@@ -291,8 +295,9 @@ function appendMessageToDOM(msg) {
   if (empty) empty.remove();
   
   var isMe = msg.sender_id === currentUser.id;
+  var isCallLog = !!(msg.text && msg.text.indexOf('📞') === 0 && !msg.photo_url && !msg.video_url && !msg.file_url && !msg.voice_url);
   var bubble = document.createElement('div');
-  bubble.className = 'msg-bubble ' + (isMe ? 'me' : 'them');
+  bubble.className = 'msg-bubble ' + (isCallLog ? 'call-log' : (isMe ? 'me' : 'them'));
   bubble.dataset.msgId = msg.id;
   
   var time = new Date(msg.created_at).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
@@ -336,7 +341,7 @@ function appendMessageToDOM(msg) {
   
   contentHtml += '<div class="msg-time"><span>' + time + '</span>';
   
-  if (isMe) {
+  if (isMe && !isCallLog) {
     contentHtml += ' <button class="msg-delete-btn" onclick="deleteMessage(\'' + msg.id + '\')" title="Удалить">🗑️</button>';
   }
   
