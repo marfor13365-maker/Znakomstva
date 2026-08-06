@@ -63,6 +63,8 @@ let durationTimer = null;
 let ringTimer = null;
 let isMuted = false;
 let speakerOn = false;
+let isCaller = false;
+let callAlreadyLogged = false;
 
 // --- рингтон/вибро ---
 let audioCtx = null;
@@ -73,6 +75,26 @@ let vibrateInterval = null;
 let mediaRecorder = null;
 let recordedChunks = [];
 let isRecording = false;
+
+function formatCallDuration(ms) {
+  var sec = Math.floor(ms / 1000);
+  var m = String(Math.floor(sec / 60)).padStart(2, '0');
+  var s = String(sec % 60).padStart(2, '0');
+  return m + ':' + s;
+}
+
+async function logCallToChat(text) {
+  if (!currentMatchId || !_client || !_myUserId) return;
+  try {
+    await _client.from('messages').insert({
+      match_id: currentMatchId,
+      sender_id: _myUserId,
+      text: text
+    });
+  } catch (e) {
+    log('не удалось записать лог звонка в чат', e);
+  }
+}
 
 function log(...args) {
   console.log('[call]', ...args);
@@ -315,6 +337,8 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
   const callId = crypto.randomUUID();
   currentCallId = callId;
   currentMatchId = matchId;
+  isCaller = true;
+  callAlreadyLogged = false;
 
   showOutgoingScreen(name, avatarUrl);
 
@@ -369,6 +393,8 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
     }, (payload) => {
       if (payload.new.status === 'declined' && !connectedAt) {
         showDeclinedScreen(name, avatarUrl);
+        callAlreadyLogged = true;
+        logCallToChat('📞 Звонок отклонён');
         setTimeout(() => cleanupCall(), 1600);
       }
     })
@@ -382,6 +408,8 @@ export async function startCall(matchId, calleeUserId, name, avatarUrl) {
       try {
         await _client.from('calls').update({ status: 'missed', updated_at: new Date().toISOString() }).eq('id', callId);
       } catch (e) {}
+      callAlreadyLogged = true;
+      await logCallToChat('📞 Пропущенный звонок');
       cleanupCall();
     }
   }, RING_TIMEOUT_MS);
@@ -416,6 +444,8 @@ async function notifyIncomingCallPush(matchId, calleeUserId, callId) {
 
 async function acceptCurrentCall(row) {
   clearTimeout(ringTimer);
+  isCaller = false;
+  callAlreadyLogged = false;
   const infoName = document.getElementById('call-name-text')?.textContent || 'Пользователь';
   const infoAvatar = document.getElementById('call-avatar-img')?.src || '';
 
@@ -553,6 +583,14 @@ export function declineCall() {
 }
 
 function cleanupCall() {
+  if (isCaller && currentMatchId && !callAlreadyLogged) {
+    callAlreadyLogged = true;
+    if (connectedAt) {
+      logCallToChat('📞 Звонок • ' + formatCallDuration(Date.now() - connectedAt));
+    } else {
+      logCallToChat('📞 Звонок отменён');
+    }
+  }
   clearTimeout(ringTimer);
   stopRingtone();
   if (isRecording) stopRecording();
@@ -566,6 +604,8 @@ function cleanupCall() {
   currentMatchId = null;
   isMuted = false;
   speakerOn = false;
+  isCaller = false;
+  callAlreadyLogged = false;
   if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
   connectedAt = null;
   hideCallScreen();
