@@ -137,6 +137,16 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
   <button class="rec-stop" onclick="stopVoiceRecording()">✋ Остановить</button>
 </div>
 
+<div class="voice-recording" id="voice-preview">
+  <div class="rec-icon">🎧</div>
+  <div class="rec-text">Прослушай перед отправкой</div>
+  <audio id="voice-preview-audio" controls style="width:80%;max-width:320px;margin-top:6px"></audio>
+  <div style="display:flex;gap:12px;margin-top:10px">
+    <button class="rec-stop" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="discardVoicePreview()">🗑 Удалить</button>
+    <button class="rec-stop" onclick="sendVoicePreview()">➤ Отправить</button>
+  </div>
+</div>
+
 <input type="file" id="file-input" style="display:none" onchange="handleFileSelect(this)">
 
 <script src="theme.js"></script>
@@ -170,6 +180,7 @@ var otherUserId = null;
 var subscription = null;
 var messagesMap = {};
 var mediaRecorder = null;
+var pendingVoiceBlob = null;
 var audioChunks = [];
 var recInterval = null;
 var recSeconds = 0;
@@ -341,7 +352,7 @@ function appendMessageToDOM(msg) {
   
   contentHtml += '<div class="msg-time"><span>' + time + '</span>';
   
-  if (isMe && !isCallLog) {
+  if (!isCallLog) {
     contentHtml += ' <button class="msg-delete-btn" onclick="deleteMessage(\'' + msg.id + '\')" title="Удалить">🗑️</button>';
   }
   
@@ -355,7 +366,7 @@ function appendMessageToDOM(msg) {
 // ===== УДАЛЕНИЕ СООБЩЕНИЙ =====
 async function deleteMessage(messageId) {
   if (!confirm('Удалить сообщение?')) return;
-  var { error } = await db.from('messages').delete().eq('id', messageId).eq('sender_id', currentUser.id);
+  var { error } = await db.from('messages').delete().eq('id', messageId).eq('match_id', matchId);
   if (error) { alert('Ошибка: ' + error.message); return; }
   var wrap = document.getElementById('messages-wrap');
   var items = wrap.querySelectorAll('.msg-bubble');
@@ -584,7 +595,10 @@ function startVoiceRecording() {
     
     mediaRecorder.onstop = function() {
       var audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-      uploadVoiceMessage(audioBlob);
+      pendingVoiceBlob = audioBlob;
+      var url = URL.createObjectURL(audioBlob);
+      document.getElementById('voice-preview-audio').src = url;
+      document.getElementById('voice-preview').classList.add('show');
       stream.getTracks().forEach(function(t) { t.stop(); });
     };
     
@@ -608,6 +622,23 @@ function stopVoiceRecording() {
   mediaRecorder.stop();
   document.getElementById('voice-recording').classList.remove('show');
   document.getElementById('rec-timer').textContent = '00:00';
+}
+
+function discardVoicePreview() {
+  var audioEl = document.getElementById('voice-preview-audio');
+  if (audioEl.src) { URL.revokeObjectURL(audioEl.src); audioEl.src = ''; audioEl.pause(); }
+  pendingVoiceBlob = null;
+  document.getElementById('voice-preview').classList.remove('show');
+}
+
+function sendVoicePreview() {
+  if (!pendingVoiceBlob) return;
+  var blob = pendingVoiceBlob;
+  var audioEl = document.getElementById('voice-preview-audio');
+  if (audioEl.src) { URL.revokeObjectURL(audioEl.src); audioEl.src = ''; audioEl.pause(); }
+  pendingVoiceBlob = null;
+  document.getElementById('voice-preview').classList.remove('show');
+  uploadVoiceMessage(blob);
 }
 
 async function uploadVoiceMessage(blob) {
