@@ -125,7 +125,8 @@ input:focus{border-color:var(--accent)}
 <div id="hcaptcha-login" style="margin-bottom:12px;display:flex;justify-content:center;min-height:78px"></div>
 <button class="btn" id="btn_login" onclick="doLogin()"></button>
 <div class="msg" id="login-msg"></div>
-<button type="button" class="unlock-toggle" id="unlock-toggle-login" onclick="toggleUnlockBox('login')"></button>
+<!-- Временно скрыто: покупка доп.аккаунта идёт через resume-bot, у которого сейчас не проходят платежи (Platiga 401). Код оставлен нетронутым, просто спрятан — включить обратно можно, убрав style="display:none". -->
+<button type="button" class="unlock-toggle" id="unlock-toggle-login" onclick="toggleUnlockBox('login')" style="display:none"></button>
 <div class="unlock-box" id="unlock-box-login" style="display:none"></div>
 </div>
 <div id="register-form" style="display:none">
@@ -150,7 +151,8 @@ input:focus{border-color:var(--accent)}
 <div id="hcaptcha-register" style="margin-bottom:12px;display:flex;justify-content:center;min-height:78px"></div>
 <button class="btn" id="reg-btn" onclick="doRegister()" disabled></button>
 <div class="msg" id="reg-msg"></div>
-<button type="button" class="unlock-toggle" id="unlock-toggle-reg" onclick="toggleUnlockBox('reg')"></button>
+<!-- Временно скрыто: см. комментарий у аналогичного блока на вкладке входа. -->
+<button type="button" class="unlock-toggle" id="unlock-toggle-reg" onclick="toggleUnlockBox('reg')" style="display:none"></button>
 <div class="unlock-box" id="unlock-box-reg" style="display:none"></div>
 </div>
 </div>
