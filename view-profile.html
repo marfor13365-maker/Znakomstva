@@ -44,14 +44,37 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .locked-state{text-align:center;padding:50px 30px;color:var(--muted)}
 .locked-state .icon{font-size:50px;margin-bottom:14px}
 .locked-state p{font-size:14px;line-height:1.6}
-.viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:100;display:none;align-items:center;justify-content:center}
+.viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:100;display:none;flex-direction:column}
 .viewer-overlay.show{display:flex}
 .viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:101}
-.viewer-content{max-width:100%;max-height:100%;padding:20px}
-.viewer-content img,.viewer-content video{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}
+.viewer-scroll{flex:1;display:flex;flex-direction:column;overflow-y:auto}
+.viewer-photo-wrap{flex-shrink:0;min-height:58vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.viewer-content{max-width:100%;max-height:78vh}
+.viewer-content img,.viewer-content video{max-width:100%;max-height:78vh;object-fit:contain;border-radius:8px}
 .viewer-content img{touch-action:none;-webkit-user-drag:none;-webkit-user-select:none;user-select:none;will-change:transform}
-.viewer-views{position:absolute;bottom:20px;left:0;right:0;text-align:center;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px}
-.viewer-overlay.immersive .viewer-close,.viewer-overlay.immersive .viewer-views{display:none}
+.viewer-views{color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 0 14px}
+.viewer-footer{padding:0 20px calc(30px + env(safe-area-inset-bottom))}
+.viewer-overlay.immersive .viewer-close,.viewer-overlay.immersive .viewer-views,.viewer-overlay.immersive .viewer-footer{display:none}
+.viewer-overlay.immersive .viewer-photo-wrap{min-height:100vh}
+.like-comment-row{display:flex;align-items:center;margin-bottom:10px;border-top:1px solid var(--border);padding-top:14px}
+.like-btn{background:none;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--text);padding:4px 0}
+.like-btn.liked{color:var(--accent)}
+.like-btn span{font-size:14px;font-weight:600;color:var(--muted)}
+.comments-section{margin-top:6px}
+.comments-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:500}
+.comment-item{display:flex;gap:8px;margin-bottom:10px;align-items:flex-start}
+.comment-avatar{width:28px;height:28px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border:1px solid var(--border)}
+.comment-avatar img{width:100%;height:100%;object-fit:cover}
+.comment-avatar .initials{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--text)}
+.comment-body{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
+.comment-name{font-size:12px;font-weight:600;margin-bottom:2px}
+.comment-text{font-size:13px;line-height:1.4}
+.comment-del{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:4px;flex-shrink:0}
+.comment-input-row{display:flex;gap:8px;margin-top:8px}
+.comment-input-row input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:18px;padding:10px 14px;color:var(--text);font-size:13px;outline:none}
+.comment-input-row input:focus{border-color:var(--accent)}
+.comment-input-row button{background:var(--accent);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:14px;flex-shrink:0}
+.comments-disabled-msg{font-size:12px;color:var(--muted);text-align:center;padding:8px 0}
 .bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:transparent;z-index:10;gap:6px}
 .bottom-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:rgba(255,255,255,0.85);cursor:pointer;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:opacity 0.2s;flex:1;border-radius:16px;box-shadow:0 2px 10px rgba(255,77,109,0.4)}
 .bottom-btn.active{color:white;font-weight:600;opacity:1}
@@ -61,259 +84,400 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </head>
 <body>
 <div class="topbar">
-  <button class="back-btn" onclick="history.back()">&#8592;</button>
-  <div class="page-title" data-i18n="profile">Анкета</div>
-  <div class="topbar-right">
-    <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
-  </div>
+<button class="back-btn" onclick="history.back()">&#8592;</button>
+<div class="page-title" data-i18n="profile">Анкета</div>
+<div class="topbar-right">
+<button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
+</div>
 </div>
 <div class="content" id="content">
-  <div class="loading">⏳ Загрузка...</div>
+<div class="loading">⏳ Загрузка...</div>
 </div>
 <div class="viewer-overlay" id="viewer-overlay">
-  <button class="viewer-close" onclick="closeViewer()">✕</button>
-  <div class="viewer-content" id="viewer-content">
-    <img id="viewer-img" src="" alt="" style="display:none">
-    <video id="viewer-video" src="" controls playsinline style="display:none"></video>
-  </div>
-  <div class="viewer-views" id="viewer-views">👁 <span id="viewer-views-count">0</span></div>
+<button class="viewer-close" onclick="closeViewer()">✕</button>
+<div class="viewer-scroll" id="viewer-scroll">
+<div class="viewer-photo-wrap">
+<div class="viewer-content" id="viewer-content">
+<img id="viewer-img" src="" alt="" style="display:none">
+<video id="viewer-video" src="" controls playsinline style="display:none"></video>
+</div>
+</div>
+<div class="viewer-views" id="viewer-views">👁 <span id="viewer-views-count">0</span></div>
+<div class="viewer-footer" id="viewer-footer" style="display:none">
+<div class="like-comment-row">
+<button class="like-btn" id="gallery-like-btn" onclick="toggleGalleryPostLike()">🤍 <span id="gallery-like-count">0</span></button>
+</div>
+<div class="comments-section">
+<div class="comments-title">Комментарии</div>
+<div id="gallery-comments-list"></div>
+<div class="comment-input-row" id="gallery-comment-input-row">
+<input type="text" id="gallery-comment-input" placeholder="Написать комментарий..." maxlength="300">
+<button onclick="sendGalleryComment()">➤</button>
+</div>
+<div class="comments-disabled-msg" id="gallery-comments-disabled-msg" style="display:none">Комментарии отключены автором</div>
+</div>
+</div>
+</div>
 </div>
 <div class="bottombar">
-  <button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span data-i18n="feed">Лента</span></button>
-  <button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span data-i18n="swipe">Знакомства</span></button>
-  <button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span data-i18n="likes">Лайки</span></button>
-  <button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span data-i18n="chats">Чаты</span></button>
-  <button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">👤</span><span data-i18n="profile">Профиль</span></button>
+<button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span data-i18n="feed">Лента</span></button>
+<button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span data-i18n="swipe">Знакомства</span></button>
+<button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span data-i18n="likes">Лайки</span></button>
+<button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span data-i18n="chats">Чаты</span></button>
+<button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">👤</span><span data-i18n="profile">Профиль</span></button>
 </div>
-
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="photo-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
-  document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">❌ Ошибка: config.js не загружен.</div>';
+document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">❌ Ошибка: config.js не загружен.</div>';
 } else {
-  var db = createBlizkoClient();
-  var currentUser = null;
-  var galleryItems = [];
-  var currentTargetId = null;
-  var currentMatchId = null;
+var db = createBlizkoClient();
+var currentUser = null;
+var galleryItems = [];
+var galleryPostMap = {};
+var currentTargetId = null;
+var currentMatchId = null;
+var currentGalleryPostId = null;
 
-  window.toggleLanguage = function() {
-    if (typeof BlizkoTheme !== 'undefined' && typeof BlizkoTheme.toggleLang === 'function') {
-      BlizkoTheme.toggleLang();
-    } else {
-      var btn = document.getElementById('lang-toggle-btn');
-      if (btn) {
-        btn.textContent = btn.textContent === 'EN' ? 'RU' : 'EN';
-        location.reload();
-      }
-    }
-  };
+window.toggleLanguage = function() {
+if (typeof BlizkoTheme !== 'undefined' && typeof BlizkoTheme.toggleLang === 'function') {
+BlizkoTheme.toggleLang();
+} else {
+var btn = document.getElementById('lang-toggle-btn');
+if (btn) {
+btn.textContent = btn.textContent === 'EN' ? 'RU' : 'EN';
+location.reload();
+}
+}
+};
 
-  function getTargetUserId() {
-    var params = new URLSearchParams(window.location.search);
-    return params.get('user');
-  }
+function getTargetUserId() {
+var params = new URLSearchParams(window.location.search);
+return params.get('user');
+}
 
-  async function getMatchId(otherUserId) {
-    var { data } = await db.from('matches').select('id')
-      .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
-      .maybeSingle();
-    return data ? data.id : null;
-  }
+async function getMatchId(otherUserId) {
+var { data } = await db.from('matches').select('id')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+return data ? data.id : null;
+}
 
-  window.deleteMatch = async function(matchId) {
-    if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
-    try {
-      await db.from('messages').delete().eq('match_id', matchId);
-      await db.from('matches').delete().eq('id', matchId);
-      alert('Чат удалён.');
-      window.location.href = 'matches.html';
-    } catch(e) {
-      alert('Ошибка при удалении: ' + e.message);
-    }
-  };
+window.deleteMatch = async function(matchId) {
+if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
+try {
+await db.from('messages').delete().eq('match_id', matchId);
+await db.from('matches').delete().eq('id', matchId);
+alert('Чат удалён.');
+window.location.href = 'matches.html';
+} catch(e) {
+alert('Ошибка при удалении: ' + e.message);
+}
+};
 
-  async function init() {
-    try {
-      var r = await db.auth.getSession();
-      if (!r.data.session) {
-        window.location.href = 'index.html';
-        return;
-      }
-      currentUser = r.data.session.user;
-      var targetId = getTargetUserId();
-      if (!targetId) {
-        window.location.href = 'feed.html';
-        return;
-      }
-      currentTargetId = targetId;
+async function init() {
+try {
+var r = await db.auth.getSession();
+if (!r.data.session) {
+window.location.href = 'index.html';
+return;
+}
+currentUser = r.data.session.user;
+var targetId = getTargetUserId();
+if (!targetId) {
+window.location.href = 'feed.html';
+return;
+}
+currentTargetId = targetId;
+var { data: profile, error } = await db.from('profiles').select('*').eq('id', targetId).single();
+if (error || !profile) {
+document.getElementById('content').innerHTML = '<div class="loading">⚠️ Анкета не найдена</div>';
+console.error('Ошибка загрузки профиля:', error);
+return;
+}
+currentMatchId = await getMatchId(targetId);
+renderProfile(profile);
+if (typeof BlizkoTheme !== 'undefined') {
+if (typeof BlizkoTheme.apply === 'function') BlizkoTheme.apply();
+if (typeof BlizkoTheme.applyLang === 'function') BlizkoTheme.applyLang();
+}
+} catch(e) {
+console.error('Ошибка инициализации:', e);
+document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">⚠️ Ошибка загрузки: ' + e.message + '</div>';
+}
+}
 
-      var { data: profile, error } = await db.from('profiles').select('*').eq('id', targetId).single();
-      if (error || !profile) {
-        document.getElementById('content').innerHTML = '<div class="loading">⚠️ Анкета не найдена</div>';
-        console.error('Ошибка загрузки профиля:', error);
-        return;
-      }
+function renderProfile(profile) {
+var content = document.getElementById('content');
+var html =
+'<div class="avatar-block">' +
+'<div class="avatar-wrap">' +
+'<div class="avatar-circle">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
+'</div>' +
+'<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
+'<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
+'<div class="actions-row">';
+if (currentMatchId) {
+html += '<button class="btn message-btn" onclick="window.location.href=\'chat.html?match=' + currentMatchId + '\'" data-i18n="write_message">💬 Написать сообщение</button>';
+html += '<button class="btn delete-match-btn" onclick="deleteMatch(\'' + currentMatchId + '\')" data-i18n="delete_match">🗑 Удалить матч</button>';
+} else {
+html += '<button class="btn message-btn" onclick="window.location.href=\'matches.html\'" data-i18n="write_message">💬 Написать сообщение</button>';
+}
+html += '</div></div>';
+html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text">' +
+(profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
+'</div></div>';
+html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
+html += '<div class="gallery-grid" id="gallery-grid"></div>';
+content.innerHTML = html;
+loadGallery(profile.id);
+if (typeof BlizkoTheme !== 'undefined' && typeof BlizkoTheme.applyLang === 'function') {
+BlizkoTheme.applyLang();
+}
+}
 
-      currentMatchId = await getMatchId(targetId);
-      renderProfile(profile);
+function escapeHtml(str) {
+return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
-      if (typeof BlizkoTheme !== 'undefined') {
-        if (typeof BlizkoTheme.apply === 'function') BlizkoTheme.apply();
-        if (typeof BlizkoTheme.applyLang === 'function') BlizkoTheme.applyLang();
-      }
-    } catch(e) {
-      console.error('Ошибка инициализации:', e);
-      document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">⚠️ Ошибка загрузки: ' + e.message + '</div>';
-    }
-  }
+async function loadGallery(targetId) {
+try {
+var { data } = await db.from('profile_photos').select('*').eq('user_id', targetId).order('position', { ascending: true });
+galleryItems = data || [];
+var grid = document.getElementById('gallery-grid');
+if (!grid) return;
+if (galleryItems.length === 0) {
+grid.innerHTML = '<div style="padding:0 4px;color:var(--muted);font-size:13px">Галерея пуста</div>';
+return;
+}
 
-  function renderProfile(profile) {
-    var content = document.getElementById('content');
+var photoIds = galleryItems.map(function(p) { return p.id; });
 
-    var html =
-      '<div class="avatar-block">' +
-        '<div class="avatar-wrap">' +
-          '<div class="avatar-circle">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
-        '</div>' +
-        '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
-        '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
-        '<div class="actions-row">';
+// У каждого фото в галерее есть связанный пост (создаётся автоматически при добавлении
+// фото — виден в ленте или скрыт), именно в нём хранятся общие лайки и комментарии
+galleryPostMap = {};
+try {
+var { data: linkedPosts } = await db.from('posts').select('*').eq('user_id', targetId).in('profile_photo_id', photoIds);
+(linkedPosts || []).forEach(function(p) { galleryPostMap[p.profile_photo_id] = p; });
+} catch(e) {
+console.error('Ошибка загрузки связанных постов:', e);
+}
 
-    if (currentMatchId) {
-      html += '<button class="btn message-btn" onclick="window.location.href=\'chat.html?match=' + currentMatchId + '\'" data-i18n="write_message">💬 Написать сообщение</button>';
-      html += '<button class="btn delete-match-btn" onclick="deleteMatch(\'' + currentMatchId + '\')" data-i18n="delete_match">🗑 Удалить матч</button>';
-    } else {
-      html += '<button class="btn message-btn" onclick="window.location.href=\'matches.html\'" data-i18n="write_message">💬 Написать сообщение</button>';
-    }
+var viewCounts = {};
+var { data: viewsData } = await db.from('media_views')
+.select('item_id')
+.eq('item_type', 'profile_photo')
+.in('item_id', photoIds);
+(viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
 
-    html += '</div></div>';
+grid.innerHTML = '';
+galleryItems.forEach(function(item, idx) {
+var el = document.createElement('div');
+el.className = 'gallery-item';
+el.setAttribute('data-photo-id', item.id);
+el.onclick = function() { openViewer(idx); };
+var mediaHtml = item.media_type === 'video'
+? '<video src="' + item.photo_url + '" muted></video>'
+: '<img src="' + item.photo_url + '">';
+el.innerHTML = mediaHtml + '<div class="gallery-item-views">👁 ' + (viewCounts[item.id] || 0) + '</div>';
+grid.appendChild(el);
+});
+} catch(e) {
+console.error('Ошибка загрузки галереи:', e);
+}
+}
 
-    html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text">' +
-      (profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
-      '</div></div>';
+var galleryViewerAttached = false;
+function ensureGalleryViewerAttached() {
+if (galleryViewerAttached) return;
+galleryViewerAttached = true;
+var img = document.getElementById('viewer-img');
+if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.attach) {
+BlizkoPhotoViewer.attach(img, {
+onImmersiveChange: function (level) {
+document.getElementById('viewer-overlay').classList.toggle('immersive', level > 0);
+}
+});
+}
+}
 
-    html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
-    html += '<div class="gallery-grid" id="gallery-grid"></div>';
+function openViewer(idx) {
+var item = galleryItems[idx];
+if (!item) return;
+ensureGalleryViewerAttached();
+var img = document.getElementById('viewer-img');
+var video = document.getElementById('viewer-video');
+if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.reset) {
+BlizkoPhotoViewer.reset(img);
+}
+document.getElementById('viewer-overlay').classList.remove('immersive');
+if (item.media_type === 'video') {
+video.src = item.photo_url;
+video.style.display = 'block';
+img.style.display = 'none';
+img.src = '';
+video.play().catch(function() {});
+} else {
+img.src = item.photo_url;
+img.style.display = 'block';
+video.style.display = 'none';
+video.src = '';
+}
+document.getElementById('viewer-scroll').scrollTop = 0;
+document.getElementById('viewer-overlay').classList.add('show');
+recordAndShowProfilePhotoViews(item.id);
 
-    content.innerHTML = html;
-    loadGallery(profile.id);
-    if (typeof BlizkoTheme !== 'undefined' && typeof BlizkoTheme.applyLang === 'function') {
-      BlizkoTheme.applyLang();
-    }
-  }
+var linkedPost = galleryPostMap[item.id];
+var footer = document.getElementById('viewer-footer');
+if (linkedPost) {
+currentGalleryPostId = linkedPost.id;
+footer.style.display = 'block';
+loadGalleryPostLikes(linkedPost.id);
+loadGalleryComments(linkedPost.id, linkedPost.comments_enabled !== false, linkedPost.user_id === currentUser.id);
+} else {
+// На случай если у фото почему-то ещё нет связанного поста (например, добавлено
+// до применения миграции) — просто скрываем блок реакций для этого фото
+currentGalleryPostId = null;
+footer.style.display = 'none';
+}
+}
 
-  function escapeHtml(str) {
-    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+async function recordAndShowProfilePhotoViews(photoId) {
+try {
+await db.from('media_views').insert({
+item_type: 'profile_photo',
+item_id: photoId,
+viewer_id: currentUser.id
+});
+var { count } = await db.from('media_views')
+.select('id', { count: 'exact', head: true })
+.eq('item_type', 'profile_photo')
+.eq('item_id', photoId);
+var el = document.getElementById('viewer-views-count');
+if (el) el.textContent = count || 0;
+var gridBadge = document.querySelector('.gallery-item[data-photo-id="' + photoId + '"] .gallery-item-views');
+if (gridBadge) gridBadge.textContent = '👁 ' + (count || 0);
+} catch(e) {
+console.error('Ошибка записи просмотра:', e);
+}
+}
 
-  async function loadGallery(targetId) {
-    try {
-      var { data } = await db.from('profile_photos').select('*').eq('user_id', targetId).order('position', { ascending: true });
-      galleryItems = data || [];
-      var grid = document.getElementById('gallery-grid');
-      if (!grid) return;
-      if (galleryItems.length === 0) {
-        grid.innerHTML = '<div style="padding:0 4px;color:var(--muted);font-size:13px">Галерея пуста</div>';
-        return;
-      }
-      var photoIds = galleryItems.map(function(p) { return p.id; });
-      var viewCounts = {};
-      var { data: viewsData } = await db.from('media_views')
-        .select('item_id')
-        .eq('item_type', 'profile_photo')
-        .in('item_id', photoIds);
-      (viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
+async function loadGalleryPostLikes(postId) {
+try {
+var { count } = await db.from('post_likes').select('id', { count: 'exact', head: true }).eq('post_id', postId);
+var { data: myLike } = await db.from('post_likes').select('id').eq('post_id', postId).eq('user_id', currentUser.id).maybeSingle();
+var likeBtn = document.getElementById('gallery-like-btn');
+if (myLike) {
+likeBtn.classList.add('liked');
+likeBtn.innerHTML = '❤️ <span id="gallery-like-count">' + (count || 0) + '</span>';
+} else {
+likeBtn.classList.remove('liked');
+likeBtn.innerHTML = '🤍 <span id="gallery-like-count">' + (count || 0) + '</span>';
+}
+} catch(e) {
+console.error('Ошибка загрузки лайков:', e);
+}
+}
 
-      grid.innerHTML = '';
-      galleryItems.forEach(function(item, idx) {
-        var el = document.createElement('div');
-        el.className = 'gallery-item';
-        el.setAttribute('data-photo-id', item.id);
-        el.onclick = function() { openViewer(idx); };
-        var mediaHtml = item.media_type === 'video'
-          ? '<video src="' + item.photo_url + '" muted></video>'
-          : '<img src="' + item.photo_url + '">';
-        el.innerHTML = mediaHtml + '<div class="gallery-item-views">👁 ' + (viewCounts[item.id] || 0) + '</div>';
-        grid.appendChild(el);
-      });
-    } catch(e) {
-      console.error('Ошибка загрузки галереи:', e);
-    }
-  }
+window.toggleGalleryPostLike = async function() {
+if (!currentGalleryPostId) return;
+var likeBtn = document.getElementById('gallery-like-btn');
+var isLiked = likeBtn.classList.contains('liked');
+if (isLiked) {
+await db.from('post_likes').delete().eq('post_id', currentGalleryPostId).eq('user_id', currentUser.id);
+} else {
+await db.from('post_likes').insert({ post_id: currentGalleryPostId, user_id: currentUser.id });
+}
+loadGalleryPostLikes(currentGalleryPostId);
+};
 
-  var galleryViewerAttached = false;
-  function ensureGalleryViewerAttached() {
-    if (galleryViewerAttached) return;
-    galleryViewerAttached = true;
-    var img = document.getElementById('viewer-img');
-    if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.attach) {
-      BlizkoPhotoViewer.attach(img, {
-        onImmersiveChange: function (level) {
-          document.getElementById('viewer-overlay').classList.toggle('immersive', level > 0);
-        }
-      });
-    }
-  }
+async function loadGalleryComments(postId, commentsEnabled, isOwner) {
+var inputRow = document.getElementById('gallery-comment-input-row');
+var disabledMsg = document.getElementById('gallery-comments-disabled-msg');
+if (!commentsEnabled && !isOwner) {
+inputRow.style.display = 'none';
+disabledMsg.style.display = 'block';
+} else {
+inputRow.style.display = commentsEnabled ? 'flex' : 'none';
+disabledMsg.style.display = commentsEnabled ? 'none' : 'block';
+}
+var list = document.getElementById('gallery-comments-list');
+var { data: comments, error: cErr } = await db.from('post_comments')
+.select('*')
+.eq('post_id', postId)
+.order('created_at', { ascending: true });
+if (cErr) {
+console.error('loadGalleryComments error:', cErr);
+list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Ошибка загрузки комментариев</div>';
+return;
+}
+if (!comments || comments.length === 0) {
+list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Пока нет комментариев</div>';
+return;
+}
+var userIds = [];
+comments.forEach(function(c) { if (userIds.indexOf(c.user_id) === -1) userIds.push(c.user_id); });
+var profilesMap = {};
+if (userIds.length > 0) {
+var { data: profs } = await db.from('profiles').select('id, name, photo_url').in('id', userIds);
+(profs || []).forEach(function(p) { profilesMap[p.id] = p; });
+}
+list.innerHTML = '';
+comments.forEach(function(c) {
+var cp = profilesMap[c.user_id] || {};
+var canDelete = c.user_id === currentUser.id || isOwner;
+var cName = cp.name || 'Пользователь';
+var cInitials = cName.charAt(0).toUpperCase();
+var item = document.createElement('div');
+item.className = 'comment-item';
+item.innerHTML =
+'<div class="comment-avatar">' + (cp.photo_url ? '<img src="' + cp.photo_url + '">' : '<span class="initials">' + cInitials + '</span>') + '</div>' +
+'<div class="comment-body"><div class="comment-name">' + cName + '</div><div class="comment-text">' + escapeHtml(c.text) + '</div></div>' +
+(canDelete ? '<button class="comment-del" onclick="deleteGalleryComment(\'' + c.id + '\')">✕</button>' : '');
+list.appendChild(item);
+});
+}
 
-  function openViewer(idx) {
-    var item = galleryItems[idx];
-    if (!item) return;
-    ensureGalleryViewerAttached();
-    var img = document.getElementById('viewer-img');
-    var video = document.getElementById('viewer-video');
-    if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.reset) {
-      BlizkoPhotoViewer.reset(img);
-    }
-    document.getElementById('viewer-overlay').classList.remove('immersive');
-    if (item.media_type === 'video') {
-      video.src = item.photo_url;
-      video.style.display = 'block';
-      img.style.display = 'none';
-      img.src = '';
-      video.play().catch(function() {});
-    } else {
-      img.src = item.photo_url;
-      img.style.display = 'block';
-      video.style.display = 'none';
-      video.src = '';
-    }
-    document.getElementById('viewer-overlay').classList.add('show');
-    recordAndShowProfilePhotoViews(item.id);
-  }
+function currentLinkedPost() {
+for (var k in galleryPostMap) {
+if (galleryPostMap[k].id === currentGalleryPostId) return galleryPostMap[k];
+}
+return null;
+}
 
-  async function recordAndShowProfilePhotoViews(photoId) {
-    try {
-      await db.from('media_views').insert({
-        item_type: 'profile_photo',
-        item_id: photoId,
-        viewer_id: currentUser.id
-      });
-      var { count } = await db.from('media_views')
-        .select('id', { count: 'exact', head: true })
-        .eq('item_type', 'profile_photo')
-        .eq('item_id', photoId);
-      var el = document.getElementById('viewer-views-count');
-      if (el) el.textContent = count || 0;
-      var gridBadge = document.querySelector('.gallery-item[data-photo-id="' + photoId + '"] .gallery-item-views');
-      if (gridBadge) gridBadge.textContent = '👁 ' + (count || 0);
-    } catch(e) {
-      console.error('Ошибка записи просмотра:', e);
-    }
-  }
+window.sendGalleryComment = async function() {
+var input = document.getElementById('gallery-comment-input');
+var text = input.value.trim();
+if (!text || !currentGalleryPostId) return;
+var { error } = await db.from('post_comments').insert({ post_id: currentGalleryPostId, user_id: currentUser.id, text: text });
+if (error) { alert('Ошибка: ' + error.message); return; }
+input.value = '';
+var linkedPost = currentLinkedPost();
+loadGalleryComments(currentGalleryPostId, linkedPost ? linkedPost.comments_enabled !== false : true, linkedPost ? linkedPost.user_id === currentUser.id : false);
+};
 
-  function closeViewer() {
-    document.getElementById('viewer-overlay').classList.remove('show');
-    document.getElementById('viewer-overlay').classList.remove('immersive');
-    document.getElementById('viewer-video').pause();
-    document.getElementById('viewer-video').src = '';
-    document.getElementById('viewer-img').src = '';
-  }
+window.deleteGalleryComment = async function(commentId) {
+if (!confirm('Удалить комментарий?')) return;
+var { error } = await db.from('post_comments').delete().eq('id', commentId);
+if (error) { alert('Ошибка удаления: ' + error.message); return; }
+var linkedPost = currentLinkedPost();
+loadGalleryComments(currentGalleryPostId, linkedPost ? linkedPost.comments_enabled !== false : true, linkedPost ? linkedPost.user_id === currentUser.id : false);
+};
 
-  init();
+window.closeViewer = function() {
+document.getElementById('viewer-overlay').classList.remove('show');
+document.getElementById('viewer-overlay').classList.remove('immersive');
+document.getElementById('viewer-video').pause();
+document.getElementById('viewer-video').src = '';
+document.getElementById('viewer-img').src = '';
+document.getElementById('viewer-footer').style.display = 'none';
+currentGalleryPostId = null;
+};
+
+init();
 }
 </script>
 </body>
