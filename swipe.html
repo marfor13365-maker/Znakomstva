@@ -65,74 +65,70 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-left">
-    <button class="back-btn" onclick="goBack()">←</button>
-    <div class="brand">
-      <svg class="brand-icon" width="30" height="30" viewBox="0 0 100 100" aria-hidden="true">
-        <defs>
-          <linearGradient id="brandGreenSwipe" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#2fe37a"/>
-            <stop offset="1" stop-color="#0fa958"/>
-          </linearGradient>
-          <clipPath id="brandLeftSwipe"><rect x="0" y="0" width="50" height="100"/></clipPath>
-          <clipPath id="brandRightSwipe"><rect x="50" y="0" width="50" height="100"/></clipPath>
-        </defs>
-        <circle cx="50" cy="50" r="48" fill="url(#brandGreenSwipe)"/>
-        <path id="brandHeartSwipe" d="M50 76 C 26 58, 18 42, 27 30 C 34 21, 46 22, 50 33 C 54 22, 66 21, 73 30 C 82 42, 74 58, 50 76 Z"/>
-        <use href="#brandHeartSwipe" clip-path="url(#brandLeftSwipe)" fill="#3fb7ff"/>
-        <use href="#brandHeartSwipe" clip-path="url(#brandRightSwipe)" fill="#ff4d9d"/>
-      </svg>
-      <span class="brand-name">Znakomstor</span>
-    </div>
-  </div>
-  <button class="filter-btn" onclick="openFilters()">⚙️ Фильтры<span class="filter-badge" id="filter-badge"></span></button>
+<div class="topbar-left">
+<button class="back-btn" onclick="goBack()">←</button>
+<div class="brand">
+<svg class="brand-icon" width="30" height="30" viewBox="0 0 100 100" aria-hidden="true">
+<defs>
+<linearGradient id="brandGreenSwipe" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#2fe37a"/>
+<stop offset="1" stop-color="#0fa958"/>
+</linearGradient>
+<clipPath id="brandLeftSwipe"><rect x="0" y="0" width="50" height="100"/></clipPath>
+<clipPath id="brandRightSwipe"><rect x="50" y="0" width="50" height="100"/></clipPath>
+</defs>
+<circle cx="50" cy="50" r="48" fill="url(#brandGreenSwipe)"/>
+<path id="brandHeartSwipe" d="M50 76 C 26 58, 18 42, 27 30 C 34 21, 46 22, 50 33 C 54 22, 66 21, 73 30 C 82 42, 74 58, 50 76 Z"/>
+<use href="#brandHeartSwipe" clip-path="url(#brandLeftSwipe)" fill="#3fb7ff"/>
+<use href="#brandHeartSwipe" clip-path="url(#brandRightSwipe)" fill="#ff4d9d"/>
+</svg>
+<span class="brand-name">Znakomstor</span>
 </div>
-
+</div>
+<button class="filter-btn" onclick="openFilters()">⚙️ Фильтры<span class="filter-badge" id="filter-badge"></span></button>
+</div>
 <div class="card-wrap" id="card-wrap">
-  <div class="loading" style="padding:40px;text-align:center;color:var(--muted)">⏳ Загрузка...</div>
+<div class="loading" style="padding:40px;text-align:center;color:var(--muted)">⏳ Загрузка...</div>
 </div>
-
 <div class="like-modal" id="filters-modal">
-  <div class="like-modal-card">
-    <div class="like-modal-title">⚙️ Фильтры</div>
-    <div class="filter-row">
-      <span class="filter-label">Показывать</span>
-      <div class="filter-gender-row">
-        <button class="filter-gender-btn" id="filter-gender-male" onclick="selectGenderFilter('male')">Мужчины</button>
-        <button class="filter-gender-btn" id="filter-gender-female" onclick="selectGenderFilter('female')">Женщины</button>
-        <button class="filter-gender-btn" id="filter-gender-any" onclick="selectGenderFilter(null)">Все</button>
-      </div>
-    </div>
-    <div class="filter-row">
-      <span class="filter-label">Возраст</span>
-      <div class="filter-age-inputs">
-        <input type="number" id="filter-age-min" placeholder="18" min="18" max="99">
-        <span class="filter-age-sep">—</span>
-        <input type="number" id="filter-age-max" placeholder="99" min="18" max="99">
-      </div>
-    </div>
-    <div class="filter-row">
-      <span class="filter-label">Город</span>
-      <input type="text" class="filter-city-input" id="filter-city" placeholder="Например: Москва">
-    </div>
-    <div class="like-modal-actions">
-      <button class="cancel" onclick="resetFilters()">Сбросить</button>
-      <button class="send" onclick="applyFilters()">Применить</button>
-    </div>
-  </div>
+<div class="like-modal-card">
+<div class="like-modal-title">⚙️ Фильтры</div>
+<div class="filter-row">
+<span class="filter-label">Показывать</span>
+<div class="filter-gender-row">
+<button class="filter-gender-btn" id="filter-gender-male" onclick="selectGenderFilter('male')">Мужчины</button>
+<button class="filter-gender-btn" id="filter-gender-female" onclick="selectGenderFilter('female')">Женщины</button>
+<button class="filter-gender-btn" id="filter-gender-any" onclick="selectGenderFilter(null)">Все</button>
 </div>
-
+</div>
+<div class="filter-row">
+<span class="filter-label">Возраст</span>
+<div class="filter-age-inputs">
+<input type="number" id="filter-age-min" placeholder="18" min="18" max="99">
+<span class="filter-age-sep">—</span>
+<input type="number" id="filter-age-max" placeholder="99" min="18" max="99">
+</div>
+</div>
+<div class="filter-row">
+<span class="filter-label">Город</span>
+<input type="text" class="filter-city-input" id="filter-city" placeholder="Например: Москва">
+</div>
+<div class="like-modal-actions">
+<button class="cancel" onclick="resetFilters()">Сбросить</button>
+<button class="send" onclick="applyFilters()">Применить</button>
+</div>
+</div>
+</div>
 <div class="like-modal" id="like-modal">
-  <div class="like-modal-card">
-    <div class="like-modal-title">❤️ Понравился(ась)?</div>
-    <textarea id="like-comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
-    <div class="like-modal-actions">
-      <button class="cancel" onclick="closeLikeModal()">Отмена</button>
-      <button class="send" onclick="sendLike()">Лайкнуть</button>
-    </div>
-  </div>
+<div class="like-modal-card">
+<div class="like-modal-title">❤️ Понравился(ась)?</div>
+<textarea id="like-comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
+<div class="like-modal-actions">
+<button class="cancel" onclick="closeLikeModal()">Отмена</button>
+<button class="send" onclick="sendLike()">Лайкнуть</button>
 </div>
-
+</div>
+</div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -149,312 +145,292 @@ var pendingGenderFilter = null;
 var SWIPE_FILTERS_KEY = 'blizko_swipe_filters';
 
 function saveFiltersToStorage() {
-  try { localStorage.setItem(SWIPE_FILTERS_KEY, JSON.stringify(activeFilters)); } catch (e) {}
+try { localStorage.setItem(SWIPE_FILTERS_KEY, JSON.stringify(activeFilters)); } catch (e) {}
 }
 
 function loadFiltersFromStorage() {
-  try {
-    var raw = localStorage.getItem(SWIPE_FILTERS_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) {
-    return null;
-  }
+try {
+var raw = localStorage.getItem(SWIPE_FILTERS_KEY);
+return raw ? JSON.parse(raw) : null;
+} catch (e) {
+return null;
+}
 }
 
 // Нижнего меню на этой странице больше нет (перекрывало кнопки лайк/пропустить на
 // коротких экранах) — вместо него кнопка "назад" сверху. Если попали сюда не из
 // приложения (прямая ссылка, нет истории) — уводим на ленту, а не в никуда.
 function goBack() {
-  if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) {
-    history.back();
-  } else {
-    window.location.href = 'feed.html';
-  }
+if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) {
+history.back();
+} else {
+window.location.href = 'feed.html';
+}
 }
 
 async function init() {
-  var wrap = document.getElementById('card-wrap');
-  var session = null;
-  var attempts = 0;
-  var maxAttempts = 15;
-  
-  while (!session && attempts < maxAttempts) {
-    var r = await db.auth.getSession();
-    session = r.data.session;
-    if (!session) {
-      attempts++;
-      await new Promise(function(resolve) { setTimeout(resolve, 200); });
-    }
-  }
-
-  if (!session) {
-    var restored = await restoreLastVaultSession(db);
-    if (restored) {
-      var r2 = await db.auth.getSession();
-      session = r2.data.session;
-    }
-  }
-
-  if (!session) {
-    wrap.innerHTML = 
-      '<div class="empty-state" style="padding:60px 20px;">' +
-        '<div class="icon">🔒</div>' +
-        '<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
-        '<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
-        '<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'index.html\'">Войти</button>' +
-      '</div>';
-    return;
-  }
-  
-  currentUser = session.user;
-
-  var savedFilters = loadFiltersFromStorage();
-  if (savedFilters) {
-    activeFilters = savedFilters;
-    updateFilterBadge();
-  } else {
-    try {
-      var { data: myProfile } = await db.from('profiles').select('looking_for').eq('id', currentUser.id).single();
-      if (myProfile && myProfile.looking_for && myProfile.looking_for !== 'any') {
-        activeFilters.gender = myProfile.looking_for;
-        updateFilterBadge();
-      }
-    } catch (e) {}
-    saveFiltersToStorage();
-  }
-
-  await loadProfiles();
+var wrap = document.getElementById('card-wrap');
+var session = null;
+var attempts = 0;
+var maxAttempts = 15;
+while (!session && attempts < maxAttempts) {
+var r = await db.auth.getSession();
+session = r.data.session;
+if (!session) {
+attempts++;
+await new Promise(function(resolve) { setTimeout(resolve, 200); });
+}
+}
+if (!session) {
+var restored = await restoreLastVaultSession(db);
+if (restored) {
+var r2 = await db.auth.getSession();
+session = r2.data.session;
+}
+}
+if (!session) {
+wrap.innerHTML =
+'<div class="empty-state" style="padding:60px 20px;">' +
+'<div class="icon">🔒</div>' +
+'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
+'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
+'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'index.html\'">Войти</button>' +
+'</div>';
+return;
+}
+currentUser = session.user;
+var savedFilters = loadFiltersFromStorage();
+if (savedFilters) {
+activeFilters = savedFilters;
+updateFilterBadge();
+} else {
+try {
+var { data: myProfile } = await db.from('profiles').select('looking_for').eq('id', currentUser.id).single();
+if (myProfile && myProfile.looking_for && myProfile.looking_for !== 'any') {
+activeFilters.gender = myProfile.looking_for;
+updateFilterBadge();
+}
+} catch (e) {}
+saveFiltersToStorage();
+}
+await loadProfiles();
 }
 
 async function loadProfiles() {
-  var wrap = document.getElementById('card-wrap');
-  var query = db.from('profiles')
-    .select('*, profile_photos(photo_url)')
-    .neq('id', currentUser.id)
-    .eq('is_active', true);
-
-  if (activeFilters.ageMin) query = query.gte('age', activeFilters.ageMin);
-  if (activeFilters.ageMax) query = query.lte('age', activeFilters.ageMax);
-  if (activeFilters.city) query = query.ilike('city', '%' + activeFilters.city + '%');
-  if (activeFilters.gender) query = query.eq('gender', activeFilters.gender);
-
-  var { data, error } = await query.limit(20);
-  
-  if (error) { console.error(error); wrap.innerHTML = '<div class="empty-state"><p>Ошибка загрузки</p></div>'; return; }
-  
-  profiles = data || [];
-  if (profiles.length === 0) {
-    var hasFilters = activeFilters.ageMin || activeFilters.ageMax || activeFilters.city;
-    wrap.innerHTML = hasFilters
-      ? '<div class="empty-state"><div class="icon">🔍</div><p>Под такие фильтры никого не нашлось.<br>Попробуй расширить критерии.</p></div>'
-      : '<div class="empty-state"><div class="icon">😴</div><p>Пока никого нет рядом.<br>Попробуй позже!</p></div>';
-    return;
-  }
-  
-  currentIndex = 0;
-  renderCard();
+var wrap = document.getElementById('card-wrap');
+// photo_url — фото анкеты (аватар), profile_photos — резерв на случай если аватар не задан
+var query = db.from('profiles')
+.select('*, profile_photos(photo_url)')
+.neq('id', currentUser.id)
+.eq('is_active', true);
+if (activeFilters.ageMin) query = query.gte('age', activeFilters.ageMin);
+if (activeFilters.ageMax) query = query.lte('age', activeFilters.ageMax);
+if (activeFilters.city) query = query.ilike('city', '%' + activeFilters.city + '%');
+if (activeFilters.gender) query = query.eq('gender', activeFilters.gender);
+var { data, error } = await query.limit(20);
+if (error) { console.error(error); wrap.innerHTML = '<div class="empty-state"><p>Ошибка загрузки</p></div>'; return; }
+profiles = data || [];
+if (profiles.length === 0) {
+var hasFilters = activeFilters.ageMin || activeFilters.ageMax || activeFilters.city;
+wrap.innerHTML = hasFilters
+? '<div class="empty-state"><div class="icon">🔍</div><p>Под такие фильтры никого не нашлось.<br>Попробуй расширить критерии.</p></div>'
+: '<div class="empty-state"><div class="icon">😴</div><p>Пока никого нет рядом.<br>Попробуй позже!</p></div>';
+return;
+}
+currentIndex = 0;
+renderCard();
 }
 
 function renderCard() {
-  var wrap = document.getElementById('card-wrap');
-  if (currentIndex >= profiles.length) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>Все анкеты просмотрены!<br>Заходи позже — появятся новые.</p></div>';
-    return;
-  }
-  
-  var p = profiles[currentIndex];
-  var photos = p.profile_photos || [];
-  var photoUrl = photos.length > 0 ? photos[0].photo_url : '';
-  var age = p.age ? ', ' + p.age : '';
-  var city = p.city ? '📍 ' + p.city : '';
-  
-  wrap.innerHTML =
-    '<div class="card" id="current-card">' +
-      (photoUrl ? '<img src="' + photoUrl + '" alt="">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px">👤</div>') +
-      '<div class="like-label label" id="like-label">ЛАЙК</div>' +
-      '<div class="nope-label label" id="nope-label">НЕТ</div>' +
-      '<div class="card-info">' +
-        '<div class="card-name">' + (p.name || 'Пользователь') + age + '</div>' +
-        '<div class="card-meta">' + city + '</div>' +
-        '<div class="card-bio">' + (p.bio || '') + '</div>' +
-        '<div class="card-actions">' +
-          '<button class="skip-btn" onclick="skipProfile()">👎 Пропустить</button>' +
-          '<button class="like-btn" onclick="openLikeModal()">❤️ Лайк</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  
-  setupDrag(document.getElementById('current-card'));
+var wrap = document.getElementById('card-wrap');
+if (currentIndex >= profiles.length) {
+wrap.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>Все анкеты просмотрены!<br>Заходи позже — появятся новые.</p></div>';
+return;
+}
+var p = profiles[currentIndex];
+var photos = p.profile_photos || [];
+// Показываем фото анкеты (аватар из edit-profile/profile) — оно и должно быть лицом карточки.
+// Фото из галереи — только запасной вариант, если аватар почему-то не задан.
+var photoUrl = p.photo_url || (photos.length > 0 ? photos[0].photo_url : '');
+var age = p.age ? ', ' + p.age : '';
+var city = p.city ? '📍 ' + p.city : '';
+wrap.innerHTML =
+'<div class="card" id="current-card">' +
+(photoUrl ? '<img src="' + photoUrl + '" alt="">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px">👤</div>') +
+'<div class="like-label label" id="like-label">ЛАЙК</div>' +
+'<div class="nope-label label" id="nope-label">НЕТ</div>' +
+'<div class="card-info">' +
+'<div class="card-name">' + (p.name || 'Пользователь') + age + '</div>' +
+'<div class="card-meta">' + city + '</div>' +
+'<div class="card-bio">' + (p.bio || '') + '</div>' +
+'<div class="card-actions">' +
+'<button class="skip-btn" onclick="skipProfile()">👎 Пропустить</button>' +
+'<button class="like-btn" onclick="openLikeModal()">❤️ Лайк</button>' +
+'</div>' +
+'</div>' +
+'</div>';
+setupDrag(document.getElementById('current-card'));
 }
 
 function setupDrag(card) {
-  if (!card) return;
-  card.addEventListener('mousedown', dragStart);
-  card.addEventListener('touchstart', dragStart, {passive: true});
-  card.addEventListener('mousemove', dragMove);
-  card.addEventListener('touchmove', dragMove, {passive: true});
-  card.addEventListener('mouseup', dragEnd);
-  card.addEventListener('touchend', dragEnd);
-  card.addEventListener('touchcancel', dragEnd);
-  card.addEventListener('mouseleave', dragEnd);
+if (!card) return;
+card.addEventListener('mousedown', dragStart);
+card.addEventListener('touchstart', dragStart, {passive: true});
+card.addEventListener('mousemove', dragMove);
+card.addEventListener('touchmove', dragMove, {passive: true});
+card.addEventListener('mouseup', dragEnd);
+card.addEventListener('touchend', dragEnd);
+card.addEventListener('touchcancel', dragEnd);
+card.addEventListener('mouseleave', dragEnd);
 }
 
 function dragStart(e) {
-  if (e.target.closest('.card-actions')) return;
-  isDragging = true;
-  var card = e.currentTarget;
-  card.classList.add('dragging');
-  var pt = e.touches ? e.touches[0] : e;
-  startX = pt.clientX;
-  startY = pt.clientY;
+if (e.target.closest('.card-actions')) return;
+isDragging = true;
+var card = e.currentTarget;
+card.classList.add('dragging');
+var pt = e.touches ? e.touches[0] : e;
+startX = pt.clientX;
+startY = pt.clientY;
 }
 
 function dragMove(e) {
-  if (!isDragging) return;
-  var card = document.getElementById('current-card');
-  if (!card) { isDragging = false; return; }
-  var pt = e.touches ? e.touches[0] : e;
-  var dx = pt.clientX - startX;
-  var dy = pt.clientY - startY;
-  card.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx * 0.1) + 'deg)';
-  var ll = document.getElementById('like-label');
-  var nl = document.getElementById('nope-label');
-  if (ll) ll.style.opacity = dx > 20 ? Math.min((dx - 20) / 80, 1) : 0;
-  if (nl) nl.style.opacity = dx < -20 ? Math.min((-dx - 20) / 80, 1) : 0;
+if (!isDragging) return;
+var card = document.getElementById('current-card');
+if (!card) { isDragging = false; return; }
+var pt = e.touches ? e.touches[0] : e;
+var dx = pt.clientX - startX;
+var dy = pt.clientY - startY;
+card.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx * 0.1) + 'deg)';
+var ll = document.getElementById('like-label');
+var nl = document.getElementById('nope-label');
+if (ll) ll.style.opacity = dx > 20 ? Math.min((dx - 20) / 80, 1) : 0;
+if (nl) nl.style.opacity = dx < -20 ? Math.min((-dx - 20) / 80, 1) : 0;
 }
 
 function dragEnd(e) {
-  if (!isDragging) return;
-  isDragging = false;
-  var card = document.getElementById('current-card');
-  if (!card) return;
-  card.classList.remove('dragging');
-  
-  var m = card.style.transform.match(/translate\(([^,]+)px/);
-  var dx = m ? parseFloat(m[1]) : 0;
-  var mY = card.style.transform.match(/translate\([^,]+,\s*([^)]+)px/);
-  var dy = mY ? parseFloat(mY[1]) : 0;
-  
-  card.style.transform = '';
-  var ll = document.getElementById('like-label');
-  var nl = document.getElementById('nope-label');
-  if (ll) ll.style.opacity = 0;
-  if (nl) nl.style.opacity = 0;
-  
-  if (dx > 100) { openLikeModal(); }
-  else if (dx < -100) { swipe('left'); }
-  else if (dy < -150) { nextProfile(); }
+if (!isDragging) return;
+isDragging = false;
+var card = document.getElementById('current-card');
+if (!card) return;
+card.classList.remove('dragging');
+var m = card.style.transform.match(/translate\(([^,]+)px/);
+var dx = m ? parseFloat(m[1]) : 0;
+var mY = card.style.transform.match(/translate\([^,]+,\s*([^)]+)px/);
+var dy = mY ? parseFloat(mY[1]) : 0;
+card.style.transform = '';
+var ll = document.getElementById('like-label');
+var nl = document.getElementById('nope-label');
+if (ll) ll.style.opacity = 0;
+if (nl) nl.style.opacity = 0;
+if (dx > 100) { openLikeModal(); }
+else if (dx < -100) { swipe('left'); }
+else if (dy < -150) { nextProfile(); }
 }
 
 function swipe(direction) {
-  var card = document.getElementById('current-card');
-  if (!card) return;
-  card.style.transition = 'transform 0.3s, opacity 0.3s';
-  card.style.transform = 'translate(' + (direction === 'left' ? '-120%' : '120%') + 'px, 0) rotate(' + (direction === 'left' ? -20 : 20) + 'deg)';
-  card.style.opacity = '0';
-  setTimeout(nextProfile, 300);
+var card = document.getElementById('current-card');
+if (!card) return;
+card.style.transition = 'transform 0.3s, opacity 0.3s';
+card.style.transform = 'translate(' + (direction === 'left' ? '-120%' : '120%') + 'px, 0) rotate(' + (direction === 'left' ? -20 : 20) + 'deg)';
+card.style.opacity = '0';
+setTimeout(nextProfile, 300);
 }
 
 function nextProfile() {
-  currentIndex++;
-  renderCard();
+currentIndex++;
+renderCard();
 }
 
 function skipProfile() {
-  swipe('left');
+swipe('left');
 }
 
 function openLikeModal() {
-  if (currentIndex >= profiles.length) return;
-  pendingLikeId = profiles[currentIndex].id;
-  document.getElementById('like-comment').value = '';
-  document.getElementById('like-modal').classList.add('show');
+if (currentIndex >= profiles.length) return;
+pendingLikeId = profiles[currentIndex].id;
+document.getElementById('like-comment').value = '';
+document.getElementById('like-modal').classList.add('show');
 }
 
 function closeLikeModal() {
-  document.getElementById('like-modal').classList.remove('show');
-  pendingLikeId = null;
+document.getElementById('like-modal').classList.remove('show');
+pendingLikeId = null;
 }
 
 async function sendLike() {
-  if (!pendingLikeId) return;
-  var comment = document.getElementById('like-comment').value.trim();
-  
-  await db.from('likes').upsert({
-    from_user: currentUser.id,
-    to_user: pendingLikeId,
-    is_like: true,
-    comment: comment || null
-  }, { onConflict: 'from_user,to_user' });
-  
-  var { data: matchData } = await db.from('matches').select('*')
-    .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + pendingLikeId + '),and(user1.eq.' + pendingLikeId + ',user2.eq.' + currentUser.id + ')')
-    .maybeSingle();
-  
-  closeLikeModal();
-  
-  if (matchData) {
-    setTimeout(function() {
-      if (confirm('🎉 Это взаимный лайк! Перейти в чат?')) {
-        window.location.href = 'chat.html?match=' + matchData.id;
-      }
-    }, 300);
-  } else {
-    nextProfile();
-  }
+if (!pendingLikeId) return;
+var comment = document.getElementById('like-comment').value.trim();
+await db.from('likes').upsert({
+from_user: currentUser.id,
+to_user: pendingLikeId,
+is_like: true,
+comment: comment || null
+}, { onConflict: 'from_user,to_user' });
+var { data: matchData } = await db.from('matches').select('*')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + pendingLikeId + '),and(user1.eq.' + pendingLikeId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+closeLikeModal();
+if (matchData) {
+setTimeout(function() {
+if (confirm('🎉 Это взаимный лайк! Перейти в чат?')) {
+window.location.href = 'chat.html?match=' + matchData.id;
+}
+}, 300);
+} else {
+nextProfile();
+}
 }
 
 function selectGenderFilter(value) {
-  pendingGenderFilter = value;
-  document.getElementById('filter-gender-male').classList.toggle('active', value === 'male');
-  document.getElementById('filter-gender-female').classList.toggle('active', value === 'female');
-  document.getElementById('filter-gender-any').classList.toggle('active', !value);
+pendingGenderFilter = value;
+document.getElementById('filter-gender-male').classList.toggle('active', value === 'male');
+document.getElementById('filter-gender-female').classList.toggle('active', value === 'female');
+document.getElementById('filter-gender-any').classList.toggle('active', !value);
 }
 
 function openFilters() {
-  document.getElementById('filter-age-min').value = activeFilters.ageMin || '';
-  document.getElementById('filter-age-max').value = activeFilters.ageMax || '';
-  document.getElementById('filter-city').value = activeFilters.city || '';
-  selectGenderFilter(activeFilters.gender);
-  document.getElementById('filters-modal').classList.add('show');
+document.getElementById('filter-age-min').value = activeFilters.ageMin || '';
+document.getElementById('filter-age-max').value = activeFilters.ageMax || '';
+document.getElementById('filter-city').value = activeFilters.city || '';
+selectGenderFilter(activeFilters.gender);
+document.getElementById('filters-modal').classList.add('show');
 }
 
 function closeFiltersModal() {
-  document.getElementById('filters-modal').classList.remove('show');
+document.getElementById('filters-modal').classList.remove('show');
 }
 
 function updateFilterBadge() {
-  var badge = document.getElementById('filter-badge');
-  var hasFilters = !!(activeFilters.ageMin || activeFilters.ageMax || activeFilters.city || activeFilters.gender);
-  badge.classList.toggle('show', hasFilters);
+var badge = document.getElementById('filter-badge');
+var hasFilters = !!(activeFilters.ageMin || activeFilters.ageMax || activeFilters.city || activeFilters.gender);
+badge.classList.toggle('show', hasFilters);
 }
 
 function applyFilters() {
-  var ageMin = parseInt(document.getElementById('filter-age-min').value, 10);
-  var ageMax = parseInt(document.getElementById('filter-age-max').value, 10);
-  var city = document.getElementById('filter-city').value.trim();
-
-  activeFilters.ageMin = isNaN(ageMin) ? null : ageMin;
-  activeFilters.ageMax = isNaN(ageMax) ? null : ageMax;
-  activeFilters.city = city;
-  activeFilters.gender = pendingGenderFilter;
-
-  saveFiltersToStorage();
-  closeFiltersModal();
-  updateFilterBadge();
-  loadProfiles();
+var ageMin = parseInt(document.getElementById('filter-age-min').value, 10);
+var ageMax = parseInt(document.getElementById('filter-age-max').value, 10);
+var city = document.getElementById('filter-city').value.trim();
+activeFilters.ageMin = isNaN(ageMin) ? null : ageMin;
+activeFilters.ageMax = isNaN(ageMax) ? null : ageMax;
+activeFilters.city = city;
+activeFilters.gender = pendingGenderFilter;
+saveFiltersToStorage();
+closeFiltersModal();
+updateFilterBadge();
+loadProfiles();
 }
 
 function resetFilters() {
-  activeFilters = { ageMin: null, ageMax: null, city: '', gender: null };
-  document.getElementById('filter-age-min').value = '';
-  document.getElementById('filter-age-max').value = '';
-  document.getElementById('filter-city').value = '';
-  selectGenderFilter(null);
-  saveFiltersToStorage();
-  closeFiltersModal();
-  updateFilterBadge();
-  loadProfiles();
+activeFilters = { ageMin: null, ageMax: null, city: '', gender: null };
+document.getElementById('filter-age-min').value = '';
+document.getElementById('filter-age-max').value = '';
+document.getElementById('filter-city').value = '';
+selectGenderFilter(null);
+saveFiltersToStorage();
+closeFiltersModal();
+updateFilterBadge();
+loadProfiles();
 }
 
 init();
