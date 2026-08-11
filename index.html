@@ -76,8 +76,8 @@ input:focus{border-color:var(--accent)}
 </head>
 <body>
 <div class="auto-login-overlay" id="auto-login-overlay">
-  <div class="spin"></div>
-  <div class="txt" id="auto-login-txt">Входим...</div>
+<div class="spin"></div>
+<div class="txt" id="auto-login-txt">Входим...</div>
 </div>
 <div class="hearts-canvas" id="hearts"></div>
 <div class="lang-switch">
@@ -86,18 +86,18 @@ input:focus{border-color:var(--accent)}
 </div>
 <div class="hero">
 <svg class="logo-img" width="88" height="88" viewBox="0 0 100 100" role="img" aria-label="Znakomstor">
-  <defs>
-    <linearGradient id="brandGreenHero" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2fe37a"/>
-      <stop offset="1" stop-color="#0fa958"/>
-    </linearGradient>
-    <clipPath id="brandLeftHero"><rect x="0" y="0" width="50" height="100"/></clipPath>
-    <clipPath id="brandRightHero"><rect x="50" y="0" width="50" height="100"/></clipPath>
-  </defs>
-  <circle cx="50" cy="50" r="48" fill="url(#brandGreenHero)"/>
-  <path id="brandHeartHero" d="M50 76 C 26 58, 18 42, 27 30 C 34 21, 46 22, 50 33 C 54 22, 66 21, 73 30 C 82 42, 74 58, 50 76 Z"/>
-  <use href="#brandHeartHero" clip-path="url(#brandLeftHero)" fill="#3fb7ff"/>
-  <use href="#brandHeartHero" clip-path="url(#brandRightHero)" fill="#ff4d9d"/>
+<defs>
+<linearGradient id="brandGreenHero" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#2fe37a"/>
+<stop offset="1" stop-color="#0fa958"/>
+</linearGradient>
+<clipPath id="brandLeftHero"><rect x="0" y="0" width="50" height="100"/></clipPath>
+<clipPath id="brandRightHero"><rect x="50" y="0" width="50" height="100"/></clipPath>
+</defs>
+<circle cx="50" cy="50" r="48" fill="url(#brandGreenHero)"/>
+<path id="brandHeartHero" d="M50 76 C 26 58, 18 42, 27 30 C 34 21, 46 22, 50 33 C 54 22, 66 21, 73 30 C 82 42, 74 58, 50 76 Z"/>
+<use href="#brandHeartHero" clip-path="url(#brandLeftHero)" fill="#3fb7ff"/>
+<use href="#brandHeartHero" clip-path="url(#brandRightHero)" fill="#ff4d9d"/>
 </svg>
 <div class="logo">Znakomstor</div>
 <div class="tagline" id="tagline"></div>
@@ -171,7 +171,6 @@ input:focus{border-color:var(--accent)}
 <script>
 var BLIZKO_API_URL = (typeof window.BLIZKO_API_URL !== 'undefined') ? window.BLIZKO_API_URL : 'https://vector-chat-api.onrender.com';
 var REMEMBER_KEY = 'blizko_remember_me';
-
 var T={ru:{
 tagline:'Настоящие знакомства рядом',
 tab_login:'Войти',tab_reg:'Регистрация',
@@ -188,7 +187,7 @@ err_fill:'Заполни все поля',err_pass:'Пароль минимум 
 err_need_paid_code:'На этом устройстве уже есть аккаунт. Чтобы создать ещё один, сначала купи доп.аккаунт и введи полученный код выше.',
 err_captcha:'Пройди проверку "Я не робот" ниже.',
 err_login:'Неверный email или пароль',
-ok_welcome:'Добро пожаловать!',ok_created:'Аккаунт создан!',
+ok_welcome:'Добро пожаловать!',ok_created:'Аккаунт создан! Входим...',
 ok_check_email:'Почти готово! Мы отправили письмо со ссылкой подтверждения на твой email. Перейди по ней, чтобы завершить регистрацию, потом сможешь войти.',
 loading_in:'Входим...',loading_reg:'Создаём аккаунт...',
 auto_login_txt:'Входим...',
@@ -234,7 +233,7 @@ err_fill:'Please fill in all fields',err_pass:'Password must be at least 6 chara
 err_need_paid_code:'This device already has an account. To create another one, buy an extra account first and enter the code above.',
 err_captcha:'Please complete the "I am not a robot" check below.',
 err_login:'Invalid email or password',
-ok_welcome:'Welcome!',ok_created:'Account created!',
+ok_welcome:'Welcome!',ok_created:'Account created! Signing in...',
 ok_check_email:'Almost done! We sent a confirmation link to your email. Click it to finish registration, then you can sign in.',
 loading_in:'Signing in...',loading_reg:'Creating account...',
 auto_login_txt:'Signing in...',
@@ -265,48 +264,41 @@ choose_account_title:'This device already has accounts:',
 choose_account_hint:'Choose which one to sign in to:',
 copy_password:'📋 Copy password'
 }};
-
 var lang=localStorage.getItem('lang')||'ru';
 var HCAPTCHA_SITEKEY='8d14406a-4fb2-4d6e-acb8-d80a6b5af6fa';
 var loginCaptchaId=null;
 var regCaptchaId=null;
 var hcaptchaReady=false;
-
 function onHcaptchaLoad(){
-  if(typeof hcaptcha==='undefined')return;
-  hcaptchaReady=true;
-  renderLoginCaptcha();
-  renderRegCaptcha();
+if(typeof hcaptcha==='undefined')return;
+hcaptchaReady=true;
+renderLoginCaptcha();
+renderRegCaptcha();
 }
-
 function renderLoginCaptcha(){
-  if(!hcaptchaReady||loginCaptchaId!==null)return;
-  var container=document.getElementById('hcaptcha-login');
-  if(container&&container.offsetParent!==null){
-    try{
-      loginCaptchaId=hcaptcha.render('hcaptcha-login',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
-    }catch(e){console.error('hCaptcha login render error:',e);}
-  }
+if(!hcaptchaReady||loginCaptchaId!==null)return;
+var container=document.getElementById('hcaptcha-login');
+if(container&&container.offsetParent!==null){
+try{
+loginCaptchaId=hcaptcha.render('hcaptcha-login',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
+}catch(e){console.error('hCaptcha login render error:',e);}
 }
-
+}
 function renderRegCaptcha(){
-  if(!hcaptchaReady||regCaptchaId!==null)return;
-  var container=document.getElementById('hcaptcha-register');
-  if(container&&container.offsetParent!==null){
-    try{
-      regCaptchaId=hcaptcha.render('hcaptcha-register',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
-    }catch(e){console.error('hCaptcha reg render error:',e);}
-  }
+if(!hcaptchaReady||regCaptchaId!==null)return;
+var container=document.getElementById('hcaptcha-register');
+if(container&&container.offsetParent!==null){
+try{
+regCaptchaId=hcaptcha.render('hcaptcha-register',{sitekey:HCAPTCHA_SITEKEY,size:'compact'});
+}catch(e){console.error('hCaptcha reg render error:',e);}
 }
-
+}
 setTimeout(function(){
-  if(!hcaptchaReady&&typeof hcaptcha!=='undefined'){
-    onHcaptchaLoad();
-  }
+if(!hcaptchaReady&&typeof hcaptcha!=='undefined'){
+onHcaptchaLoad();
+}
 },4000);
-
 function setLang(l){lang=l;localStorage.setItem('lang',l);document.querySelectorAll('.lang-btn').forEach(function(b,i){b.classList.toggle('active',(i===0&&l==='ru')||(i===1&&l==='en'))});applyLang()}
-
 function applyLang(){
 var t=T[lang];
 document.getElementById('tagline').textContent=t.tagline;
@@ -334,89 +326,75 @@ document.getElementById('auto-login-txt').textContent=t.auto_login_txt;
 renderUnlockBox('login');
 renderUnlockBox('reg');
 }
-
 function spawnHearts(){var c=document.getElementById('hearts');var e=['❤️','🧡','💕','💖','💗','💓','💝'];for(var i=0;i<14;i++){var h=document.createElement('div');h.className='heart';h.textContent=e[Math.floor(Math.random()*e.length)];h.style.left=Math.random()*100+'vw';h.style.fontSize=(13+Math.random()*16)+'px';h.style.animationDuration=(8+Math.random()*10)+'s';h.style.animationDelay=(Math.random()*14)+'s';c.appendChild(h)}}
-
 var db=createBlizkoClient();
-
 // ===== АВТОВХОД ("Запомнить меня") =====
 // Если на этом устройстве уже есть сохранённый в сейфе аккаунт (localStorage) и человек
 // не снимал галочку "запомнить меня" — пробуем войти автоматически, без ввода пароля.
 async function tryAutoLogin(){
-  var remembered = localStorage.getItem(REMEMBER_KEY);
-  if (remembered === 'off') return; // пользователь явно отключил автовход
-
-  var r = await db.auth.getSession();
-  if (r.data.session) {
-    window.location.href = 'feed.html';
-    return;
-  }
-
-  var overlay = document.getElementById('auto-login-overlay');
-  overlay.classList.add('show');
-
-  var restored = await restoreLastVaultSession(db);
-  if (restored) {
-    window.location.href = 'feed.html';
-    return;
-  }
-
-  overlay.classList.remove('show');
+var remembered = localStorage.getItem(REMEMBER_KEY);
+if (remembered === 'off') return; // пользователь явно отключил автовход
+var r = await db.auth.getSession();
+if (r.data.session) {
+window.location.href = 'feed.html';
+return;
 }
-
+var overlay = document.getElementById('auto-login-overlay');
+overlay.classList.add('show');
+var restored = await restoreLastVaultSession(db);
+if (restored) {
+window.location.href = 'feed.html';
+return;
+}
+overlay.classList.remove('show');
+}
 function switchTab(tab){
-  document.querySelectorAll('.tab').forEach(function(t,i){
-    t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register'))
-  });
-  document.getElementById('login-form').style.display=tab==='login'?'block':'none';
-  document.getElementById('register-form').style.display=tab==='register'?'block':'none';
-  if(tab==='register'){
-    setTimeout(renderRegCaptcha,100);
-  }
+document.querySelectorAll('.tab').forEach(function(t,i){
+t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register'))
+});
+document.getElementById('login-form').style.display=tab==='login'?'block':'none';
+document.getElementById('register-form').style.display=tab==='register'?'block':'none';
+if(tab==='register'){
+setTimeout(renderRegCaptcha,100);
 }
-
+}
 function checkConsent(){document.getElementById('reg-btn').disabled=!['consent1','consent2','consent3'].every(function(id){return document.getElementById(id).checked})}
-
 function setMsg(id,text,type){var el=document.getElementById(id);el.textContent=text;el.className='msg '+(type||'')}
-
 function togglePass(inputId,btn){
 var input=document.getElementById(inputId);
 var isHidden=input.type==='password';
 input.type=isHidden?'text':'password';
 btn.style.color=isHidden?'var(--accent2)':'var(--muted)';
 }
-
 function getDeviceId(){
-  var cookieId = document.cookie.split('; ').find(row => row.startsWith('blizko_device_id='));
-  if (cookieId) {
-    var id = cookieId.split('=')[1];
-    if (localStorage.getItem('blizko_device_id') !== id) {
-      localStorage.setItem('blizko_device_id', id);
-    }
-    return id;
-  }
-  var localId = localStorage.getItem('blizko_device_id');
-  if (localId) {
-    var domain = window.location.hostname;
-    var cookieDomain = (domain === 'localhost' || domain === '127.0.0.1') ? '' : '; domain=' + domain.replace(/^[^.]+\./, '.');
-    document.cookie = 'blizko_device_id=' + localId + '; path=/; max-age=31536000' + cookieDomain + '; SameSite=Lax';
-    return localId;
-  }
-  var newId = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 12);
-  localStorage.setItem('blizko_device_id', newId);
-  var domain = window.location.hostname;
-  var cookieDomain = (domain === 'localhost' || domain === '127.0.0.1') ? '' : '; domain=' + domain.replace(/^[^.]+\./, '.');
-  document.cookie = 'blizko_device_id=' + newId + '; path=/; max-age=31536000' + cookieDomain + '; SameSite=Lax';
-  return newId;
+var cookieId = document.cookie.split('; ').find(row => row.startsWith('blizko_device_id='));
+if (cookieId) {
+var id = cookieId.split('=')[1];
+if (localStorage.getItem('blizko_device_id') !== id) {
+localStorage.setItem('blizko_device_id', id);
 }
-
+return id;
+}
+var localId = localStorage.getItem('blizko_device_id');
+if (localId) {
+var domain = window.location.hostname;
+var cookieDomain = (domain === 'localhost' || domain === '127.0.0.1') ? '' : '; domain=' + domain.replace(/^[^.]+\./, '.');
+document.cookie = 'blizko_device_id=' + localId + '; path=/; max-age=31536000' + cookieDomain + '; SameSite=Lax';
+return localId;
+}
+var newId = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 12);
+localStorage.setItem('blizko_device_id', newId);
+var domain = window.location.hostname;
+var cookieDomain = (domain === 'localhost' || domain === '127.0.0.1') ? '' : '; domain=' + domain.replace(/^[^.]+\./, '.');
+document.cookie = 'blizko_device_id=' + newId + '; path=/; max-age=31536000' + cookieDomain + '; SameSite=Lax';
+return newId;
+}
 function toggleUnlockBox(which){
 var box=document.getElementById('unlock-box-'+which);
 var open=box.style.display==='none';
 box.style.display=open?'block':'none';
 document.getElementById('unlock-toggle-'+which).textContent=open?T[lang].unlock_toggle_close:T[lang].unlock_toggle_open;
 }
-
 function renderUnlockBox(which){
 var t=T[lang];
 var box=document.getElementById('unlock-box-'+which);
@@ -432,13 +410,11 @@ box.innerHTML=
 '<div class="msg" id="unlock-msg-'+which+'"></div>'+
 '<div id="unlock-result-'+which+'"></div>';
 }
-
 function copyAndOpenBot(link, btnEl){
 var t=T[lang];
 navigator.clipboard.writeText(link).then(function(){}).catch(function(){});
 window.open(link, '_blank');
 }
-
 function renderTelegramLink(containerId,link){
 var t=T[lang];
 document.getElementById(containerId).innerHTML=
@@ -447,7 +423,6 @@ document.getElementById(containerId).innerHTML=
 '<button type="button" class="btn" style="margin-top:10px" onclick="copyAndOpenBot(\''+link+'\', this)">'+t.start_copy+'</button>'+
 '</div>';
 }
-
 async function startExtraAccountRequest(which){
 var t=T[lang];
 var msgId='start-msg-extra-'+which;
@@ -474,7 +449,6 @@ setMsg(msgId,t.unlock_err_generic,'error');
 document.getElementById('start-btn-extra-'+which).disabled=false;
 }
 }
-
 function copyText(text, btnEl){
 navigator.clipboard.writeText(text).then(function(){
 var orig=btnEl.textContent;
@@ -482,7 +456,6 @@ btnEl.textContent = '✅ ' + (lang==='ru'?'Скопировано!':'Copied!');
 setTimeout(function(){ btnEl.textContent = orig; }, 2000);
 }).catch(function(){});
 }
-
 async function redeemUnlockCode(which){
 var t=T[lang];
 var codeInput=document.getElementById('unlock-code-'+which);
@@ -534,7 +507,6 @@ setMsg(msgId,t.unlock_err_generic,'error');
 document.getElementById('unlock-btn-'+which).disabled=false;
 }
 }
-
 async function doLogin(){
 var t=T[lang];
 var email=document.getElementById('login-email').value.trim();
@@ -554,69 +526,76 @@ setMsg('login-msg',t.ok_welcome,'success');
 setTimeout(function(){window.location.href='feed.html'},800)
 }
 }
-
 async function doRegister(){
 var t=T[lang];
 var name=document.getElementById('reg-name').value.trim();
 var email=document.getElementById('reg-email').value.trim();
 var pass=document.getElementById('reg-pass').value;
 var captchaToken=(typeof hcaptcha!=='undefined'&&regCaptchaId!==null)?hcaptcha.getResponse(regCaptchaId):'';
-
 if(!name||!email||!pass){setMsg('reg-msg',t.err_fill,'error');return}
 if(!captchaToken){setMsg('reg-msg',t.err_captcha,'error');return}
 if(pass.length<6){setMsg('reg-msg',t.err_pass,'error');return}
-
 var deviceId = getDeviceId();
 var existingAccounts = [];
 try {
-  var resp = await fetch(BLIZKO_API_URL + '/api/device/accounts/' + deviceId);
-  if (resp.ok) {
-    var data = await resp.json();
-    existingAccounts = data.emails || [];
-  }
-} catch(e) { }
-
-if (existingAccounts.length > 0 && !window._blizkoExtraCode) {
-  setMsg('reg-msg', t.err_need_paid_code, 'error');
-  return;
+var resp = await fetch(BLIZKO_API_URL + '/api/device/accounts/' + deviceId);
+if (resp.ok) {
+var data = await resp.json();
+existingAccounts = data.emails || [];
 }
-
+} catch(e) { }
+if (existingAccounts.length > 0 && !window._blizkoExtraCode) {
+setMsg('reg-msg', t.err_need_paid_code, 'error');
+return;
+}
 setMsg('reg-msg', t.loading_reg, '');
 document.getElementById('reg-btn').disabled = true;
-
 var r = await db.auth.signUp({email:email, password:pass, options:{captchaToken:captchaToken}});
 if (r.error) {
-  if (typeof hcaptcha !== 'undefined' && regCaptchaId !== null) hcaptcha.reset(regCaptchaId);
-  setMsg('reg-msg', r.error.message, 'error');
-  document.getElementById('reg-btn').disabled = false;
-  return;
+if (typeof hcaptcha !== 'undefined' && regCaptchaId !== null) hcaptcha.reset(regCaptchaId);
+setMsg('reg-msg', r.error.message, 'error');
+document.getElementById('reg-btn').disabled = false;
+return;
 }
-
 await db.from('profiles').insert({id:r.data.user.id, name:name, consent_given:true, consent_at:new Date().toISOString()});
-
 try {
-  await fetch(BLIZKO_API_URL + '/api/device/link-account', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({device_id:deviceId, user_id:r.data.user.id, email:email})
-  });
+await fetch(BLIZKO_API_URL + '/api/device/link-account', {
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({device_id:deviceId, user_id:r.data.user.id, email:email})
+});
 } catch(e) {}
-
 if (window._blizkoExtraCode) {
-  try {
-    await fetch(BLIZKO_API_URL + '/api/unlock/consume-extra', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({code:window._blizkoExtraCode, device_id:window._blizkoExtraDeviceId, new_user_id:r.data.user.id, email:email})
-    });
-  } catch(e) {}
-  window._blizkoExtraCode = null;
+try {
+await fetch(BLIZKO_API_URL + '/api/unlock/consume-extra', {
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({code:window._blizkoExtraCode, device_id:window._blizkoExtraDeviceId, new_user_id:r.data.user.id, email:email})
+});
+} catch(e) {}
+window._blizkoExtraCode = null;
 }
-
+// Подтверждение email сейчас отключено на бэкенде — аккаунт уже полностью
+// рабочий сразу после регистрации. Раньше здесь показывалась надпись "мы отправили
+// письмо со ссылкой" и человек оставался на этом экране в недоумении, хотя вход
+// был уже доступен. Теперь: если signUp сразу вернул сессию — пускаем в приложение
+// без лишних слов. Если сессии нет (например, если подтверждение почты всё же
+// когда-нибудь включат обратно) — пробуем войти паролем тут же; и только если
+// это тоже не сработало, показываем прежнее сообщение про письмо, как страховку.
+if (r.data.session) {
+setMsg('reg-msg', t.ok_created, 'success');
+setTimeout(function(){window.location.href='feed.html'},600);
+return;
+}
+var loginR = await db.auth.signInWithPassword({email:email, password:pass});
+if (loginR.data && loginR.data.session) {
+setMsg('reg-msg', t.ok_created, 'success');
+setTimeout(function(){window.location.href='feed.html'},600);
+return;
+}
 setMsg('reg-msg', t.ok_check_email, 'success');
 document.getElementById('reg-btn').disabled = false;
 }
-
 var deviceAccountCount = 0;
 async function loadDeviceAccounts(){
 try{
@@ -638,7 +617,6 @@ var loginForm=document.getElementById('login-form');
 loginForm.insertBefore(box, loginForm.firstChild);
 }catch(e){}
 }
-
 spawnHearts();setLang(lang);loadDeviceAccounts();tryAutoLogin();
 </script>
 </body>
