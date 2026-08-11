@@ -8,9 +8,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
 :root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px;--green:#4cff9f}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-bottom:80px}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-bottom:20px}
 .topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
-.back-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:20px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);flex-shrink:0}
+.nav-menu-wrap{position:relative}
+.hamburger-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);flex-shrink:0}
+.hamburger-btn:active{opacity:0.8}
+.nav-menu{position:absolute;top:46px;left:0;background:var(--card);border:1px solid var(--border);border-radius:14px;min-width:190px;box-shadow:0 8px 30px rgba(0,0,0,0.5);display:none;overflow:hidden;z-index:50}
+.nav-menu.show{display:block}
+.nav-menu-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 16px;background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);font-family:'Inter',sans-serif}
+.nav-menu-item:last-child{border-bottom:none}
+.nav-menu-item:active{background:var(--input-bg)}
+.nav-menu-item.current{color:var(--accent);font-weight:600}
 .page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
 .list{flex:1}
 .like-item{display:flex;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border)}
@@ -29,44 +37,28 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
 .empty-state .icon{font-size:60px;margin-bottom:16px}
 .empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
-.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:transparent;z-index:10;gap:6px}
-.bottom-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:rgba(255,255,255,0.85);cursor:pointer;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Inter',sans-serif;font-size:10px;transition:opacity 0.2s;flex:1;border-radius:16px;box-shadow:0 2px 10px rgba(255,77,109,0.4)}
-.bottom-btn.active{color:white;font-weight:600;opacity:1}
-.bottom-btn:not(.active){opacity:0.85}
-.bottom-btn .ico{font-size:20px}
 .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
-
 <div class="topbar">
-  <button class="back-btn" onclick="history.back()">←</button>
-  <div class="page-title">Кто меня лайкнул</div>
+<div class="nav-menu-wrap">
+<button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
+<div class="nav-menu" id="nav-menu">
+<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
+<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 Лента</button>
+<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 Знакомства</button>
+<button class="nav-menu-item current" onclick="location.href='likes.html'">💖 Лайки</button>
+<button class="nav-menu-item" onclick="location.href='matches.html'">💬 Чаты</button>
+<button class="nav-menu-item" onclick="location.href='profile.html'">👤 Профиль</button>
 </div>
-
+</div>
+<div class="page-title">Кто меня лайкнул</div>
+</div>
 <div class="list" id="list-wrap">
-  <div class="loading">⏳ Загрузка...</div>
+<div class="loading">⏳ Загрузка...</div>
 </div>
-
-<div class="bottombar">
-  <button class="bottom-btn" onclick="window.location.href='feed.html'">
-    <span class="ico">🏠</span><span>Лента</span>
-  </button>
-  <button class="bottom-btn" onclick="window.location.href='swipe.html'">
-    <span class="ico">😍</span><span>Знакомства</span>
-  </button>
-  <button class="bottom-btn active" onclick="window.location.href='likes.html'">
-    <span class="ico">💖</span><span>Лайки</span>
-  </button>
-  <button class="bottom-btn" onclick="window.location.href='matches.html'">
-    <span class="ico">💬</span><span>Чаты</span>
-  </button>
-  <button class="bottom-btn" onclick="window.location.href='profile.html'">
-    <span class="ico">👤</span><span>Профиль</span>
-  </button>
-</div>
-
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -75,155 +67,159 @@ var db = createBlizkoClient();
 var currentUser = null;
 var myResponses = {};
 
+function toggleNavMenu() {
+document.getElementById('nav-menu').classList.toggle('show');
+}
+
+function navGoBack() {
+var menu = document.getElementById('nav-menu');
+if (menu) menu.classList.remove('show');
+if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) {
+history.back();
+} else {
+window.location.href = 'feed.html';
+}
+}
+
+document.addEventListener('click', function(e) {
+var navWrap = document.querySelector('.nav-menu-wrap');
+if (navWrap && !navWrap.contains(e.target)) {
+var menu = document.getElementById('nav-menu');
+if (menu) menu.classList.remove('show');
+}
+});
+
 async function init() {
-  var wrap = document.getElementById('list-wrap');
-  var session = null;
-  var attempts = 0;
-  var maxAttempts = 15;
-  
-  while (!session && attempts < maxAttempts) {
-    var r = await db.auth.getSession();
-    session = r.data.session;
-    if (!session) {
-      attempts++;
-      await new Promise(function(resolve) { setTimeout(resolve, 200); });
-    }
-  }
-
-  if (!session) {
-    var restored = await restoreLastVaultSession(db);
-    if (restored) {
-      var r2 = await db.auth.getSession();
-      session = r2.data.session;
-    }
-  }
-
-  if (!session) {
-    wrap.innerHTML = 
-      '<div class="empty-state" style="padding:60px 20px;">' +
-        '<div class="icon">🔒</div>' +
-        '<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
-        '<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
-        '<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'index.html\'">Войти</button>' +
-      '</div>';
-    return;
-  }
-  
-  currentUser = session.user;
-  await loadLikes();
+var wrap = document.getElementById('list-wrap');
+var session = null;
+var attempts = 0;
+var maxAttempts = 15;
+while (!session && attempts < maxAttempts) {
+var r = await db.auth.getSession();
+session = r.data.session;
+if (!session) {
+attempts++;
+await new Promise(function(resolve) { setTimeout(resolve, 200); });
+}
+}
+if (!session) {
+var restored = await restoreLastVaultSession(db);
+if (restored) {
+var r2 = await db.auth.getSession();
+session = r2.data.session;
+}
+}
+if (!session) {
+wrap.innerHTML =
+'<div class="empty-state" style="padding:60px 20px;">' +
+'<div class="icon">🔒</div>' +
+'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
+'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
+'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'index.html\'">Войти</button>' +
+'</div>';
+return;
+}
+currentUser = session.user;
+await loadLikes();
 }
 
 async function loadLikes() {
-  var wrap = document.getElementById('list-wrap');
-
-  var { data: likesData, error } = await db.from('likes')
-    .select('*, profiles!likes_from_user_fkey(name, age, city, photo_url)')
-    .eq('to_user', currentUser.id)
-    .eq('is_like', true)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    var fallback = await db.from('likes')
-      .select('*')
-      .eq('to_user', currentUser.id)
-      .eq('is_like', true)
-      .order('created_at', { ascending: false });
-    likesData = fallback.data;
-    if (likesData) {
-      for (var i = 0; i < likesData.length; i++) {
-        var p = await db.from('profiles').select('name, age, city, photo_url').eq('id', likesData[i].from_user).single();
-        likesData[i].profiles = p.data;
-      }
-    }
-  }
-
-  likesData = likesData || [];
-
-  var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
-  myResponses = {};
-  (myLikes || []).forEach(function(l) { myResponses[l.to_user] = l.is_like; });
-
-  if (likesData.length === 0) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">💖</div><p>Пока никто не лайкнул.<br>Заполни профиль и добавь фото —<br>тебя будут находить чаще!</p></div>';
-    return;
-  }
-
-  wrap.innerHTML = '';
-  // ВАЖНО: используем let (а не var) для each-переменной цикла — иначе к моменту клика
-  // по карточке цикл уже завершён, и все onclick-обработчики ссылаются на ОДИН И ТОТ ЖЕ
-  // (последний) элемент массива. Именно это и было причиной "клик по любой карточке
-  // ведёт на последний профиль в списке".
-  for (let i = 0; i < likesData.length; i++) {
-    let like = likesData[i];
-    var p = like.profiles || {};
-    var alreadyMatched = myResponses.hasOwnProperty(like.from_user) && myResponses[like.from_user] === true;
-
-    var item = document.createElement('div');
-    item.className = 'like-item';
-
-    var actionsHtml = '';
-    if (alreadyMatched) {
-      actionsHtml = '<div class="matched-tag">✓ Взаимный лайк</div>';
-    } else {
-      actionsHtml =
-        '<div class="like-actions">' +
-        '<button class="mini-btn like" onclick="event.stopPropagation();likeBack(\'' + like.from_user + '\', this)">❤️ Лайкнуть в ответ</button>' +
-        '<button class="mini-btn skip" onclick="event.stopPropagation();skipLike(\'' + like.from_user + '\', this)">Пропустить</button>' +
-        '</div>';
-    }
-
-    item.onclick = function(e) {
-      if (e.target.closest('.like-actions')) return;
-      window.location.href = 'view-profile.html?user=' + like.from_user;
-    };
-
-    item.innerHTML =
-      '<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
-      '<div class="like-info">' +
-        '<div class="like-name">' + (p.name || 'Пользователь') + (p.age ? ', ' + p.age : '') + '</div>' +
-        '<div class="like-city">' + (p.city ? '📍 ' + p.city : '') + '</div>' +
-        (like.comment ? '<div class="like-comment">💬 ' + escapeHtml(like.comment) + '</div>' : '') +
-        actionsHtml +
-      '</div>';
-
-    wrap.appendChild(item);
-  }
+var wrap = document.getElementById('list-wrap');
+var { data: likesData, error } = await db.from('likes')
+.select('*, profiles!likes_from_user_fkey(name, age, city, photo_url)')
+.eq('to_user', currentUser.id)
+.eq('is_like', true)
+.order('created_at', { ascending: false });
+if (error) {
+var fallback = await db.from('likes')
+.select('*')
+.eq('to_user', currentUser.id)
+.eq('is_like', true)
+.order('created_at', { ascending: false });
+likesData = fallback.data;
+if (likesData) {
+for (var i = 0; i < likesData.length; i++) {
+var p = await db.from('profiles').select('name, age, city, photo_url').eq('id', likesData[i].from_user).single();
+likesData[i].profiles = p.data;
+}
+}
+}
+likesData = likesData || [];
+var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
+myResponses = {};
+(myLikes || []).forEach(function(l) { myResponses[l.to_user] = l.is_like; });
+if (likesData.length === 0) {
+wrap.innerHTML = '<div class="empty-state"><div class="icon">💖</div><p>Пока никто не лайкнул.<br>Заполни профиль и добавь фото —<br>тебя будут находить чаще!</p></div>';
+return;
+}
+wrap.innerHTML = '';
+// ВАЖНО: используем let (а не var) для each-переменной цикла — иначе к моменту клика
+// по карточке цикл уже завершён, и все onclick-обработчики ссылаются на ОДИН И ТОТ ЖЕ
+// (последний) элемент массива. Именно это и было причиной "клик по любой карточке
+// ведёт на последний профиль в списке".
+for (let i = 0; i < likesData.length; i++) {
+let like = likesData[i];
+var p = like.profiles || {};
+var alreadyMatched = myResponses.hasOwnProperty(like.from_user) && myResponses[like.from_user] === true;
+var item = document.createElement('div');
+item.className = 'like-item';
+var actionsHtml = '';
+if (alreadyMatched) {
+actionsHtml = '<div class="matched-tag">✓ Взаимный лайк</div>';
+} else {
+actionsHtml =
+'<div class="like-actions">' +
+'<button class="mini-btn like" onclick="event.stopPropagation();likeBack(\'' + like.from_user + '\', this)">❤️ Лайкнуть в ответ</button>' +
+'<button class="mini-btn skip" onclick="event.stopPropagation();skipLike(\'' + like.from_user + '\', this)">Пропустить</button>' +
+'</div>';
+}
+item.onclick = function(e) {
+if (e.target.closest('.like-actions')) return;
+window.location.href = 'view-profile.html?user=' + like.from_user;
+};
+item.innerHTML =
+'<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
+'<div class="like-info">' +
+'<div class="like-name">' + (p.name || 'Пользователь') + (p.age ? ', ' + p.age : '') + '</div>' +
+'<div class="like-city">' + (p.city ? '📍 ' + p.city : '') + '</div>' +
+(like.comment ? '<div class="like-comment">💬 ' + escapeHtml(like.comment) + '</div>' : '') +
+actionsHtml +
+'</div>';
+wrap.appendChild(item);
+}
 }
 
 function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 async function likeBack(otherUserId, btnEl) {
-  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
-  
-  await db.from('likes').upsert({
-    from_user: currentUser.id,
-    to_user: otherUserId,
-    is_like: true
-  }, { onConflict: 'from_user,to_user' });
-
-  var { data: matchData } = await db.from('matches').select('*')
-    .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
-    .single();
-
-  if (matchData) {
-    setTimeout(function() {
-      window.location.href = 'chat.html?match=' + matchData.id;
-    }, 300);
-  } else {
-    await loadLikes();
-  }
+if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+await db.from('likes').upsert({
+from_user: currentUser.id,
+to_user: otherUserId,
+is_like: true
+}, { onConflict: 'from_user,to_user' });
+var { data: matchData } = await db.from('matches').select('*')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
+.single();
+if (matchData) {
+setTimeout(function() {
+window.location.href = 'chat.html?match=' + matchData.id;
+}, 300);
+} else {
+await loadLikes();
+}
 }
 
 async function skipLike(otherUserId, btnEl) {
-  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
-  await db.from('likes').upsert({
-    from_user: currentUser.id,
-    to_user: otherUserId,
-    is_like: false
-  }, { onConflict: 'from_user,to_user' });
-  await loadLikes();
+if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+await db.from('likes').upsert({
+from_user: currentUser.id,
+to_user: otherUserId,
+is_like: false
+}, { onConflict: 'from_user,to_user' });
+await loadLikes();
 }
 
 init();
