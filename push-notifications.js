@@ -8,6 +8,12 @@
 // разрешение браузера" — что сбивало с толку, если разрешение было ни при чём. Теперь видно
 // точную причину: не поддерживается браузером / нет разрешения / не удалось зарегистрировать
 // Service Worker / не удалось подписаться / не удалось сохранить подписку в БД.
+//
+// ИЗМЕНЕНО ещё раз: upsert теперь конфликтует по паре (user_id, endpoint), а не по одному
+// endpoint. Раньше, если на одном браузере/устройстве уже подписывался другой аккаунт
+// (тот же push endpoint), Supabase пытался ОБНОВИТЬ чужую строку — и RLS правильно это
+// блокировал ("new row violates row-level security policy (USING expression)"). Теперь
+// разные аккаунты на одном устройстве просто получают каждый свою строку подписки.
 
 (function () {
   var VAPID_PUBLIC_KEY = 'BACW1lr_W9Oyo50LRLjQeCfjS7TmzR-BwXDSjQ-7aXLLuKVbsaaqRqZHZ1LtrME3YLKqz49juqypy2lpo1beLeA';
@@ -84,12 +90,14 @@
     }
 
     try {
+      // onConflict по (user_id, endpoint): если это устройство уже подписывалось под
+      // ДРУГИМ аккаунтом, та старая строка не трогается — просто добавляется своя.
       var { error } = await dbClient.from('push_subscriptions').upsert({
         user_id: userId,
         endpoint: subscription.endpoint,
         p256dh: p256dh,
         auth: authKey
-      }, { onConflict: 'endpoint' });
+      }, { onConflict: 'user_id,endpoint' });
 
       if (error) {
         console.error('Не удалось сохранить подписку в Supabase:', error);
