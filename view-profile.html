@@ -16,6 +16,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .topbar-right{display:flex;align-items:center;gap:8px}
 .lang-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;min-width:40px;text-align:center}
 .lang-btn:active{opacity:0.7}
+.nav-menu-wrap{position:relative}
+.hamburger-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);flex-shrink:0}
+.hamburger-btn:active{opacity:0.8}
+.nav-menu{position:absolute;top:46px;left:0;background:var(--card);border:1px solid var(--border);border-radius:14px;min-width:190px;box-shadow:0 8px 30px rgba(0,0,0,0.5);display:none;overflow:hidden;z-index:50}
+.nav-menu.show{display:block}
+.nav-menu-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 16px;background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);font-family:'Inter',sans-serif}
+.nav-menu-item:last-child{border-bottom:none}
+.nav-menu-item:active{background:var(--input-bg)}
 .content{flex:1;padding-bottom:40px}
 .loading{padding:60px 20px;text-align:center;color:var(--muted);font-size:14px}
 .avatar-block{display:flex;flex-direction:column;align-items:center;padding:30px 20px}
@@ -44,6 +52,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .locked-state{text-align:center;padding:50px 30px;color:var(--muted)}
 .locked-state .icon{font-size:50px;margin-bottom:14px}
 .locked-state p{font-size:14px;line-height:1.6}
+.locked-state{padding:0 20px}
 .viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:100;display:none;flex-direction:column}
 .viewer-overlay.show{display:flex}
 .viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:101}
@@ -84,7 +93,17 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </head>
 <body>
 <div class="topbar">
-<button class="back-btn" onclick="history.back()">&#8592;</button>
+<div class="nav-menu-wrap">
+<button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
+<div class="nav-menu" id="nav-menu">
+<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
+<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 Лента</button>
+<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 Знакомства</button>
+<button class="nav-menu-item" onclick="location.href='likes.html'">💖 Лайки</button>
+<button class="nav-menu-item" onclick="location.href='matches.html'">💬 Чаты</button>
+<button class="nav-menu-item" onclick="location.href='profile.html'">👤 Профиль</button>
+</div>
+</div>
 <div class="page-title" data-i18n="profile">Анкета</div>
 <div class="topbar-right">
 <button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
@@ -119,13 +138,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 </div>
 </div>
-<div class="bottombar">
-<button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span data-i18n="feed">Лента</span></button>
-<button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span data-i18n="swipe">Знакомства</span></button>
-<button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span data-i18n="likes">Лайки</span></button>
-<button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span data-i18n="chats">Чаты</span></button>
-<button class="bottom-btn" onclick="window.location.href='profile.html'"><span class="ico">👤</span><span data-i18n="profile">Профиль</span></button>
-</div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="photo-viewer.js"></script>
@@ -153,6 +165,28 @@ location.reload();
 }
 }
 };
+
+window.toggleNavMenu = function() {
+document.getElementById('nav-menu').classList.toggle('show');
+};
+
+window.navGoBack = function() {
+var menu = document.getElementById('nav-menu');
+if (menu) menu.classList.remove('show');
+if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) {
+history.back();
+} else {
+window.location.href = 'feed.html';
+}
+};
+
+document.addEventListener('click', function(e) {
+var navWrap = document.querySelector('.nav-menu-wrap');
+if (navWrap && !navWrap.contains(e.target)) {
+var menu = document.getElementById('nav-menu');
+if (menu) menu.classList.remove('show');
+}
+});
 
 function getTargetUserId() {
 var params = new URLSearchParams(window.location.search);
@@ -231,9 +265,25 @@ html += '<div class="section"><div class="section-title" data-i18n="about">О с
 (profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
 '</div></div>';
 html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
+
+// Владелец профиля решает, кому видна его галерея (посты в ленте — отдельная история,
+// это касается именно фото в профиле): "всем" / "только мэтчам" / "никому"
+var visibility = profile.posts_visibility || 'all';
+var isOwnProfile = currentUser.id === profile.id;
+var canSeeGallery = isOwnProfile || visibility === 'all' || (visibility === 'matches' && !!currentMatchId);
+
+if (!canSeeGallery) {
+html += '<div class="locked-state"><div class="icon">🔒</div><p>' +
+(visibility === 'none'
+? 'Пользователь закрыл галерею для всех.'
+: 'Галерея доступна только мэтчам.') +
+'</p></div>';
+content.innerHTML = html;
+} else {
 html += '<div class="gallery-grid" id="gallery-grid"></div>';
 content.innerHTML = html;
 loadGallery(profile.id);
+}
 if (typeof BlizkoTheme !== 'undefined' && typeof BlizkoTheme.applyLang === 'function') {
 BlizkoTheme.applyLang();
 }
