@@ -16,6 +16,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .brand-icon{flex-shrink:0;display:block}
 .brand-name{font-family:'Unbounded',sans-serif;font-size:17px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .settings-wrap{position:relative}
+.nav-menu-wrap{position:relative}
+.hamburger-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);flex-shrink:0}
+.hamburger-btn:active{opacity:0.8}
+.nav-menu{position:absolute;top:46px;left:0;background:var(--card);border:1px solid var(--border);border-radius:14px;min-width:190px;box-shadow:0 8px 30px rgba(0,0,0,0.5);display:none;overflow:hidden;z-index:50}
+.nav-menu.show{display:block}
+.nav-menu-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 16px;background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);font-family:'Inter',sans-serif}
+.nav-menu-item:last-child{border-bottom:none}
+.nav-menu-item:active{background:var(--input-bg)}
+.nav-menu-item.current{color:var(--accent);font-weight:600}
 .settings-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
 .settings-menu{position:absolute;top:46px;right:0;background:var(--card);border:1px solid var(--border);border-radius:14px;min-width:220px;max-width:280px;box-shadow:0 8px 30px rgba(0,0,0,0.5);display:none;overflow:hidden;z-index:30;max-height:70vh;overflow-y:auto}
 .settings-menu.show{display:block}
@@ -77,7 +86,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .visibility-row{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
 .visibility-label{font-size:12px;color:var(--muted)}
 .visibility-select{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text);font-size:12px}
-.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:2px;padding-bottom:90px}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:2px;padding-bottom:24px}
 .grid-item{position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--card)}
 .grid-add{display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted);background:var(--input-bg);border:2px dashed var(--border)}
 .grid-item img{width:100%;height:100%;object-fit:cover;display:block}
@@ -96,13 +105,37 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .bottom-btn .ico{font-size:22px}
 input[type="file"]{display:none}
 .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
-.viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:300;display:none;align-items:center;justify-content:center}
+.viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:300;display:none;flex-direction:column}
 .viewer-overlay.show{display:flex}
 .viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:301}
-.viewer-content{max-width:100%;max-height:100%;padding:20px}
-.viewer-content img,.viewer-content video{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}
+.viewer-scroll{flex:1;display:flex;flex-direction:column;overflow-y:auto}
+.viewer-photo-wrap{flex-shrink:0;min-height:58vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.viewer-content{max-width:100%;max-height:78vh}
+.viewer-content img,.viewer-content video{max-width:100%;max-height:78vh;object-fit:contain;border-radius:8px}
 .viewer-content img{touch-action:none;-webkit-user-drag:none;-webkit-user-select:none;user-select:none;will-change:transform}
-.viewer-overlay.immersive .viewer-close{display:none}
+.viewer-views-mine{color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 0 14px}
+.viewer-footer{padding:0 20px calc(30px + env(safe-area-inset-bottom))}
+.viewer-overlay.immersive .viewer-close,.viewer-overlay.immersive .viewer-views-mine,.viewer-overlay.immersive .viewer-footer{display:none}
+.viewer-overlay.immersive .viewer-photo-wrap{min-height:100vh}
+.like-comment-row{display:flex;align-items:center;margin-bottom:10px;border-top:1px solid var(--border);padding-top:14px}
+.like-btn{background:none;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--text);padding:4px 0}
+.like-btn.liked{color:var(--accent)}
+.like-btn span{font-size:14px;font-weight:600;color:var(--muted)}
+.comments-section{margin-top:6px}
+.comments-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:500}
+.comment-item{display:flex;gap:8px;margin-bottom:10px;align-items:flex-start}
+.comment-avatar{width:28px;height:28px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border:1px solid var(--border)}
+.comment-avatar img{width:100%;height:100%;object-fit:cover}
+.comment-avatar .initials{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--text)}
+.comment-body{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
+.comment-name{font-size:12px;font-weight:600;margin-bottom:2px}
+.comment-text{font-size:13px;line-height:1.4}
+.comment-del{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:4px;flex-shrink:0}
+.comment-input-row{display:flex;gap:8px;margin-top:8px}
+.comment-input-row input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:18px;padding:10px 14px;color:var(--text);font-size:13px;outline:none}
+.comment-input-row input:focus{border-color:var(--accent)}
+.comment-input-row button{background:var(--accent);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:14px;flex-shrink:0}
+.comments-disabled-msg{font-size:12px;color:var(--muted);text-align:center;padding:8px 0}
 .delete-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
 .delete-sheet-overlay.show{display:flex}
 .delete-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
@@ -130,7 +163,17 @@ input[type="file"]{display:none}
 </head>
 <body>
 <div class="topbar">
-<button class="back-btn" onclick="history.back()">&#8592;</button>
+<div class="nav-menu-wrap">
+<button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
+<div class="nav-menu" id="nav-menu">
+<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
+<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 Лента</button>
+<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 Знакомства</button>
+<button class="nav-menu-item" onclick="location.href='likes.html'">💖 Лайки</button>
+<button class="nav-menu-item" onclick="location.href='matches.html'">💬 Чаты</button>
+<button class="nav-menu-item current" onclick="location.href='profile.html'">👤 Профиль</button>
+</div>
+</div>
 <div class="brand">
 <svg class="brand-icon" width="30" height="30" viewBox="0 0 100 100" aria-hidden="true">
 <defs>
@@ -242,18 +285,30 @@ input[type="file"]{display:none}
 </div>
 </div>
 <input type="file" id="profile-post-file" accept="image/*,video/*" onchange="handleProfilePostPhoto(this)" style="display:none">
-<div class="bottombar">
-<button class="bottom-btn" onclick="window.location.href='feed.html'"><span class="ico">🏠</span><span>Лента</span></button>
-<button class="bottom-btn" onclick="window.location.href='swipe.html'"><span class="ico">😍</span><span>Знакомства</span></button>
-<button class="bottom-btn" onclick="window.location.href='likes.html'"><span class="ico">💖</span><span>Лайки</span></button>
-<button class="bottom-btn" onclick="window.location.href='matches.html'"><span class="ico">💬</span><span>Чаты</span></button>
-<button class="bottom-btn active"><span class="ico">👤</span><span>Профиль</span></button>
-</div>
 <div class="viewer-overlay" id="viewer-overlay">
 <button class="viewer-close" onclick="closeViewer()">✕</button>
+<div class="viewer-scroll" id="viewer-scroll">
+<div class="viewer-photo-wrap">
 <div class="viewer-content" id="viewer-content">
 <img id="viewer-img" src="" alt="" style="display:none">
 <video id="viewer-video" src="" controls playsinline style="display:none"></video>
+</div>
+</div>
+<div class="viewer-views-mine" id="viewer-views-mine">👁 <span id="viewer-views-count-mine">0</span></div>
+<div class="viewer-footer" id="viewer-footer-mine" style="display:none">
+<div class="like-comment-row">
+<button class="like-btn" id="my-like-btn" onclick="toggleMyPhotoLike()">🤍 <span id="my-like-count">0</span></button>
+</div>
+<div class="comments-section">
+<div class="comments-title">Комментарии</div>
+<div id="my-comments-list"></div>
+<div class="comment-input-row" id="my-comment-input-row">
+<input type="text" id="my-comment-input" placeholder="Написать комментарий..." maxlength="300">
+<button onclick="sendMyComment()">➤</button>
+</div>
+<div class="comments-disabled-msg" id="my-comments-disabled-msg" style="display:none">Комментарии отключены</div>
+</div>
+</div>
 </div>
 </div>
 <div class="list-sheet-overlay" id="list-sheet-overlay" onclick="if(event.target===this) closeListSheet()">
@@ -523,7 +578,7 @@ var { data: viewsData } = await db.from('media_views')
 (viewsData || []).forEach(function(v) { viewCounts[v.item_id] = (viewCounts[v.item_id] || 0) + 1; });
 
 // Подтягиваем связанные посты (нужно знать, опубликовано ли фото в ленте)
-var { data: linkedPosts } = await db.from('posts').select('id, profile_photo_id, visible_in_feed').in('profile_photo_id', photoIds);
+var { data: linkedPosts } = await db.from('posts').select('id, profile_photo_id, visible_in_feed, comments_enabled').in('profile_photo_id', photoIds);
 (linkedPosts || []).forEach(function(p) { myPostsByPhotoId[p.profile_photo_id] = p; });
 }
 
@@ -576,6 +631,9 @@ document.getElementById('viewer-overlay').classList.toggle('immersive', level > 
 });
 }
 
+var currentMyPostId = null;
+var currentMyPhotoId = null;
+
 function openViewer(idx) {
 var post = myPosts[idx];
 if (!post) return;
@@ -596,7 +654,117 @@ img.style.display = 'block';
 video.style.display = 'none';
 video.src = '';
 }
+document.getElementById('viewer-scroll').scrollTop = 0;
 document.getElementById('viewer-overlay').classList.add('show');
+
+// Показываем твои же лайки/комменты — то, что видят другие, когда смотрят это фото
+currentMyPhotoId = post.id;
+var linked = myPostsByPhotoId[post.id];
+var footer = document.getElementById('viewer-footer-mine');
+if (linked) {
+currentMyPostId = linked.id;
+footer.style.display = 'block';
+loadMyPhotoLikes(linked.id);
+loadMyPhotoComments(linked.id, linked.comments_enabled !== false);
+} else {
+currentMyPostId = null;
+footer.style.display = 'none';
+}
+}
+
+async function loadMyPhotoLikes(postId) {
+try {
+var { count } = await db.from('post_likes').select('id', { count: 'exact', head: true }).eq('post_id', postId);
+var { data: myLike } = await db.from('post_likes').select('id').eq('post_id', postId).eq('user_id', currentUser.id).maybeSingle();
+var likeBtn = document.getElementById('my-like-btn');
+if (myLike) {
+likeBtn.classList.add('liked');
+likeBtn.innerHTML = '❤️ <span id="my-like-count">' + (count || 0) + '</span>';
+} else {
+likeBtn.classList.remove('liked');
+likeBtn.innerHTML = '🤍 <span id="my-like-count">' + (count || 0) + '</span>';
+}
+} catch(e) {
+console.error('Ошибка загрузки лайков:', e);
+}
+}
+
+async function toggleMyPhotoLike() {
+if (!currentMyPostId) return;
+var likeBtn = document.getElementById('my-like-btn');
+var isLiked = likeBtn.classList.contains('liked');
+if (isLiked) {
+await db.from('post_likes').delete().eq('post_id', currentMyPostId).eq('user_id', currentUser.id);
+} else {
+await db.from('post_likes').insert({ post_id: currentMyPostId, user_id: currentUser.id });
+}
+loadMyPhotoLikes(currentMyPostId);
+}
+
+function escapeHtmlMine(str) {
+return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function loadMyPhotoComments(postId, commentsEnabled) {
+var inputRow = document.getElementById('my-comment-input-row');
+var disabledMsg = document.getElementById('my-comments-disabled-msg');
+// Это твой пост — можешь отвечать в комментариях, даже если сам отключил их для остальных
+inputRow.style.display = 'flex';
+disabledMsg.style.display = commentsEnabled ? 'none' : 'block';
+disabledMsg.textContent = 'Комментарии отключены для остальных (но ты можешь отвечать)';
+var list = document.getElementById('my-comments-list');
+var { data: comments, error: cErr } = await db.from('post_comments')
+.select('*')
+.eq('post_id', postId)
+.order('created_at', { ascending: true });
+if (cErr) {
+console.error('loadMyPhotoComments error:', cErr);
+list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Ошибка загрузки комментариев</div>';
+return;
+}
+if (!comments || comments.length === 0) {
+list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Пока нет комментариев</div>';
+return;
+}
+var userIds = [];
+comments.forEach(function(c) { if (userIds.indexOf(c.user_id) === -1) userIds.push(c.user_id); });
+var profilesMap = {};
+if (userIds.length > 0) {
+var { data: profs } = await db.from('profiles').select('id, name, photo_url').in('id', userIds);
+(profs || []).forEach(function(p) { profilesMap[p.id] = p; });
+}
+list.innerHTML = '';
+comments.forEach(function(c) {
+var cp = profilesMap[c.user_id] || {};
+var cName = cp.name || 'Пользователь';
+var cInitials = cName.charAt(0).toUpperCase();
+var item = document.createElement('div');
+item.className = 'comment-item';
+item.innerHTML =
+'<div class="comment-avatar">' + (cp.photo_url ? '<img src="' + cp.photo_url + '">' : '<span class="initials">' + cInitials + '</span>') + '</div>' +
+'<div class="comment-body"><div class="comment-name">' + cName + '</div><div class="comment-text">' + escapeHtmlMine(c.text) + '</div></div>' +
+'<button class="comment-del" onclick="deleteMyPhotoComment(\'' + c.id + '\')">✕</button>';
+list.appendChild(item);
+});
+}
+
+async function sendMyComment() {
+var input = document.getElementById('my-comment-input');
+var text = input.value.trim();
+if (!text || !currentMyPostId) return;
+var { error } = await db.from('post_comments').insert({ post_id: currentMyPostId, user_id: currentUser.id, text: text });
+if (error) { alert('Ошибка: ' + error.message); return; }
+input.value = '';
+var linked = myPostsByPhotoId[currentMyPhotoId];
+loadMyPhotoComments(currentMyPostId, linked ? linked.comments_enabled !== false : true);
+}
+
+async function deleteMyPhotoComment(commentId) {
+if (!confirm('Удалить комментарий?')) return;
+var { error } = await db.from('post_comments').delete().eq('id', commentId);
+if (error) { alert('Ошибка удаления: ' + error.message); return; }
+var linked = myPostsByPhotoId[currentMyPhotoId];
+loadMyPhotoComments(currentMyPostId, linked ? linked.comments_enabled !== false : true);
 }
 
 function closeViewer() {
@@ -605,6 +773,9 @@ document.getElementById('viewer-overlay').classList.remove('immersive');
 document.getElementById('viewer-video').pause();
 document.getElementById('viewer-video').src = '';
 document.getElementById('viewer-img').src = '';
+document.getElementById('viewer-footer-mine').style.display = 'none';
+currentMyPostId = null;
+currentMyPhotoId = null;
 }
 
 async function deletePost(postId) {
@@ -789,6 +960,28 @@ alert((messages[reason] || 'Не удалось включить уведомл�
 function toggleSettingsMenu() {
 document.getElementById('settings-menu').classList.toggle('show');
 }
+
+function toggleNavMenu() {
+document.getElementById('nav-menu').classList.toggle('show');
+}
+
+function navGoBack() {
+var menu = document.getElementById('nav-menu');
+if (menu) menu.classList.remove('show');
+if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) {
+history.back();
+} else {
+window.location.href = 'feed.html';
+}
+}
+
+document.addEventListener('click', function(e) {
+var navWrap = document.querySelector('.nav-menu-wrap');
+if (navWrap && !navWrap.contains(e.target)) {
+var menu = document.getElementById('nav-menu');
+if (menu) menu.classList.remove('show');
+}
+});
 
 document.addEventListener('click', function(e) {
 var wrap = document.querySelector('.settings-wrap');
