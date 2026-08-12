@@ -118,6 +118,26 @@ input[type="file"]{display:none}
 #crop-zoom{flex:1;accent-color:var(--accent);height:4px}
 .crop-actions{display:flex;gap:10px}
 .crop-actions .btn{margin:0;flex:1}
+.username-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.username-badge{font-family:'Unbounded',sans-serif;font-size:13px;color:var(--accent2);background:var(--input-bg);border:1px solid var(--border);padding:6px 12px;border-radius:20px}
+.username-icon-btn{width:30px;height:30px;border-radius:50%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.username-icon-btn:active{opacity:0.7}
+.qr-modal{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:400;display:none;align-items:center;justify-content:center;padding:20px}
+.qr-modal.show{display:flex}
+.qr-modal-inner{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;width:100%;max-width:320px;text-align:center}
+.qr-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600;margin-bottom:16px}
+#qr-canvas{border-radius:12px;background:white;padding:10px}
+.qr-username{font-family:'Unbounded',sans-serif;font-size:15px;color:var(--accent2);margin-top:14px;margin-bottom:18px}
+.qr-actions{display:flex;flex-direction:column;gap:10px}
+.username-input-row{display:flex;align-items:center;gap:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:2px 14px}
+.username-input-row.valid{border-color:#6bffb8}
+.username-input-row.invalid{border-color:#ff6b6b}
+.username-input-row span{color:var(--accent2);font-family:'Unbounded',sans-serif;font-weight:600}
+.username-input-row input{flex:1;background:none;border:none;padding:12px 0;color:var(--text);font-size:15px;outline:none;font-family:'Inter',sans-serif}
+.username-status{font-size:12px;margin-top:8px;min-height:18px;text-align:left}
+.username-suggestions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;margin-bottom:14px}
+.username-suggestion-chip{background:var(--input-bg);border:1px solid var(--border);border-radius:16px;padding:7px 13px;font-size:12px;cursor:pointer;color:var(--accent2);font-family:'Inter',sans-serif}
+.username-suggestion-chip:active{opacity:0.7}
 .viewer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:300;display:none;flex-direction:column}
 .viewer-overlay.show{display:flex}
 .viewer-close{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--card);border:none;color:white;font-size:18px;cursor:pointer;z-index:301}
@@ -244,6 +264,12 @@ input[type="file"]{display:none}
 </div>
 <div class="profile-name" id="profile-name">Загрузка...</div>
 <div class="profile-meta" id="profile-meta"></div>
+<div class="username-row" id="username-row" style="display:none">
+<span class="username-badge" id="username-display"></span>
+<button class="username-icon-btn" onclick="copyUsername()" title="Скопировать">📋</button>
+<button class="username-icon-btn" onclick="openQrModal()" title="QR-код">▦</button>
+<button class="username-icon-btn" onclick="openUsernameEditModal()" title="Изменить">✏️</button>
+</div>
 <div class="avatar-actions">
 <button class="avatar-action-btn" onclick="document.getElementById('avatar-input').click()">Сменить фото</button>
 <button class="avatar-action-btn danger" id="avatar-delete-btn" onclick="deleteAvatar()" style="display:none">Удалить</button>
@@ -357,10 +383,37 @@ input[type="file"]{display:none}
 </div>
 </div>
 </div>
+<div class="qr-modal" id="qr-modal">
+<div class="qr-modal-inner">
+<div class="qr-title">Мой QR-код</div>
+<canvas id="qr-canvas" width="220" height="220"></canvas>
+<div class="qr-username" id="qr-username-text"></div>
+<div class="qr-actions">
+<button class="btn" onclick="copyProfileLink()">🔗 Скопировать ссылку</button>
+<button class="btn btn-outline" onclick="closeQrModal()">Закрыть</button>
+</div>
+</div>
+</div>
+<div class="qr-modal" id="username-edit-modal">
+<div class="qr-modal-inner" style="text-align:left">
+<div class="qr-title" style="text-align:center">Свой никнейм</div>
+<div class="username-input-row" id="username-input-row">
+<span>&</span>
+<input type="text" id="username-input" placeholder="ivan_petrov" maxlength="32" oninput="onUsernameInput()" autocapitalize="off" autocomplete="off">
+</div>
+<div class="username-status" id="username-status"></div>
+<div class="username-suggestions" id="username-suggestions"></div>
+<div class="qr-actions">
+<button class="btn" id="username-save-btn" onclick="saveUsername()" disabled>Сохранить</button>
+<button class="btn btn-outline" onclick="closeUsernameEditModal()">Отмена</button>
+</div>
+</div>
+</div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="photo-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="push-notifications.js"></script>
 <!-- Подключаем модуль звонков -->
 <script type="module">
@@ -385,6 +438,185 @@ var currentUser = null;
 var currentAccessToken = null;
 var myPosts = [];
 var myPostsByPhotoId = {};
+var myUsername = null;
+
+function renderUsername(username) {
+myUsername = username;
+var row = document.getElementById('username-row');
+if (!username) { row.style.display = 'none'; return; }
+document.getElementById('username-display').textContent = '&' + username;
+row.style.display = 'flex';
+}
+
+function copyUsername() {
+if (!myUsername) return;
+var text = '&' + myUsername;
+if (navigator.clipboard) {
+navigator.clipboard.writeText(text).then(function() {
+alert('Никнейм скопирован: ' + text);
+}).catch(function() { prompt('Скопируй никнейм:', text); });
+} else {
+prompt('Скопируй никнейм:', text);
+}
+}
+
+function getProfileShareUrl() {
+return window.location.origin + '/view-profile.html?u=' + encodeURIComponent(myUsername);
+}
+
+function copyProfileLink() {
+if (!myUsername) return;
+var url = getProfileShareUrl();
+if (navigator.clipboard) {
+navigator.clipboard.writeText(url).then(function() {
+alert('Ссылка скопирована!');
+}).catch(function() { prompt('Скопируй ссылку:', url); });
+} else {
+prompt('Скопируй ссылку:', url);
+}
+}
+
+function openQrModal() {
+if (!myUsername) return;
+document.getElementById('qr-username-text').textContent = '&' + myUsername;
+document.getElementById('qr-modal').classList.add('show');
+setTimeout(function() {
+var canvas = document.getElementById('qr-canvas');
+if (typeof QRCode !== 'undefined') {
+QRCode.toCanvas(canvas, getProfileShareUrl(), { width: 220, margin: 1, color: { dark: '#0d0d0d', light: '#ffffff' } }, function(err) {
+if (err) console.error('QR error:', err);
+});
+} else {
+console.error('QRCode library не загрузилась');
+}
+}, 50);
+}
+
+function closeQrModal() {
+document.getElementById('qr-modal').classList.remove('show');
+}
+
+// ===== РЕДАКТИРОВАНИЕ НИКНЕЙМА (свой вариант + подсказки свободных, как в Telegram) =====
+var usernameCheckDebounce = null;
+
+function openUsernameEditModal() {
+document.getElementById('username-input').value = myUsername || '';
+document.getElementById('username-status').textContent = '';
+document.getElementById('username-suggestions').innerHTML = '';
+document.getElementById('username-input-row').className = 'username-input-row';
+document.getElementById('username-save-btn').disabled = true;
+document.getElementById('username-edit-modal').classList.add('show');
+}
+
+function closeUsernameEditModal() {
+document.getElementById('username-edit-modal').classList.remove('show');
+}
+
+function onUsernameInput() {
+clearTimeout(usernameCheckDebounce);
+var input = document.getElementById('username-input');
+var raw = input.value;
+var val = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+if (val !== raw) { input.value = val; }
+var row = document.getElementById('username-input-row');
+var statusEl = document.getElementById('username-status');
+document.getElementById('username-suggestions').innerHTML = '';
+document.getElementById('username-save-btn').disabled = true;
+row.className = 'username-input-row';
+if (!val) { statusEl.textContent = ''; return; }
+if (!/^[a-z][a-z0-9_]{4,31}$/.test(val)) {
+statusEl.textContent = 'От 5 до 32 символов: латиница, цифры, _; начинается с буквы';
+statusEl.style.color = 'var(--muted)';
+row.classList.add('invalid');
+return;
+}
+statusEl.textContent = 'Проверяем...';
+statusEl.style.color = 'var(--muted)';
+usernameCheckDebounce = setTimeout(function() { checkUsernameAvailability(val); }, 400);
+}
+
+async function checkUsernameAvailability(val) {
+if (document.getElementById('username-input').value !== val) return; // юзер уже печатает дальше
+var row = document.getElementById('username-input-row');
+var statusEl = document.getElementById('username-status');
+if (val === myUsername) {
+statusEl.textContent = 'Это твой текущий никнейм';
+statusEl.style.color = 'var(--muted)';
+row.className = 'username-input-row';
+document.getElementById('username-save-btn').disabled = true;
+return;
+}
+var { data } = await db.from('profiles').select('id').eq('username', val).maybeSingle();
+if (document.getElementById('username-input').value !== val) return;
+if (data) {
+statusEl.textContent = '✕ Занято — вот свободные варианты:';
+statusEl.style.color = '#ff6b6b';
+row.className = 'username-input-row invalid';
+document.getElementById('username-save-btn').disabled = true;
+refreshUsernameSuggestions(val);
+} else {
+statusEl.textContent = '✓ Свободно';
+statusEl.style.color = '#6bffb8';
+row.className = 'username-input-row valid';
+document.getElementById('username-save-btn').disabled = false;
+document.getElementById('username-suggestions').innerHTML = '';
+}
+}
+
+function buildUsernameCandidates(base) {
+var arr = [];
+for (var i = 0; i < 8 && arr.length < 6; i++) {
+var suffix = i === 0 ? '' : (i < 4 ? String(Math.floor(10 + Math.random() * 90)) : '_' + String(Math.floor(10 + Math.random() * 90)));
+var cand = (base + suffix).slice(0, 32);
+if (arr.indexOf(cand) === -1) arr.push(cand);
+}
+return arr;
+}
+
+async function refreshUsernameSuggestions(base) {
+var candidates = buildUsernameCandidates(base);
+var { data } = await db.from('profiles').select('username').in('username', candidates);
+var taken = {};
+(data || []).forEach(function(r) { taken[r.username] = true; });
+var free = candidates.filter(function(c) { return !taken[c]; }).slice(0, 3);
+var wrap = document.getElementById('username-suggestions');
+wrap.innerHTML = '';
+free.forEach(function(name) {
+var chip = document.createElement('button');
+chip.type = 'button';
+chip.className = 'username-suggestion-chip';
+chip.textContent = '&' + name;
+chip.onclick = function() {
+document.getElementById('username-input').value = name;
+onUsernameInput();
+};
+wrap.appendChild(chip);
+});
+}
+
+async function saveUsername() {
+var val = document.getElementById('username-input').value;
+if (!val) return;
+var btn = document.getElementById('username-save-btn');
+btn.disabled = true;
+btn.textContent = 'Сохраняем...';
+var { error } = await db.from('profiles').update({ username: val }).eq('id', currentUser.id);
+btn.textContent = 'Сохранить';
+if (error) {
+if (error.code === '23505') {
+document.getElementById('username-status').textContent = '✕ Только что заняли — попробуй другой вариант';
+document.getElementById('username-status').style.color = '#ff6b6b';
+document.getElementById('username-input-row').className = 'username-input-row invalid';
+refreshUsernameSuggestions(val);
+} else {
+alert('Ошибка: ' + error.message);
+btn.disabled = false;
+}
+return;
+}
+renderUsername(val);
+closeUsernameEditModal();
+}
 
 async function init() {
 var r = await db.auth.getSession();
@@ -401,6 +633,7 @@ document.getElementById('profile-name').textContent = profile.name || 'Поль�
 document.getElementById('profile-meta').textContent = (profile.age ? profile.age + ' лет' : '') + (profile.city ? ' · ' + profile.city : '');
 if (profile.photo_url) showAvatar(profile.photo_url);
 document.getElementById('posts_visibility').value = profile.posts_visibility || 'all';
+renderUsername(profile.username);
 }
 await loadMyPosts();
 await loadFollowCounts();
