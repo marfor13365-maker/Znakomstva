@@ -126,7 +126,7 @@ input[type="file"]{display:none}
 .qr-modal.show{display:flex}
 .qr-modal-inner{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;width:100%;max-width:320px;text-align:center}
 .qr-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600;margin-bottom:16px}
-#qr-canvas{border-radius:12px;background:white;padding:10px}
+#qr-img{border-radius:12px;background:white;padding:10px;width:220px;height:220px;display:block;margin:0 auto}
 .qr-username{font-family:'Unbounded',sans-serif;font-size:15px;color:var(--accent2);margin-top:14px;margin-bottom:18px}
 .qr-actions{display:flex;flex-direction:column;gap:10px}
 .username-input-row{display:flex;align-items:center;gap:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:2px 14px}
@@ -386,7 +386,8 @@ input[type="file"]{display:none}
 <div class="qr-modal" id="qr-modal">
 <div class="qr-modal-inner">
 <div class="qr-title">Мой QR-код</div>
-<canvas id="qr-canvas" width="220" height="220"></canvas>
+<div class="loading" id="qr-loading" style="padding:20px 0">⏳ Генерируем...</div>
+<img id="qr-img" src="" alt="QR-код" style="display:none" onload="document.getElementById('qr-loading').style.display='none';this.style.display='block'" onerror="document.getElementById('qr-loading').textContent='⚠️ Не удалось создать QR-код'">
 <div class="qr-username" id="qr-username-text"></div>
 <div class="qr-actions">
 <button class="btn" onclick="copyProfileLink()">🔗 Скопировать ссылку</button>
@@ -413,7 +414,6 @@ input[type="file"]{display:none}
 <script src="config.js"></script>
 <script src="photo-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="push-notifications.js"></script>
 <!-- Подключаем модуль звонков -->
 <script type="module">
@@ -479,17 +479,16 @@ prompt('Скопируй ссылку:', url);
 function openQrModal() {
 if (!myUsername) return;
 document.getElementById('qr-username-text').textContent = '&' + myUsername;
+var img = document.getElementById('qr-img');
+var loading = document.getElementById('qr-loading');
+img.style.display = 'none';
+loading.style.display = 'block';
+loading.textContent = '⏳ Генерируем...';
 document.getElementById('qr-modal').classList.add('show');
-setTimeout(function() {
-var canvas = document.getElementById('qr-canvas');
-if (typeof QRCode !== 'undefined') {
-QRCode.toCanvas(canvas, getProfileShareUrl(), { width: 220, margin: 1, color: { dark: '#0d0d0d', light: '#ffffff' } }, function(err) {
-if (err) console.error('QR error:', err);
-});
-} else {
-console.error('QRCode library не загрузилась');
-}
-}, 50);
+// Готовый внешний сервис вместо JS-библиотеки — она у части браузеров не грузилась
+// с CDN и оставляла пустой белый квадрат без всякого объяснения. Обычная картинка
+// надёжнее: либо она загрузится, либо покажем понятную ошибку (onerror у img).
+img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(getProfileShareUrl());
 }
 
 function closeQrModal() {
