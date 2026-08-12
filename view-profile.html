@@ -35,6 +35,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .new-post-dot.show{display:block}
 .profile-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-top:14px}
 .profile-meta{font-size:13px;color:var(--muted);margin-top:6px}
+.username-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.username-badge{font-family:'Unbounded',sans-serif;font-size:13px;color:var(--accent2);background:var(--input-bg);border:1px solid var(--border);padding:6px 12px;border-radius:20px}
+.username-icon-btn{width:30px;height:30px;border-radius:50%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.username-icon-btn:active{opacity:0.7}
 .actions-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
 .actions-row .btn{flex:0 1 auto;min-width:140px;padding:10px 20px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;border:none;transition:opacity 0.2s;white-space:nowrap}
 .actions-row .btn:active{opacity:0.7}
@@ -152,6 +156,19 @@ var galleryItems = [];
 var galleryPostMap = {};
 var currentTargetId = null;
 var currentMatchId = null;
+var currentTargetUsername = null;
+
+function copyTargetUsername() {
+if (!currentTargetUsername) return;
+var text = '&' + currentTargetUsername;
+if (navigator.clipboard) {
+navigator.clipboard.writeText(text).then(function() {
+alert('Никнейм скопирован: ' + text);
+}).catch(function() { prompt('Скопируй никнейм:', text); });
+} else {
+prompt('Скопируй никнейм:', text);
+}
+}
 var currentGalleryPostId = null;
 
 window.toggleLanguage = function() {
@@ -193,6 +210,11 @@ var params = new URLSearchParams(window.location.search);
 return params.get('user');
 }
 
+function getTargetUsername() {
+var params = new URLSearchParams(window.location.search);
+return params.get('u');
+}
+
 async function getMatchId(otherUserId) {
 var { data } = await db.from('matches').select('id')
 .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
@@ -222,6 +244,14 @@ return;
 currentUser = r.data.session.user;
 var targetId = getTargetUserId();
 if (!targetId) {
+// Ссылка вида view-profile.html?u=nickname (шаринг/QR-код) — сначала находим id по нику
+var usernameParam = getTargetUsername();
+if (usernameParam) {
+var { data: byUsername } = await db.from('profiles').select('id').eq('username', usernameParam).maybeSingle();
+if (byUsername) targetId = byUsername.id;
+}
+}
+if (!targetId) {
 window.location.href = 'feed.html';
 return;
 }
@@ -233,6 +263,21 @@ console.error('Ошибка загрузки профиля:', error);
 return;
 }
 currentMatchId = await getMatchId(targetId);
+
+// Владелец мог полностью закрыть анкету (не только галерею) — проверяем ДО рендера,
+// иначе прямая ссылка/QR обходили бы это ограничение в обход проверки, которая раньше
+// делалась только на странице-источнике (лента, поиск), а не тут.
+var isOwn = currentUser.id === profile.id;
+var pv = profile.profile_visibility || 'matches';
+if (!isOwn && pv === 'none') {
+document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>Пользователь закрыл анкету для всех.</p></div>';
+return;
+}
+if (!isOwn && pv === 'matches' && !currentMatchId) {
+document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>Анкета доступна только мэтчам. Лайкни пользователя, чтобы открыть её.</p></div>';
+return;
+}
+
 renderProfile(profile);
 if (typeof BlizkoTheme !== 'undefined') {
 if (typeof BlizkoTheme.apply === 'function') BlizkoTheme.apply();
@@ -245,6 +290,7 @@ document.getElementById('content').innerHTML = '<div class="loading" style="colo
 }
 
 function renderProfile(profile) {
+currentTargetUsername = profile.username || null;
 var content = document.getElementById('content');
 var html =
 '<div class="avatar-block">' +
@@ -253,6 +299,7 @@ var html =
 '</div>' +
 '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
 '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
+(profile.username ? '<div class="username-row"><span class="username-badge">&' + escapeHtml(profile.username) + '</span><button class="username-icon-btn" onclick="copyTargetUsername()" title="Скопировать">📋</button></div>' : '') +
 '<div class="actions-row">';
 if (currentMatchId) {
 html += '<button class="btn message-btn" onclick="window.location.href=\'chat.html?match=' + currentMatchId + '\'" data-i18n="write_message">💬 Написать сообщение</button>';
