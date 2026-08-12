@@ -33,6 +33,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
 .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.search-wrap{padding:14px 20px;border-bottom:1px solid var(--border)}
+.search-wrap input{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:11px 16px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none}
+.search-wrap input:focus{border-color:var(--accent)}
+.match-last.username{color:var(--accent2)}
 </style>
 </head>
 <body>
@@ -50,6 +54,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 <div class="page-title">Матчи</div>
 </div>
+<div class="search-wrap">
+<input type="text" id="user-search-input" placeholder="Поиск по нику, например &ivan482" oninput="onSearchInput()">
+</div>
+<div id="search-results" style="display:none"></div>
 <div class="list" id="list-wrap">
 <div class="loading">⏳ Загрузка...</div>
 </div>
@@ -59,6 +67,77 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script>
 var db = createBlizkoClient();
 var currentUser = null;
+var searchDebounce = null;
+
+function onSearchInput() {
+clearTimeout(searchDebounce);
+var q = document.getElementById('user-search-input').value.trim().replace(/^&/, '');
+var resultsEl = document.getElementById('search-results');
+var listEl = document.getElementById('list-wrap');
+if (!q) {
+resultsEl.style.display = 'none';
+listEl.style.display = 'block';
+return;
+}
+searchDebounce = setTimeout(function() { runSearch(q); }, 300);
+}
+
+async function runSearch(q) {
+var resultsEl = document.getElementById('search-results');
+var listEl = document.getElementById('list-wrap');
+listEl.style.display = 'none';
+resultsEl.style.display = 'block';
+resultsEl.innerHTML = '<div class="loading">⏳ Ищем...</div>';
+var { data, error } = await db.from('profiles')
+.select('id, name, age, username, photo_url, city')
+.ilike('username', q + '%')
+.neq('id', currentUser.id)
+.limit(20);
+if (error) {
+console.error('Ошибка поиска по нику:', error);
+resultsEl.innerHTML = '<div class="loading">Ошибка поиска</div>';
+return;
+}
+if (!data || data.length === 0) {
+resultsEl.innerHTML = '<div class="empty-state" style="padding:30px 20px"><div class="icon">🔍</div><p>Никого не нашлось по этому нику</p></div>';
+return;
+}
+resultsEl.innerHTML = '';
+data.forEach(function(p) {
+var item = document.createElement('div');
+item.className = 'match-item';
+item.onclick = function() { openFoundProfile(p.id); };
+item.innerHTML =
+'<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
+'<div class="match-info">' +
+'<div class="match-name">' + (p.name || 'Пользователь') + (p.age ? ', ' + p.age : '') + '</div>' +
+'<div class="match-last username">&' + (p.username || '') + (p.city ? ' · ' + p.city : '') + '</div>' +
+'</div>';
+resultsEl.appendChild(item);
+});
+}
+
+// Та же логика приватности, что и при переходе из ленты — найти по нику не значит
+// автоматически получить доступ к закрытой анкете.
+async function openFoundProfile(userId) {
+var { data: profile } = await db.from('profiles').select('profile_visibility').eq('id', userId).single();
+if (!profile) { alert('Профиль не найден'); return; }
+var visibility = profile.profile_visibility || 'matches';
+if (visibility === 'none') {
+alert('🔒 Этот пользователь закрыл свою анкету для всех.');
+return;
+}
+if (visibility === 'matches') {
+var { data: match } = await db.from('matches').select('id')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + userId + '),and(user1.eq.' + userId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+if (!match) {
+alert('🔒 Анкета доступна только для мэтчей. Лайкни этого пользователя, чтобы открыть анкету.');
+return;
+}
+}
+window.location.href = 'view-profile.html?user=' + userId;
+}
 
 function toggleNavMenu() {
 document.getElementById('nav-menu').classList.toggle('show');
