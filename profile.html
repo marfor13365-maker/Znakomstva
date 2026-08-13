@@ -523,8 +523,8 @@ document.getElementById('username-suggestions').innerHTML = '';
 document.getElementById('username-save-btn').disabled = true;
 row.className = 'username-input-row';
 if (!val) { statusEl.textContent = ''; return; }
-if (!/^[a-z0-9][a-z0-9._-]{3,30}[a-z0-9]$/.test(val)) {
-statusEl.textContent = 'От 5 до 32 символов: латиница, цифры, точка, дефис, подчёркивание; начинается и заканчивается буквой или цифрой';
+if (!/^[a-z0-9][a-z0-9._-]{3,30}[a-z0-9]$/.test(val) || !/[a-z]/.test(val) || !/[0-9]/.test(val)) {
+statusEl.textContent = 'От 5 до 32 символов: обязательно хотя бы одна буква и одна цифра; точка/дефис/подчёркивание — по желанию';
 statusEl.style.color = 'var(--muted)';
 row.classList.add('invalid');
 return;
