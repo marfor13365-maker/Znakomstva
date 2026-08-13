@@ -39,6 +39,13 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .username-badge{font-family:'Unbounded',sans-serif;font-size:13px;color:var(--accent2);background:var(--input-bg);border:1px solid var(--border);padding:6px 12px;border-radius:20px}
 .username-icon-btn{width:30px;height:30px;border-radius:50%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .username-icon-btn:active{opacity:0.7}
+.qr-modal{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:400;display:none;align-items:center;justify-content:center;padding:20px}
+.qr-modal.show{display:flex}
+.qr-modal-inner{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;width:100%;max-width:320px;text-align:center}
+.qr-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600;margin-bottom:16px}
+#target-qr-img{border-radius:12px;background:white;padding:10px;width:220px;height:220px;display:block;margin:0 auto}
+.qr-username{font-family:'Unbounded',sans-serif;font-size:15px;color:var(--accent2);margin-top:14px;margin-bottom:18px}
+.qr-actions{display:flex;flex-direction:column;gap:10px}
 .actions-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
 .actions-row .btn{flex:0 1 auto;min-width:140px;padding:10px 20px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;border:none;transition:opacity 0.2s;white-space:nowrap}
 .actions-row .btn:active{opacity:0.7}
@@ -142,6 +149,18 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 </div>
 </div>
+<div class="qr-modal" id="target-qr-modal">
+<div class="qr-modal-inner">
+<div class="qr-title">QR-код анкеты</div>
+<div class="loading" id="target-qr-loading" style="padding:20px 0">⏳ Генерируем...</div>
+<img id="target-qr-img" src="" alt="QR-код" style="display:none" onload="document.getElementById('target-qr-loading').style.display='none';this.style.display='block'" onerror="document.getElementById('target-qr-loading').textContent='⚠️ Не удалось создать QR-код'">
+<div class="qr-username" id="target-qr-username-text"></div>
+<div class="qr-actions">
+<button class="btn" style="background:var(--accent);border:none;color:white;padding:12px;border-radius:12px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer" onclick="copyTargetProfileLink()">🔗 Скопировать ссылку</button>
+<button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:12px;border-radius:12px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer" onclick="closeTargetQrModal()">Закрыть</button>
+</div>
+</div>
+</div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
 <script src="photo-viewer.js"></script>
@@ -168,6 +187,38 @@ alert('Никнейм скопирован: ' + text);
 } else {
 prompt('Скопируй никнейм:', text);
 }
+}
+
+function getTargetProfileShareUrl() {
+return window.location.origin + '/view-profile.html?u=' + encodeURIComponent(currentTargetUsername);
+}
+
+function copyTargetProfileLink() {
+if (!currentTargetUsername) return;
+var url = getTargetProfileShareUrl();
+if (navigator.clipboard) {
+navigator.clipboard.writeText(url).then(function() {
+alert('Ссылка скопирована!');
+}).catch(function() { prompt('Скопируй ссылку:', url); });
+} else {
+prompt('Скопируй ссылку:', url);
+}
+}
+
+function openTargetQrModal() {
+if (!currentTargetUsername) return;
+document.getElementById('target-qr-username-text').textContent = '&' + currentTargetUsername;
+var img = document.getElementById('target-qr-img');
+var loading = document.getElementById('target-qr-loading');
+img.style.display = 'none';
+loading.style.display = 'block';
+loading.textContent = '⏳ Генерируем...';
+document.getElementById('target-qr-modal').classList.add('show');
+img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(getTargetProfileShareUrl());
+}
+
+function closeTargetQrModal() {
+document.getElementById('target-qr-modal').classList.remove('show');
 }
 var currentGalleryPostId = null;
 
@@ -299,7 +350,7 @@ var html =
 '</div>' +
 '<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
 '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
-(profile.username ? '<div class="username-row"><span class="username-badge">&' + escapeHtml(profile.username) + '</span><button class="username-icon-btn" onclick="copyTargetUsername()" title="Скопировать">📋</button></div>' : '') +
+(profile.username ? '<div class="username-row"><span class="username-badge">&' + escapeHtml(profile.username) + '</span><button class="username-icon-btn" onclick="copyTargetUsername()" title="Скопировать">📋</button><button class="username-icon-btn" onclick="openTargetQrModal()" title="QR-код">▦</button></div>' : '') +
 '<div class="actions-row">';
 if (currentMatchId) {
 html += '<button class="btn message-btn" onclick="window.location.href=\'chat.html?match=' + currentMatchId + '\'" data-i18n="write_message">💬 Написать сообщение</button>';
