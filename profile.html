@@ -515,7 +515,7 @@ function onUsernameInput() {
 clearTimeout(usernameCheckDebounce);
 var input = document.getElementById('username-input');
 var raw = input.value;
-var val = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+var val = raw.toLowerCase().replace(/[^a-z0-9._-]/g, '');
 if (val !== raw) { input.value = val; }
 var row = document.getElementById('username-input-row');
 var statusEl = document.getElementById('username-status');
@@ -523,8 +523,8 @@ document.getElementById('username-suggestions').innerHTML = '';
 document.getElementById('username-save-btn').disabled = true;
 row.className = 'username-input-row';
 if (!val) { statusEl.textContent = ''; return; }
-if (!/^[a-z][a-z0-9_]{4,31}$/.test(val)) {
-statusEl.textContent = 'От 5 до 32 символов: латиница, цифры, _; начинается с буквы';
+if (!/^[a-z0-9][a-z0-9._-]{3,30}[a-z0-9]$/.test(val)) {
+statusEl.textContent = 'От 5 до 32 символов: латиница, цифры, точка, дефис, подчёркивание; начинается и заканчивается буквой или цифрой';
 statusEl.style.color = 'var(--muted)';
 row.classList.add('invalid');
 return;
@@ -564,8 +564,10 @@ document.getElementById('username-suggestions').innerHTML = '';
 
 function buildUsernameCandidates(base) {
 var arr = [];
-for (var i = 0; i < 8 && arr.length < 6; i++) {
-var suffix = i === 0 ? '' : (i < 4 ? String(Math.floor(10 + Math.random() * 90)) : '_' + String(Math.floor(10 + Math.random() * 90)));
+var separators = ['', '', '.', '-', '_'];
+for (var i = 0; i < 10 && arr.length < 6; i++) {
+var sep = separators[i % separators.length];
+var suffix = sep === '' ? String(Math.floor(10 + Math.random() * 90)) : sep + String(Math.floor(1 + Math.random() * 9));
 var cand = (base + suffix).slice(0, 32);
 if (arr.indexOf(cand) === -1) arr.push(cand);
 }
