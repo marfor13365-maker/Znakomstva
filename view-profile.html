@@ -56,6 +56,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .section{padding:0 20px;margin-bottom:20px}
 .section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:10px}
 .about-text{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px;line-height:1.6}
+.extra-fields{display:flex;flex-direction:column;gap:8px}
+.extra-field-row{font-size:13px;line-height:1.5}
+.extra-field-label{color:var(--muted)}
+.extra-field-value{color:var(--text);font-weight:500}
+.extra-field-match{display:inline-block;margin-left:8px;background:rgba(255,77,109,0.15);color:var(--accent2);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
 .gallery-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;padding:0 20px}
 .gallery-item{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--input-bg);cursor:pointer}
 .gallery-item img,.gallery-item video{width:100%;height:100%;object-fit:cover}
@@ -176,6 +181,7 @@ var galleryPostMap = {};
 var currentTargetId = null;
 var currentMatchId = null;
 var currentTargetUsername = null;
+var myOwnExtra = {};
 
 function copyTargetUsername() {
 if (!currentTargetUsername) return;
@@ -315,6 +321,14 @@ return;
 }
 currentMatchId = await getMatchId(targetId);
 
+// Подтягиваем СВОИ значения доп.полей, чтобы подсветить совпадения с этим профилем
+if (currentUser.id !== targetId) {
+var { data: myProfile } = await db.from('profiles').select('children_count, job, business, product, service').eq('id', currentUser.id).maybeSingle();
+myOwnExtra = myProfile || {};
+} else {
+myOwnExtra = {};
+}
+
 // Владелец мог полностью закрыть анкету (не только галерею) — проверяем ДО рендера,
 // иначе прямая ссылка/QR обходили бы это ограничение в обход проверки, которая раньше
 // делалась только на странице-источнике (лента, поиск), а не тут.
@@ -360,8 +374,12 @@ html += '<button class="btn message-btn" onclick="window.location.href=\'matches
 }
 html += '</div></div>';
 html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text">' +
-(profile.about ? escapeHtml(profile.about) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
+(profile.about ? linkifyText(escapeHtml(profile.about)) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
 '</div></div>';
+var extraHtml = buildExtraFieldsHtml(profile);
+if (extraHtml) {
+html += '<div class="section"><div class="section-title">Дополнительно</div><div class="about-text extra-fields">' + extraHtml + '</div></div>';
+}
 html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
 
 // Владелец профиля решает, кому видна его галерея (посты в ленте — отдельная история,
@@ -389,6 +407,45 @@ BlizkoTheme.applyLang();
 
 function escapeHtml(str) {
 return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Делает URL в тексте "О себе" кликабельными. Работает уже ПОСЛЕ escapeHtml —
+// это безопасно, т.к. HTML-сущности (&amp; и т.п.) браузер сам раскодирует
+// внутри href при разборе атрибута, ссылка соберётся корректно.
+function linkifyText(escapedText) {
+return escapedText.replace(/(https?:\/\/[^\s<]+)|(\bwww\.[^\s<]+)/gi, function(match) {
+var trail = '';
+var m = match.match(/[.,!?;:]+$/);
+if (m) { trail = m[0]; match = match.slice(0, -trail.length); }
+var href = /^https?:\/\//i.test(match) ? match : 'https://' + match;
+return '<a href="' + href + '" target="_blank" rel="noopener noreferrer" style="color:var(--accent2);text-decoration:underline;word-break:break-all">' + match + '</a>' + trail;
+});
+}
+
+var CHILDREN_LABELS = { '0': 'Нет детей', '1': '1 ребёнок', '2': '2 ребёнка', '3+': '3 и больше' };
+
+// Собирает HTML для необязательных полей (дети/работа/бизнес/товар/услуга).
+// Если значение совпадает с ТВОИМ собственным по этому же полю — подсвечиваем меткой ✨.
+function buildExtraFieldsHtml(profile) {
+var rows = [
+{ key: 'children_count', label: 'Дети', display: profile.children_count ? (CHILDREN_LABELS[profile.children_count] || profile.children_count) : null },
+{ key: 'job', label: 'Работа', display: profile.job || null },
+{ key: 'business', label: 'Бизнес', display: profile.business || null },
+{ key: 'product', label: 'Товар', display: profile.product || null },
+{ key: 'service', label: 'Услуга', display: profile.service || null }
+];
+var html = '';
+rows.forEach(function(row) {
+if (!row.display) return;
+var myVal = myOwnExtra ? myOwnExtra[row.key] : null;
+var isMatch = myVal && profile[row.key] && String(myVal).trim().toLowerCase() === String(profile[row.key]).trim().toLowerCase();
+html += '<div class="extra-field-row">' +
+'<span class="extra-field-label">' + row.label + ':</span> ' +
+'<span class="extra-field-value">' + escapeHtml(row.display) + '</span>' +
+(isMatch ? '<span class="extra-field-match">✨ Совпадение</span>' : '') +
+'</div>';
+});
+return html;
 }
 
 async function loadGallery(targetId) {
