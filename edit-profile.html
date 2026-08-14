@@ -139,7 +139,7 @@ input[type="file"]{display:none}
 </div>
 <div class="section">
 <div class="section-title">Дополнительно (необязательно)</div>
-<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:16px">Эти поля можно не заполнять. Но если у тебя и у другого пользователя совпадёт значение — при просмотре анкет друг друга это будет отмечено как совпадение ✨.</div>
+<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:16px">Эти поля можно не заполнять. Но если то, что ты ищешь, совпадёт с тем, что предлагает другой пользователь (или наоборот) — при просмотре анкет друг друга и в "Знакомствах" это будет отмечено как совпадение ✨.</div>
 <div class="form-group">
 <label>Дети</label>
 <select id="children_count">
@@ -150,10 +150,28 @@ input[type="file"]{display:none}
 <option value="3+">3 и больше</option>
 </select>
 </div>
-<div class="form-group"><label>Работа</label><input type="text" id="job" maxlength="60" placeholder="Например: врач-стоматолог"></div>
+<div class="form-group">
+<label>Работа</label>
+<select id="job_select"></select>
+<input type="text" id="job_other" maxlength="60" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+</div>
 <div class="form-group"><label>Бизнес</label><input type="text" id="business" maxlength="60" placeholder="Например: IT-консалтинг"></div>
-<div class="form-group"><label>Товар</label><input type="text" id="product" maxlength="60" placeholder="Например: handmade украшения"></div>
-<div class="form-group"><label>Услуга</label><input type="text" id="service" maxlength="60" placeholder="Например: массаж"></div>
+<div class="form-group">
+<label>Товар — хочу продать</label>
+<select id="product_sell_select"></select>
+<input type="text" id="product_sell_other" maxlength="60" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+</div>
+<div class="form-group">
+<label>Услуга — предлагаю</label>
+<select id="service_offer_select"></select>
+<input type="text" id="service_offer_other" maxlength="60" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+</div>
+<div class="form-group">
+<label>Работа — предлагаю вакансию</label>
+<select id="job_offer_select"></select>
+<input type="text" id="job_offer_other" maxlength="60" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+</div>
+<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px">А что ты сам ищешь (товар купить / услугу заказать / работу найти) — настраивается в фильтрах на экране "Знакомства", это видно только тебе.</div>
 </div>
 <div class="section">
 <div class="section-title">Приватность анкеты</div>
@@ -171,6 +189,7 @@ input[type="file"]{display:none}
 </div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
+<script src="categories.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var db = createBlizkoClient();
@@ -209,16 +228,19 @@ document.getElementById('gender').value = p.data.gender || '';
 document.getElementById('looking_for').value = p.data.looking_for || '';
 document.getElementById('profile_visibility').value = p.data.profile_visibility || 'matches';
 document.getElementById('children_count').value = p.data.children_count || '';
-document.getElementById('job').value = p.data.job || '';
 document.getElementById('business').value = p.data.business || '';
-document.getElementById('product').value = p.data.product || '';
-document.getElementById('service').value = p.data.service || '';
 if (p.data.photo_url) {
 currentPhotoUrl = p.data.photo_url;
 showAvatar(p.data.photo_url);
 }
 updatePublishButtonLabel(p.data.is_active === true);
 }
+// Вне if(p.data) — чтобы у select-полей опции появились в любом случае,
+// даже если анкета ещё не создана (у нового пользователя p.data пустой).
+blizkoInitCategoryField('job', BLIZKO_PROFESSIONS, p.data ? p.data.job : null);
+blizkoInitCategoryField('product_sell', BLIZKO_PRODUCTS, p.data ? p.data.product_sell : null);
+blizkoInitCategoryField('service_offer', BLIZKO_SERVICES, p.data ? p.data.service_offer : null);
+blizkoInitCategoryField('job_offer', BLIZKO_PROFESSIONS, p.data ? p.data.job_offer : null);
 }
 
 function updatePublishButtonLabel(isActive) {
@@ -386,10 +408,11 @@ var gender = document.getElementById('gender').value;
 var looking_for = document.getElementById('looking_for').value;
 var profile_visibility = document.getElementById('profile_visibility').value;
 var children_count = document.getElementById('children_count').value;
-var job = document.getElementById('job').value.trim();
+var job = blizkoGetCategoryFieldValue('job');
 var business = document.getElementById('business').value.trim();
-var product = document.getElementById('product').value.trim();
-var service = document.getElementById('service').value.trim();
+var product_sell = blizkoGetCategoryFieldValue('product_sell');
+var service_offer = blizkoGetCategoryFieldValue('service_offer');
+var job_offer = blizkoGetCategoryFieldValue('job_offer');
 if (!currentPhotoUrl) {
 document.getElementById('avatar-circle').classList.add('required');
 document.getElementById('avatar-hint').classList.add('required');
@@ -403,13 +426,17 @@ if (!age || age < 18) { setMsg('Укажи возраст от 18 лет', 'erro
 if (!gender) { setMsg('Укажи свой пол', 'error'); return; }
 if (!looking_for) { setMsg('Укажи кого ищешь', 'error'); return; }
 setMsg('Публикуем...', '');
+// product_buy/service_seek/job_seek сюда намеренно НЕ включены — эти поля теперь
+// редактируются в фильтрах на экране "Знакомства" (swipe.html) и не должны
+// затираться в null при каждой публикации анкеты отсюда.
 var r = await db.from('profiles').upsert({
 id: currentUser.id, name, age, city, about, gender, looking_for, profile_visibility,
 children_count: children_count || null,
 job: job || null,
 business: business || null,
-product: product || null,
-service: service || null,
+product_sell: product_sell || null,
+service_offer: service_offer || null,
+job_offer: job_offer || null,
 photo_url: currentPhotoUrl,
 is_active: true
 });
