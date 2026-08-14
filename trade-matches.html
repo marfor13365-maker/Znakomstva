@@ -35,6 +35,16 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
 .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.like-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:none;align-items:flex-end;justify-content:center;padding:0}
+.like-modal-overlay.show{display:flex}
+.like-modal{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
+.like-modal-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:6px;text-align:center}
+.like-modal-sub{font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px}
+.like-modal-tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px}
+.like-modal textarea{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:90px;margin-bottom:14px}
+.like-modal-actions{display:flex;gap:10px}
+.like-modal-actions .btn{margin:0;flex:1}
 </style>
 </head>
 <body>
@@ -54,6 +64,18 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 <div class="list" id="list-wrap">
 <div class="loading">⏳ Загрузка...</div>
+</div>
+<div class="like-modal-overlay" id="like-modal-overlay">
+<div class="like-modal">
+<div class="like-modal-title">❤️ Отправить лайк</div>
+<div class="like-modal-sub">Анкета открыта только мэтчам — но ты можешь лайкнуть с объяснением, в чём совпадение. Если лайкнет в ответ — откроется чат.</div>
+<div class="like-modal-tags" id="like-modal-tags"></div>
+<textarea id="like-modal-comment" maxlength="300"></textarea>
+<div class="like-modal-actions">
+<button class="btn-outline" onclick="closeLikeModal()">Отмена</button>
+<button class="btn" onclick="sendLikeWithComment()">Отправить</button>
+</div>
+</div>
 </div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
@@ -118,7 +140,7 @@ all.forEach(function(entry) {
 var p = entry.profile;
 var item = document.createElement('div');
 item.className = 'match-item';
-item.onclick = function() { openProfile(p); };
+item.onclick = function() { openProfile(p, entry.matches); };
 var tagsHtml = entry.matches.map(function(m) {
 return '<span class="trade-badge ' + m.type + '">✨ ' + m.label + '</span>';
 }).join('');
@@ -132,20 +154,64 @@ wrap.appendChild(item);
 });
 }
 
-// Та же логика приватности, что и везде — совпадение по товару/услуге не отменяет
-// настройки видимости анкеты владельца.
-async function openProfile(p) {
-var visibility = p.profile_visibility || 'matches';
-if (visibility === 'none') {
-alert('🔒 Этот пользователь закрыл свою анкету для всех.');
-return;
+// Готовит текст лайка так, чтобы сразу было понятно, из-за чего пишешь — вместо
+// пустого "привет" человек сразу видит причину и может её поправить перед отправкой.
+function buildAutoComment(matches) {
+var reasons = matches.map(function(m) { return m.label; }).join('; ');
+return 'Привет! У нас совпадение: ' + reasons + '. Лайкни в ответ? 😊';
 }
-if (visibility === 'matches') {
+
+var pendingLikeTarget = null;
+
+function openLikeModal(p, matches) {
+pendingLikeTarget = p;
+document.getElementById('like-modal-comment').value = buildAutoComment(matches);
+document.getElementById('like-modal-tags').innerHTML = matches.map(function(m) {
+return '<span class="trade-badge ' + m.type + '">✨ ' + m.label + '</span>';
+}).join('');
+document.getElementById('like-modal-overlay').classList.add('show');
+}
+
+function closeLikeModal() {
+document.getElementById('like-modal-overlay').classList.remove('show');
+pendingLikeTarget = null;
+}
+
+async function sendLikeWithComment() {
+if (!pendingLikeTarget) return;
+var comment = document.getElementById('like-modal-comment').value.trim();
+var { error } = await db.from('likes').upsert({
+from_user: currentUser.id,
+to_user: pendingLikeTarget.id,
+is_like: true,
+comment: comment || null
+}, { onConflict: 'from_user,to_user' });
+if (error) { alert('Ошибка: ' + error.message); return; }
+var targetId = pendingLikeTarget.id;
+closeLikeModal();
+var { data: matchData } = await db.from('matches').select('id')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + targetId + '),and(user1.eq.' + targetId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+if (matchData) {
+if (confirm('🎉 Это взаимный лайк! Перейти в чат?')) {
+window.location.href = 'chat.html?match=' + matchData.id;
+}
+} else {
+alert('✓ Лайк с сообщением отправлен. Если он лайкнет в ответ — откроется чат.');
+}
+}
+
+// Та же логика приватности, что и везде — совпадение по товару/услуге не отменяет
+// настройки видимости анкеты владельца. Разница только в том, что теперь вместо
+// молчаливой блокировки предлагаем лайкнуть с объяснением, а не отправляем в никуда.
+async function openProfile(p, matches) {
+var visibility = p.profile_visibility || 'matches';
+if (visibility === 'matches' || visibility === 'none') {
 var { data: match } = await db.from('matches').select('id')
 .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + p.id + '),and(user1.eq.' + p.id + ',user2.eq.' + currentUser.id + ')')
 .maybeSingle();
 if (!match) {
-alert('🔒 Анкета доступна только для мэтчей. Лайкни этого пользователя, чтобы открыть анкету.');
+openLikeModal(p, matches);
 return;
 }
 }
