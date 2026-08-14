@@ -16,6 +16,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .brand-name{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .add-btn{background:var(--accent);border:none;color:white;font-size:22px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:opacity 0.2s;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,0.5)}
 .add-btn:active{opacity:0.7}
+.bell-btn{position:relative;background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.5)}
+.bell-btn:active{opacity:0.8}
+.bell-badge{position:absolute;top:-4px;right:-4px;background:#ffd23f;color:#1a1400;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg)}
 .nav-menu-wrap{position:relative}
 .hamburger-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);flex-shrink:0}
 .hamburger-btn:active{opacity:0.8}
@@ -35,6 +38,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .grid-views{font-size:10px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:2px;flex-shrink:0}
 .grid-new-dot{position:absolute;top:6px;right:6px;width:12px;height:12px;background:var(--accent);border:2px solid rgba(0,0,0,0.6);border-radius:50%;z-index:2;display:none}
 .grid-new-dot.show{display:block}
+.grid-trade-dot{position:absolute;top:6px;left:6px;width:12px;height:12px;background:#ffd23f;border:2px solid rgba(0,0,0,0.6);border-radius:50%;z-index:2;box-shadow:0 0 6px rgba(255,210,63,0.8)}
 .grid-item .user-name{font-size:11px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(0,0,0,0.4);padding:2px 8px;border-radius:10px;backdrop-filter:blur(4px)}
 .no-photo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--input-bg)}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
@@ -130,6 +134,7 @@ input[type="file"]{display:none}
 </head>
 <body>
 <div class="topbar">
+<div style="display:flex;align-items:center;gap:12px;min-width:0">
 <div class="nav-menu-wrap">
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
@@ -158,7 +163,11 @@ input[type="file"]{display:none}
 </svg>
 <span class="brand-name">Znakomstor</span>
 </div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+<button class="bell-btn" onclick="location.href='trade-matches.html'" title="Совпадения">🔔<span class="bell-badge" id="trade-bell-badge" style="display:none">0</span></button>
 <button class="add-btn" onclick="openUpload()">+</button>
+</div>
 </div>
 <div id="grid-wrap">
 <div class="loading">⏳ Загрузка...</div>
@@ -236,6 +245,7 @@ input[type="file"]{display:none}
 <script src="theme.js"></script>
 <script src="photo-viewer.js"></script>
 <script src="config.js"></script>
+<script src="trade-match.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Подключаем модуль звонков -->
 <script type="module">
@@ -261,6 +271,7 @@ var currentUser = null;
 var pendingPhotoUrl = null;
 var pendingMediaType = 'photo';
 var posts = [];
+var myTradeFields = {};
 var lastSeenMap = {};
 var followedIds = {};
 var matchIds = {};
@@ -286,6 +297,9 @@ var menu = document.getElementById('nav-menu');
 if (menu) menu.classList.remove('show');
 }
 });
+
+// fuzzyEq/computeTradeMatches теперь в trade-match.js (общий для feed.html, swipe.html,
+// view-profile.html и trade-matches.html) — используем blizkoComputeTradeMatches(myTradeFields, author).
 
 function timeAgo(dateStr) {
 var d = new Date(dateStr);
@@ -322,9 +336,14 @@ return;
 currentUser = r.data.session.user;
 var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
 (myLikes || []).forEach(function(l) { if (l.is_like) myLikesGiven[l.to_user] = true; });
+try {
+var { data: myTradeProfile } = await db.from('profiles').select('product_buy, product_sell, service_seek, service_offer, job_seek, job_offer').eq('id', currentUser.id).maybeSingle();
+if (myTradeProfile) myTradeFields = myTradeProfile;
+} catch (e) {}
 await loadFollowedAndMatches();
 await loadSeenData();
 await loadFeed();
+blizkoRenderTradeBell(db, currentUser.id, 'trade-bell-badge');
 // ===== ИНИЦИАЛИЗАЦИЯ ГЛОБАЛЬНОГО СЛУШАТЕЛЯ ЗВОНКОВ =====
 if (typeof window.callModule !== 'undefined' && window.callModule.initGlobalCallListener) {
 window.callModule.initCallModule(db, currentUser.id);
@@ -392,7 +411,7 @@ var wrap = document.getElementById('grid-wrap');
 // visible_in_feed=false — это фото, которые лежат только в галерее профиля
 // (ещё не опубликованы в ленте), лента их не показывает
 var { data, error } = await db.from('posts')
-.select('*, profiles(name, city, photo_url)')
+.select('*, profiles(name, city, photo_url, product_buy, product_sell, service_seek, service_offer, job_seek, job_offer)')
 .eq('visible_in_feed', true)
 .order('created_at', { ascending: false })
 .limit(60);
@@ -426,9 +445,11 @@ var mediaHtml = post.media_type === 'video'
 : '<img src="' + post.photo_url + '" loading="lazy">';
 var hasNew = hasNewPost(post.user_id, post.created_at);
 var dotHtml = hasNew ? '<div class="grid-new-dot show"></div>' : '';
+var tradeMatches = post.profiles ? blizkoComputeTradeMatches(myTradeFields, post.profiles) : [];
+var tradeDotHtml = tradeMatches.length > 0 ? '<div class="grid-trade-dot" title="' + escapeHtmlComment(tradeMatches.map(function(m){return m.label;}).join(' • ')) + '"></div>' : '';
 var viewsCount = viewCounts[post.id] || 0;
 var userName = (post.profiles && post.profiles.name) ? post.profiles.name : 'Пользователь';
-item.innerHTML = mediaHtml + dotHtml +
+item.innerHTML = mediaHtml + dotHtml + tradeDotHtml +
 '<div class="overlay"><div class="overlay-row">' +
 '<div class="user-name">' + userName + '</div>' +
 '<div class="grid-views">👁 ' + viewsCount + '</div></div></div>';
