@@ -167,7 +167,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 </div>
 <script src="theme.js"></script>
+<script src="trade-match.js"></script>
 <script src="config.js"></script>
+<script src="trade-match.js"></script>
 <script src="photo-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -323,7 +325,7 @@ currentMatchId = await getMatchId(targetId);
 
 // Подтягиваем СВОИ значения доп.полей, чтобы подсветить совпадения с этим профилем
 if (currentUser.id !== targetId) {
-var { data: myProfile } = await db.from('profiles').select('children_count, job, business, product, service').eq('id', currentUser.id).maybeSingle();
+var { data: myProfile } = await db.from('profiles').select('children_count, job, business, product_buy, product_sell, service_seek, service_offer, job_seek, job_offer').eq('id', currentUser.id).maybeSingle();
 myOwnExtra = myProfile || {};
 } else {
 myOwnExtra = {};
@@ -424,18 +426,18 @@ return '<a href="' + href + '" target="_blank" rel="noopener noreferrer" style="
 
 var CHILDREN_LABELS = { '0': 'Нет детей', '1': '1 ребёнок', '2': '2 ребёнка', '3+': '3 и больше' };
 
-// Собирает HTML для необязательных полей (дети/работа/бизнес/товар/услуга).
-// Если значение совпадает с ТВОИМ собственным по этому же полю — подсвечиваем меткой ✨.
+// fuzzyEq теперь в trade-match.js (blizkoFuzzyEq) — общая для всех страниц.
+// Собирает HTML для необязательных полей. Дети/работа/бизнес сравниваются "как есть"
+// (совпадение = у обоих одно и то же значение). Товар и услуга сравниваются НАКРЕСТ:
+// то, что ты ищешь/хочешь купить — с тем, что человек предлагает/продаёт, и наоборот.
 function buildExtraFieldsHtml(profile) {
-var rows = [
+var html = '';
+var plainRows = [
 { key: 'children_count', label: 'Дети', display: profile.children_count ? (CHILDREN_LABELS[profile.children_count] || profile.children_count) : null },
 { key: 'job', label: 'Работа', display: profile.job || null },
-{ key: 'business', label: 'Бизнес', display: profile.business || null },
-{ key: 'product', label: 'Товар', display: profile.product || null },
-{ key: 'service', label: 'Услуга', display: profile.service || null }
+{ key: 'business', label: 'Бизнес', display: profile.business || null }
 ];
-var html = '';
-rows.forEach(function(row) {
+plainRows.forEach(function(row) {
 if (!row.display) return;
 var myVal = myOwnExtra ? myOwnExtra[row.key] : null;
 var isMatch = myVal && profile[row.key] && String(myVal).trim().toLowerCase() === String(profile[row.key]).trim().toLowerCase();
@@ -445,6 +447,24 @@ html += '<div class="extra-field-row">' +
 (isMatch ? '<span class="extra-field-match">✨ Совпадение</span>' : '') +
 '</div>';
 });
+
+function tradeRow(label, value, matched) {
+if (!value) return '';
+return '<div class="extra-field-row">' +
+'<span class="extra-field-label">' + label + ':</span> ' +
+'<span class="extra-field-value">' + escapeHtml(value) + '</span>' +
+(matched ? '<span class="extra-field-match">✨ Совпадение</span>' : '') +
+'</div>';
+}
+
+var myExtra = myOwnExtra || {};
+html += tradeRow('Товар — хочет купить', profile.product_buy, blizkoFuzzyEq(profile.product_buy, myExtra.product_sell));
+html += tradeRow('Товар — хочет продать', profile.product_sell, blizkoFuzzyEq(profile.product_sell, myExtra.product_buy));
+html += tradeRow('Услуга — ищет', profile.service_seek, blizkoFuzzyEq(profile.service_seek, myExtra.service_offer));
+html += tradeRow('Услуга — предлагает', profile.service_offer, blizkoFuzzyEq(profile.service_offer, myExtra.service_seek));
+html += tradeRow('Работа — ищет', profile.job_seek, blizkoFuzzyEq(profile.job_seek, myExtra.job_offer));
+html += tradeRow('Вакансия — предлагает', profile.job_offer, blizkoFuzzyEq(profile.job_offer, myExtra.job_seek));
+
 return html;
 }
 
