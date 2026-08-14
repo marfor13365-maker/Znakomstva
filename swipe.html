@@ -28,11 +28,18 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .brand-name{font-family:'Unbounded',sans-serif;font-size:17px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .filter-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;border-radius:10px;padding:8px 14px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;position:relative;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
 .filter-btn:active{opacity:0.8}
+.bell-btn{position:relative;background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bell-btn:active{opacity:0.8}
+.bell-badge{position:absolute;top:-4px;right:-4px;background:#ffd23f;color:#1a1400;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg)}
 .card-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:76px 20px 24px;position:relative;overflow:hidden}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:360px;height:min(560px, calc(100vh - 120px));position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.5);transition:transform 0.1s;touch-action:none}
 .card.dragging{transition:none}
 .card img{width:100%;height:100%;object-fit:cover;display:block}
 .card-info{position:absolute;bottom:0;left:0;right:0;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,0.85))}
+.trade-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.trade-badge{display:inline-block;font-size:11px;font-weight:600;padding:5px 10px;border-radius:12px;background:rgba(255,77,109,0.25);color:var(--accent2)}
+.trade-badge.product{background:rgba(76,255,159,0.2);color:#6bffb8}
+.trade-badge.job{background:rgba(255,210,63,0.22);color:#ffd23f}
 .card-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-bottom:4px}
 .card-meta{font-size:13px;color:var(--muted);margin-bottom:12px}
 .card-bio{font-size:14px;line-height:1.5;margin-bottom:16px}
@@ -104,7 +111,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <span class="brand-name">Znakomstor</span>
 </div>
 </div>
+<div style="display:flex;align-items:center;gap:8px">
+<button class="bell-btn" onclick="location.href='trade-matches.html'" title="Совпадения">🔔<span class="bell-badge" id="trade-bell-badge" style="display:none">0</span></button>
 <button class="filter-btn" onclick="openFilters()">⚙️ Фильтры<span class="filter-badge" id="filter-badge"></span></button>
+</div>
 </div>
 <div class="card-wrap" id="card-wrap">
 <div class="loading" style="padding:40px;text-align:center;color:var(--muted)">⏳ Загрузка...</div>
@@ -132,6 +142,24 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <span class="filter-label">Город</span>
 <input type="text" class="filter-city-input" id="filter-city" placeholder="Например: Москва">
 </div>
+<div class="filter-row" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+<span class="filter-label">Что вы ищете (видно только тебе, но по нему будут находиться совпадения с тем, что предлагают в анкетах)</span>
+</div>
+<div class="filter-row">
+<span class="filter-label">Товар — хочу купить</span>
+<select class="filter-city-input" id="filter-product-buy_select"></select>
+<input type="text" class="filter-city-input" id="filter-product-buy_other" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+</div>
+<div class="filter-row">
+<span class="filter-label">Услуга — ищу</span>
+<select class="filter-city-input" id="filter-service-seek_select"></select>
+<input type="text" class="filter-city-input" id="filter-service-seek_other" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+</div>
+<div class="filter-row">
+<span class="filter-label">Работа — ищу</span>
+<select class="filter-city-input" id="filter-job-seek_select"></select>
+<input type="text" class="filter-city-input" id="filter-job-seek_other" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+</div>
 <div class="like-modal-actions">
 <button class="cancel" onclick="resetFilters()">Сбросить</button>
 <button class="send" onclick="applyFilters()">Применить</button>
@@ -150,6 +178,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
+<script src="categories.js"></script>
+<script src="trade-match.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var db = createBlizkoClient();
@@ -160,6 +190,7 @@ var isDragging = false;
 var startX = 0, startY = 0;
 var pendingLikeId = null;
 var activeFilters = { ageMin: null, ageMax: null, city: '', gender: null };
+var myTradeFields = {};
 var pendingGenderFilter = null;
 var SWIPE_FILTERS_KEY = 'blizko_swipe_filters';
 
@@ -232,21 +263,23 @@ wrap.innerHTML =
 return;
 }
 currentUser = session.user;
+try {
+var { data: myProfileFull } = await db.from('profiles').select('looking_for, product_buy, product_sell, service_seek, service_offer, job_seek, job_offer').eq('id', currentUser.id).single();
+if (myProfileFull) myTradeFields = myProfileFull;
+} catch (e) {}
 var savedFilters = loadFiltersFromStorage();
 if (savedFilters) {
 activeFilters = savedFilters;
 updateFilterBadge();
 } else {
-try {
-var { data: myProfile } = await db.from('profiles').select('looking_for').eq('id', currentUser.id).single();
-if (myProfile && myProfile.looking_for && myProfile.looking_for !== 'any') {
-activeFilters.gender = myProfile.looking_for;
+if (myTradeFields.looking_for && myTradeFields.looking_for !== 'any') {
+activeFilters.gender = myTradeFields.looking_for;
 updateFilterBadge();
 }
-} catch (e) {}
 saveFiltersToStorage();
 }
 await loadProfiles();
+blizkoRenderTradeBell(db, currentUser.id, 'trade-bell-badge');
 }
 
 async function loadProfiles() {
@@ -274,6 +307,9 @@ currentIndex = 0;
 renderCard();
 }
 
+// fuzzyEq/computeTradeMatches теперь в trade-match.js (общий для feed.html, swipe.html,
+// view-profile.html и trade-matches.html) — используем blizkoComputeTradeMatches(myTradeFields, candidate).
+
 function renderCard() {
 var wrap = document.getElementById('card-wrap');
 if (currentIndex >= profiles.length) {
@@ -287,12 +323,17 @@ var photos = p.profile_photos || [];
 var photoUrl = p.photo_url || (photos.length > 0 ? photos[0].photo_url : '');
 var age = p.age ? ', ' + p.age : '';
 var city = p.city ? '📍 ' + p.city : '';
+var tradeMatches = blizkoComputeTradeMatches(myTradeFields, p);
+var badgesHtml = tradeMatches.length > 0
+? '<div class="trade-badges">' + tradeMatches.map(function(m) { return '<span class="trade-badge ' + m.type + '">✨ ' + m.label + '</span>'; }).join('') + '</div>'
+: '';
 wrap.innerHTML =
 '<div class="card" id="current-card">' +
 (photoUrl ? '<img src="' + photoUrl + '" alt="">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px">👤</div>') +
 '<div class="like-label label" id="like-label">ЛАЙК</div>' +
 '<div class="nope-label label" id="nope-label">НЕТ</div>' +
 '<div class="card-info">' +
+badgesHtml +
 '<div class="card-name">' + (p.name || 'Пользователь') + age + '</div>' +
 '<div class="card-meta">' + city + '</div>' +
 '<div class="card-bio">' + (p.bio || '') + '</div>' +
@@ -426,6 +467,9 @@ function openFilters() {
 document.getElementById('filter-age-min').value = activeFilters.ageMin || '';
 document.getElementById('filter-age-max').value = activeFilters.ageMax || '';
 document.getElementById('filter-city').value = activeFilters.city || '';
+blizkoInitCategoryField('filter-product-buy', BLIZKO_PRODUCTS, myTradeFields.product_buy);
+blizkoInitCategoryField('filter-service-seek', BLIZKO_SERVICES, myTradeFields.service_seek);
+blizkoInitCategoryField('filter-job-seek', BLIZKO_PROFESSIONS, myTradeFields.job_seek);
 selectGenderFilter(activeFilters.gender);
 document.getElementById('filters-modal').classList.add('show');
 }
@@ -440,7 +484,26 @@ var hasFilters = !!(activeFilters.ageMin || activeFilters.ageMax || activeFilter
 badge.classList.toggle('show', hasFilters);
 }
 
-function applyFilters() {
+// "Что ищете" сохраняется не в localStorage, а в самом профиле — эти значения
+// приватны (видны только тебе в этой форме), но участвуют в сравнении с тем,
+// что другие люди ПРЕДЛАГАЮТ в анкете (жёлтая точка в ленте/Знакомствах).
+async function saveMySeekFields() {
+var product_buy = blizkoGetCategoryFieldValue('filter-product-buy');
+var service_seek = blizkoGetCategoryFieldValue('filter-service-seek');
+var job_seek = blizkoGetCategoryFieldValue('filter-job-seek');
+myTradeFields.product_buy = product_buy || null;
+myTradeFields.service_seek = service_seek || null;
+myTradeFields.job_seek = job_seek || null;
+try {
+await db.from('profiles').update({
+product_buy: myTradeFields.product_buy,
+service_seek: myTradeFields.service_seek,
+job_seek: myTradeFields.job_seek
+}).eq('id', currentUser.id);
+} catch (e) { console.error('Не удалось сохранить "что ищете":', e); }
+}
+
+async function applyFilters() {
 var ageMin = parseInt(document.getElementById('filter-age-min').value, 10);
 var ageMax = parseInt(document.getElementById('filter-age-max').value, 10);
 var city = document.getElementById('filter-city').value.trim();
@@ -449,21 +512,28 @@ activeFilters.ageMax = isNaN(ageMax) ? null : ageMax;
 activeFilters.city = city;
 activeFilters.gender = pendingGenderFilter;
 saveFiltersToStorage();
+await saveMySeekFields();
 closeFiltersModal();
 updateFilterBadge();
 loadProfiles();
+blizkoRenderTradeBell(db, currentUser.id, 'trade-bell-badge');
 }
 
-function resetFilters() {
+async function resetFilters() {
 activeFilters = { ageMin: null, ageMax: null, city: '', gender: null };
 document.getElementById('filter-age-min').value = '';
 document.getElementById('filter-age-max').value = '';
 document.getElementById('filter-city').value = '';
+blizkoInitCategoryField('filter-product-buy', BLIZKO_PRODUCTS, '');
+blizkoInitCategoryField('filter-service-seek', BLIZKO_SERVICES, '');
+blizkoInitCategoryField('filter-job-seek', BLIZKO_PROFESSIONS, '');
 selectGenderFilter(null);
 saveFiltersToStorage();
+await saveMySeekFields();
 closeFiltersModal();
 updateFilterBadge();
 loadProfiles();
+blizkoRenderTradeBell(db, currentUser.id, 'trade-bell-badge');
 }
 
 init();
