@@ -329,7 +329,6 @@ if (onDone && blob) onDone(blob);
 }
 
 (function setupCropDrag() {
-document.addEventListener('DOMContentLoaded', function() {
 var wrap = document.getElementById('crop-circle-wrap');
 if (!wrap) return;
 wrap.addEventListener('pointerdown', function(e) {
@@ -366,7 +365,6 @@ if (Object.keys(cropPointers).length < 2) cropState.pinchStartDist = null;
 }
 wrap.addEventListener('pointerup', endDrag);
 wrap.addEventListener('pointercancel', endDrag);
-});
 })();
 
 function handleAvatarUpload(input) {
