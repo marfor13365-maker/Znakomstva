@@ -446,7 +446,7 @@ var mediaHtml = post.media_type === 'video'
 : '<img src="' + post.photo_url + '" loading="lazy">';
 var hasNew = hasNewPost(post.user_id, post.created_at);
 var dotHtml = hasNew ? '<div class="grid-new-dot show"></div>' : '';
-var tradeMatches = post.profiles ? blizkoComputeTradeMatches(myTradeFields, post.profiles) : [];
+var tradeMatches = (post.profiles && post.user_id !== currentUser.id) ? blizkoComputeTradeMatches(myTradeFields, post.profiles) : [];
 var tradeDotHtml = tradeMatches.length > 0 ? '<div class="grid-trade-dot" title="' + escapeHtmlComment(tradeMatches.map(function(m){return m.label;}).join(' • ')) + '"></div>' : '';
 var viewsCount = viewCounts[post.id] || 0;
 var userName = (post.profiles && post.profiles.name) ? post.profiles.name : 'Пользователь';
