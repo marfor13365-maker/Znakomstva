@@ -78,7 +78,6 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     delete_account_warning: 'Будут удалены: анкета, фото, посты, лайки, чаты и сообщения. Это действие нельзя отменить.',
     cancel: 'Отмена',
     loading_users: '⏳ Загрузка...',
-    profile: 'Профиль',
     just_now: 'только что',
     min: 'мин',
     h: 'ч',
@@ -94,7 +93,29 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     chat: 'Чат',
     no_messages: 'Нет сообщений. Напиши первым!',
     write_message: 'Написать сообщение...',
-    confirm_delete_chat: 'Точно удалить этот чат? Все сообщения будут удалены.'
+    confirm_delete_chat: 'Точно удалить этот чат? Все сообщения будут удалены.',
+    // ---- добавлено: никнейм / QR / шаринг ----
+    username_copy_title: 'Скопировать',
+    username_qr_title: 'QR-код',
+    username_edit_title: 'Изменить',
+    qr_title: 'Мой QR-код',
+    qr_copy_link: '🔗 Скопировать ссылку',
+    qr_close: 'Закрыть',
+    username_edit_modal_title: 'Свой никнейм',
+    username_save: 'Сохранить',
+    bell_title: 'Совпадения',
+    trade_matches_title: '✨ Совпадения',
+    // ---- добавлено: доп.поля анкеты (дети/работа/бизнес/товар/услуга) ----
+    extra_section_title: 'Дополнительно (необязательно)',
+    children_label: 'Дети',
+    job_label: 'Работа',
+    business_label: 'Бизнес',
+    product_sell_label: 'Товар — хочу продать',
+    service_offer_label: 'Услуга — предлагаю',
+    job_offer_label: 'Работа — предлагаю вакансию',
+    not_specified: 'Не указано',
+    other_option: 'Другое (свой вариант)',
+    own_variant_placeholder: 'Впиши свой вариант'
   };
 
   var LANG_EN = {
@@ -156,7 +177,6 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     delete_account_warning: 'Will be deleted: profile, photos, posts, likes, chats and messages. This action cannot be undone.',
     cancel: 'Cancel',
     loading_users: '⏳ Loading...',
-    profile: 'Profile',
     just_now: 'just now',
     min: 'min',
     h: 'h',
@@ -172,7 +192,29 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     chat: 'Chat',
     no_messages: 'No messages yet. Write first!',
     write_message: 'Write a message...',
-    confirm_delete_chat: 'Delete this chat? All messages will be lost.'
+    confirm_delete_chat: 'Delete this chat? All messages will be lost.',
+    // ---- добавлено: никнейм / QR / шаринг ----
+    username_copy_title: 'Copy',
+    username_qr_title: 'QR code',
+    username_edit_title: 'Edit',
+    qr_title: 'My QR code',
+    qr_copy_link: '🔗 Copy link',
+    qr_close: 'Close',
+    username_edit_modal_title: 'Your username',
+    username_save: 'Save',
+    bell_title: 'Matches',
+    trade_matches_title: '✨ Matches',
+    // ---- добавлено: доп.поля анкеты (дети/работа/бизнес/товар/услуга) ----
+    extra_section_title: 'Additional (optional)',
+    children_label: 'Children',
+    job_label: 'Job',
+    business_label: 'Business',
+    product_sell_label: 'Product — selling',
+    service_offer_label: 'Service — offering',
+    job_offer_label: 'Job — hiring',
+    not_specified: 'Not specified',
+    other_option: 'Other (your own)',
+    own_variant_placeholder: 'Type your own'
   };
 
   function getLang() {
@@ -219,6 +261,13 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
       var key = el.getAttribute('data-i18n-placeholder');
       if (dict[key] !== undefined) {
         el.placeholder = dict[key];
+      }
+    });
+
+    document.querySelectorAll('[data-i18n-title]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n-title');
+      if (dict[key] !== undefined) {
+        el.title = dict[key];
       }
     });
 
