@@ -442,6 +442,7 @@ var currentAccessToken = null;
 var myPosts = [];
 var myPostsByPhotoId = {};
 var myUsername = null;
+var myProfileComplete = false;
 
 function renderUsername(username) {
 myUsername = username;
@@ -638,6 +639,7 @@ document.getElementById('profile-meta').textContent = (profile.age ? profile.age
 if (profile.photo_url) showAvatar(profile.photo_url);
 document.getElementById('posts_visibility').value = profile.posts_visibility || 'all';
 renderUsername(profile.username);
+myProfileComplete = profile.is_active === true;
 }
 await loadMyPosts();
 await loadFollowCounts();
@@ -873,40 +875,80 @@ if (onDone && blob) onDone(blob);
 (function setupCropDrag() {
 var wrap = document.getElementById('crop-circle-wrap');
 if (!wrap) return;
-wrap.addEventListener('pointerdown', function(e) {
-wrap.setPointerCapture(e.pointerId);
-cropPointers[e.pointerId] = { x: e.clientX, y: e.clientY, startPanX: cropState.x, startPanY: cropState.y };
-});
-wrap.addEventListener('pointermove', function(e) {
-if (!cropPointers[e.pointerId]) return;
-var start = cropPointers[e.pointerId];
-cropPointers[e.pointerId] = { x: e.clientX, y: e.clientY, startPanX: start.startPanX, startPanY: start.startPanY };
-var ids = Object.keys(cropPointers);
-if (ids.length >= 2) {
-var p1 = cropPointers[ids[0]], p2 = cropPointers[ids[1]];
-var dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-if (!cropState.pinchStartDist) {
-cropState.pinchStartDist = dist;
+
+var touchState = { dragging: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 };
+
+function touchDist(t1, t2) {
+return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+}
+
+wrap.addEventListener('touchstart', function(e) {
+e.preventDefault();
+if (e.touches.length === 1) {
+touchState.dragging = true;
+touchState.startX = e.touches[0].clientX;
+touchState.startY = e.touches[0].clientY;
+touchState.startPanX = cropState.x;
+touchState.startPanY = cropState.y;
+cropState.pinchStartDist = null;
+} else if (e.touches.length >= 2) {
+touchState.dragging = false;
+cropState.pinchStartDist = touchDist(e.touches[0], e.touches[1]);
 cropState.pinchStartScale = cropState.scale;
-} else {
+}
+}, { passive: false });
+
+wrap.addEventListener('touchmove', function(e) {
+e.preventDefault();
+if (e.touches.length >= 2 && cropState.pinchStartDist) {
+var dist = touchDist(e.touches[0], e.touches[1]);
 var ratio = dist / cropState.pinchStartDist;
 cropState.scale = Math.max(cropState.minScale, Math.min(cropState.maxScale, cropState.pinchStartScale * ratio));
 var t = (cropState.scale - cropState.minScale) / (cropState.maxScale - cropState.minScale);
 document.getElementById('crop-zoom').value = Math.round(t * 100);
-}
-} else {
-cropState.x = start.startPanX + (e.clientX - start.x);
-cropState.y = start.startPanY + (e.clientY - start.y);
+} else if (e.touches.length === 1 && touchState.dragging) {
+cropState.x = touchState.startPanX + (e.touches[0].clientX - touchState.startX);
+cropState.y = touchState.startPanY + (e.touches[0].clientY - touchState.startY);
 }
 clampCropPan();
 applyCropTransform();
-});
-function endDrag(e) {
-delete cropPointers[e.pointerId];
-if (Object.keys(cropPointers).length < 2) cropState.pinchStartDist = null;
+}, { passive: false });
+
+function touchEndHandler(e) {
+if (e.touches.length === 0) {
+touchState.dragging = false;
+cropState.pinchStartDist = null;
+} else if (e.touches.length === 1) {
+// Один палец из двух отпустили — продолжаем как перетаскивание с этой точки,
+// а не резко "прыгаем" при следующем touchmove.
+touchState.dragging = true;
+touchState.startX = e.touches[0].clientX;
+touchState.startY = e.touches[0].clientY;
+touchState.startPanX = cropState.x;
+touchState.startPanY = cropState.y;
+cropState.pinchStartDist = null;
 }
-wrap.addEventListener('pointerup', endDrag);
-wrap.addEventListener('pointercancel', endDrag);
+}
+wrap.addEventListener('touchend', touchEndHandler);
+wrap.addEventListener('touchcancel', touchEndHandler);
+
+// Мышь — для десктопа (зум там же ползунком снизу).
+var mouseDragging = false;
+wrap.addEventListener('mousedown', function(e) {
+mouseDragging = true;
+touchState.startX = e.clientX;
+touchState.startY = e.clientY;
+touchState.startPanX = cropState.x;
+touchState.startPanY = cropState.y;
+});
+document.addEventListener('mousemove', function(e) {
+if (!mouseDragging) return;
+cropState.x = touchState.startPanX + (e.clientX - touchState.startX);
+cropState.y = touchState.startPanY + (e.clientY - touchState.startY);
+clampCropPan();
+applyCropTransform();
+});
+document.addEventListener('mouseup', function() { mouseDragging = false; });
 })();
 
 function handleAvatarUpload(input) {
@@ -1180,7 +1222,13 @@ var existingProfilePhotoId = null;
 function openPostUpload() {
 existingProfilePhotoId = null;
 document.getElementById('post-upload-title').textContent = 'Новый пост';
+if (myProfileComplete) {
+document.getElementById('post-feed-toggle-wrap').innerHTML = '<input type="checkbox" id="post-also-feed"><label for="post-also-feed">Опубликовать также в ленте</label>';
 document.getElementById('post-feed-toggle-wrap').style.display = 'flex';
+} else {
+document.getElementById('post-feed-toggle-wrap').innerHTML = '<div style="font-size:12px;color:var(--muted);line-height:1.5">📝 Заполни анкету, чтобы публиковать фото в ленте — иначе там вместо имени будет просто "Пользователь". <a href="edit-profile.html" style="color:var(--accent2)">Заполнить сейчас</a></div>';
+document.getElementById('post-feed-toggle-wrap').style.display = 'block';
+}
 document.getElementById('post-photo-pick').innerHTML = '<div class="post-pick-hint">📷</div><div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>';
 document.getElementById('post-publish-btn').disabled = true;
 document.getElementById('post-upload-modal').classList.add('show');
@@ -1192,6 +1240,11 @@ document.getElementById('profile-post-file').click();
 }
 
 function publishExistingToFeed(idx) {
+if (!myProfileComplete) {
+alert('Сначала заполни анкету (имя, возраст и т.д.) — без этого в ленте вместо имени у тебя будет просто "Пользователь".');
+window.location.href = 'edit-profile.html';
+return;
+}
 var post = myPosts[idx];
 if (!post) return;
 existingProfilePhotoId = post.id;
@@ -1214,7 +1267,6 @@ pendingProfileMediaType = 'photo';
 existingProfilePhotoId = null;
 document.getElementById('post-photo-pick').innerHTML = '<div class="post-pick-hint">📷</div><div class="post-pick-text">Нажми чтобы выбрать фото или видео</div>';
 document.getElementById('post-caption-input').value = '';
-document.getElementById('post-also-feed').checked = false;
 document.getElementById('post-publish-btn').disabled = true;
 document.getElementById('post-publish-btn').textContent = 'Опубликовать';
 document.getElementById('post-upload-bar').style.width = '0%';
@@ -1294,7 +1346,8 @@ await loadMyPosts();
 return;
 }
 
-var alsoFeed = document.getElementById('post-also-feed').checked;
+var alsoFeedCheckbox = document.getElementById('post-also-feed');
+var alsoFeed = myProfileComplete && !!(alsoFeedCheckbox && alsoFeedCheckbox.checked);
 var passedModeration = true;
 if (alsoFeed) {
 passedModeration = await checkModerationOrAlert(pendingProfilePhotoUrl, pendingProfileMediaType);
