@@ -3,39 +3,100 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Правила — Znakomstor</title>
+<title>Rules — Znakomstor</title>
 <style>
-body{background:#0d0d0d;color:#f0f0f0;font-family:sans-serif;max-width:640px;margin:0 auto;padding:24px 20px;line-height:1.6}
-h1{font-size:22px;margin-bottom:16px}
-h2{font-size:17px;margin-top:28px;margin-bottom:8px;color:#ff8fa3}
-p,li{color:#ccc;font-size:15px}
-a{color:#ff8fa3}
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;max-width:640px;margin:0 auto;padding:24px 20px 60px;line-height:1.6}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.back-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);flex-shrink:0}
+.lang-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;min-width:40px;text-align:center}
+.lang-btn:active{opacity:0.7}
+h1{font-family:'Unbounded',sans-serif;font-size:20px;margin-bottom:16px}
+h2{font-family:'Unbounded',sans-serif;font-size:15px;margin-top:26px;margin-bottom:8px;color:var(--accent2)}
+p,li{color:#ccc;font-size:14px}
+a{color:var(--accent2)}
+.footer-note{margin-top:32px;font-size:13px;color:var(--muted)}
 </style>
 </head>
 <body>
-<h1>Правила сервиса Znakomstor</h1>
-<p>Используя приложение Znakomstor, вы соглашаетесь с настоящими правилами.</p>
-<h2>1. Ответственность за контент</h2>
-<p>Znakomstor — это площадка, предоставляющая пользователям возможность создавать профили, публиковать фото, видео, тексты и обмениваться сообщениями. Сервис не проверяет и не модерирует весь пользовательский контент заранее и не несёт ответственности за материалы, размещённые пользователями.</p>
-<p>Каждый пользователь самостоятельно несёт полную ответственность за контент, который он публикует, отправляет или иным образом размещает на платформе, включая соответствие законодательству и правам третьих лиц.</p>
-<h2>2. Запрещённый контент и поведение</h2>
-<ul>
-<li>Материалы, нарушающие законодательство РФ или страны пребывания пользователя</li>
-<li>Контент с участием несовершеннолетних в любой форме</li>
-<li>Разжигание ненависти, дискриминация, угрозы, домогательства</li>
-<li>Мошенничество, спам, распространение вредоносного ПО</li>
-<li>Нарушение прав интеллектуальной собственности третьих лиц</li>
-</ul>
-<h2>3. Модерация</h2>
-<p>Администрация оставляет за собой право удалять контент и блокировать аккаунты, нарушающие данные правила, без предварительного уведомления.</p>
-<h2>4. Возраст пользователей</h2>
-<p>Сервис предназначен для лиц старше 18 лет. Регистрируясь, пользователь подтверждает, что достиг совершеннолетия.</p>
-<h2>5. Персональные данные</h2>
-<p>Обработка персональных данных осуществляется в соответствии с Федеральным законом №152-ФЗ «О персональных данных». Данные используются исключительно для работы сервиса и не передаются третьим лицам без согласия пользователя, за исключением случаев, предусмотренных законом.</p>
-<h2>6. Оплата дополнительных аккаунтов</h2>
-<p>Оплата за создание дополнительного аккаунта на устройстве производится через Telegram-бот. Оплата не подлежит возврату после выдачи кода доступа. Код одноразовый и действителен только для устройства, с которого была создана заявка.</p>
-<h2>7. Изменения правил</h2>
-<p>Администрация может изменять данные правила. Актуальная версия всегда доступна по этой ссылке.</p>
-<p style="margin-top:32px;font-size:13px;color:#888">Сделано в <a href="https://vektorizi-ru.vercel.app/" target="_blank" rel="noopener">Студии Вектор</a></p>
+<div class="topbar">
+<button class="back-btn" onclick="history.back()">&#8592;</button>
+<button class="lang-btn" id="lang-toggle-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
+</div>
+<div id="rules-content"></div>
+<p class="footer-note" id="footer-note"></p>
+<script src="theme.js"></script>
+<script>
+var RULES_TEXT = {
+ru: {
+title: 'Правила сервиса Znakomstor',
+footer: 'Сделано в <a href="https://vektorizi-ru.vercel.app/" target="_blank" rel="noopener">Студии Вектор</a>',
+sections: [
+{ intro: true, body: 'Используя приложение Znakomstor, вы соглашаетесь с настоящими правилами.' },
+{ h: '1. Ответственность за контент', body: 'Znakomstor — это площадка, предоставляющая пользователям возможность создавать профили, публиковать фото, видео, тексты и обмениваться сообщениями. Сервис не проверяет и не модерирует весь пользовательский контент заранее и не несёт ответственности за материалы, размещённые пользователями.<br><br>Каждый пользователь самостоятельно несёт полную ответственность за контент, который он публикует, отправляет или иным образом размещает на платформе, включая соответствие законодательству и правам третьих лиц.' },
+{ h: '2. Запрещённый контент и поведение', list: [
+'Материалы, нарушающие законодательство РФ или страны пребывания пользователя',
+'Контент с участием несовершеннолетних в любой форме',
+'Разжигание ненависти, дискриминация, угрозы, домогательства',
+'Мошенничество, спам, распространение вредоносного ПО',
+'Нарушение прав интеллектуальной собственности третьих лиц'
+] },
+{ h: '3. Модерация', body: 'Администрация оставляет за собой право удалять контент и блокировать аккаунты, нарушающие данные правила, без предварительного уведомления.' },
+{ h: '4. Возраст пользователей', body: 'Сервис предназначен для лиц старше 18 лет. Регистрируясь, пользователь подтверждает, что достиг совершеннолетия.' },
+{ h: '5. Персональные данные', body: 'Обработка персональных данных осуществляется в соответствии с Федеральным законом №152-ФЗ «О персональных данных». Данные используются исключительно для работы сервиса и не передаются третьим лицам без согласия пользователя, за исключением случаев, предусмотренных законом.' },
+{ h: '6. Оплата дополнительных аккаунтов', body: 'Оплата за создание дополнительного аккаунта на устройстве производится через Telegram-бот. Оплата не подлежит возврату после выдачи кода доступа. Код одноразовый и действителен только для устройства, с которого была создана заявка.' },
+{ h: '7. Изменения правил', body: 'Администрация может изменять данные правила. Актуальная версия всегда доступна по этой ссылке.' }
+]
+},
+en: {
+title: 'Znakomstor Terms of Service',
+footer: 'Made by <a href="https://vektorizi-ru.vercel.app/" target="_blank" rel="noopener">Studio Vektor</a>',
+sections: [
+{ intro: true, body: 'By using the Znakomstor app, you agree to these terms.' },
+{ h: '1. Content Responsibility', body: 'Znakomstor is a platform that lets users create profiles, publish photos, videos, and text, and exchange messages. The service does not pre-screen or moderate all user content and is not responsible for material posted by users.<br><br>Each user is solely responsible for the content they publish, send, or otherwise post on the platform, including compliance with applicable law and third-party rights.' },
+{ h: '2. Prohibited Content and Conduct', list: [
+'Material that violates the laws of Russia or the user\'s country of residence',
+'Content involving minors in any form',
+'Hate speech, discrimination, threats, or harassment',
+'Fraud, spam, or distribution of malware',
+'Infringement of third parties\' intellectual property rights'
+] },
+{ h: '3. Moderation', body: 'The administration reserves the right to remove content and suspend accounts that violate these terms, without prior notice.' },
+{ h: '4. Age Requirement', body: 'This service is intended for users 18 years of age or older. By registering, the user confirms they have reached the age of majority.' },
+{ h: '5. Personal Data', body: 'Personal data is processed in accordance with Federal Law No. 152-FZ "On Personal Data". Data is used exclusively for operating the service and is not shared with third parties without the user\'s consent, except as required by law.' },
+{ h: '6. Additional Account Payments', body: 'Payment for creating an additional account on a device is made through the Telegram bot. Payments are non-refundable once an access code has been issued. Each code is single-use and valid only for the device the request was created from.' },
+{ h: '7. Changes to These Terms', body: 'The administration may update these terms. The current version is always available at this link.' }
+]
+}
+};
+
+function renderRules() {
+var lang = (typeof BlizkoTheme !== 'undefined' && BlizkoTheme.getLang) ? BlizkoTheme.getLang() : 'ru';
+var data = RULES_TEXT[lang] || RULES_TEXT.ru;
+document.title = data.title + ' — Znakomstor';
+var html = '<h1>' + data.title + '</h1>';
+data.sections.forEach(function(s) {
+if (s.intro) { html += '<p>' + s.body + '</p>'; return; }
+html += '<h2>' + s.h + '</h2>';
+if (s.list) {
+html += '<ul>' + s.list.map(function(li) { return '<li>' + li + '</li>'; }).join('') + '</ul>';
+} else {
+html += '<p>' + s.body + '</p>';
+}
+});
+document.getElementById('rules-content').innerHTML = html;
+document.getElementById('footer-note').innerHTML = data.footer;
+}
+
+renderRules();
+// Если язык переключат прямо на этой странице кнопкой — theme.js обновит data-i18n
+// элементы сам, а нам нужно ещё и перерисовать весь текст правил (он не через data-i18n,
+// это связный текст, а не отдельные подписи) — подписываемся на клик по кнопке языка.
+document.getElementById('lang-toggle-btn').addEventListener('click', function() {
+setTimeout(renderRules, 0);
+});
+</script>
 </body>
 </html>
