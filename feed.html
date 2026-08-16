@@ -269,6 +269,7 @@ getRingMode
 var db = createBlizkoClient();
 var BACKEND_URL = 'https://vector-chat-api.onrender.com';
 var currentUser = null;
+var myProfileComplete = false;
 var pendingPhotoUrl = null;
 var pendingMediaType = 'photo';
 var posts = [];
@@ -338,8 +339,11 @@ currentUser = r.data.session.user;
 var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('from_user', currentUser.id);
 (myLikes || []).forEach(function(l) { if (l.is_like) myLikesGiven[l.to_user] = true; });
 try {
-var { data: myTradeProfile } = await db.from('profiles').select('product_buy, product_sell, service_seek, service_offer, job_seek, job_offer').eq('id', currentUser.id).maybeSingle();
-if (myTradeProfile) myTradeFields = myTradeProfile;
+var { data: myTradeProfile } = await db.from('profiles').select('product_buy, product_sell, service_seek, service_offer, job_seek, job_offer, is_active').eq('id', currentUser.id).maybeSingle();
+if (myTradeProfile) {
+myTradeFields = myTradeProfile;
+myProfileComplete = myTradeProfile.is_active === true;
+}
 } catch (e) {}
 await loadFollowedAndMatches();
 await loadSeenData();
@@ -803,7 +807,14 @@ window.location.href = 'chat.html?match=' + matchData.id;
 }
 }
 
-function openUpload() { document.getElementById('upload-modal').classList.add('show'); }
+function openUpload() {
+if (!myProfileComplete) {
+alert('Сначала заполни анкету (имя, возраст и т.д.) — без этого в ленте вместо имени у тебя будет просто "Пользователь". Заполни анкету, чтобы публиковать посты.');
+window.location.href = 'edit-profile.html';
+return;
+}
+document.getElementById('upload-modal').classList.add('show');
+}
 
 function closeUpload() {
 document.getElementById('upload-modal').classList.remove('show');
@@ -870,6 +881,10 @@ return true;
 
 async function publishPost() {
 if (!pendingPhotoUrl) return;
+if (!myProfileComplete) {
+alert('Сначала заполни анкету, чтобы публиковать посты.');
+return;
+}
 var caption = document.getElementById('caption-input').value.trim();
 var btn = document.getElementById('publish-btn');
 btn.disabled = true; btn.textContent = '...';
