@@ -647,6 +647,7 @@ loginForm.insertBefore(box, loginForm.firstChild);
 }catch(e){}
 }
 spawnHearts();setLang(lang);loadDeviceAccounts();tryAutoLogin();
+if (window.location.hash === '#register') { switchTab('register'); }
 </script>
 </body>
 </html>
