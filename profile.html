@@ -629,7 +629,7 @@ if (!r.data.session) {
 var restored = await restoreLastVaultSession(db);
 if (restored) r = await db.auth.getSession();
 }
-if (!r.data.session) { window.location.href = 'index.html'; return; }
+if (!r.data.session) { window.location.href = 'login.html'; return; }
 currentUser = r.data.session.user;
 currentAccessToken = r.data.session.access_token;
 var { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
@@ -676,7 +676,7 @@ var ok = await switchToVaultAccount(db, acc.user_id);
 if (ok) {
 window.location.reload();
 } else {
-alert('Не удалось переключиться на этот аккаунт. Попробуй войти в него заново через index.html.');
+alert('Не удалось переключиться на этот аккаунт. Попробуй войти в него заново через login.html.');
 }
 };
 }
@@ -1432,7 +1432,7 @@ document.getElementById('settings-menu').classList.remove('show');
 async function logout() {
 removeFromAccountVault(currentUser.id);
 await db.auth.signOut();
-window.location.href = 'index.html';
+window.location.href = 'login.html';
 }
 
 function openDeleteAccountSheet() {
@@ -1467,7 +1467,7 @@ console.error('Не удалось удалить учётку через бэк
 removeFromAccountVault(currentUser.id);
 await db.auth.signOut();
 alert('Аккаунт удалён.');
-window.location.href = 'index.html';
+window.location.href = 'login.html';
 } catch (e) {
 alert('Ошибка при удалении: ' + e.message);
 }
