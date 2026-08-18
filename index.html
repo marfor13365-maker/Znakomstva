@@ -6,27 +6,22 @@
 <title>Znakomstor — Настоящие знакомства рядом</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;500;700&family=Inter:wght@400;500;600&display=swap');
-:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff1744;--accent2:#ff5252;--text:#f0f0f0;--muted:#aaa;--input-bg:rgba(255,255,255,0.08)}
+:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff1744;--accent2:#ff5252;--text:#f0f0f0;--muted:#aaa}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);overflow:hidden}
 body{font-family:'Inter',sans-serif;color:var(--text)}
 
 .scroller{height:100vh;height:100dvh;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-behavior:smooth}
 .scroller::-webkit-scrollbar{display:none}
-.scene{height:100vh;height:100dvh;width:100%;scroll-snap-align:start;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.scene{height:100vh;height:100dvh;width:100%;scroll-snap-align:start;position:relative;overflow:hidden}
 
-/* ===== СЦЕНА 1: ВИДЕО ===== */
+/* ===== СЦЕНА 1: ВИДЕО (чисто, без текста поверх) ===== */
 #scene-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.video-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.55) 0%,rgba(0,0,0,0.05) 22%,rgba(0,0,0,0.15) 60%,rgba(13,13,13,0.95) 100%);pointer-events:none}
-.hero-copy{position:absolute;left:0;right:0;bottom:110px;padding:0 28px;text-align:center;z-index:3;animation:heroIn 1.1s ease both;animation-delay:0.3s}
-@keyframes heroIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
-.hero-title{font-family:'Unbounded',sans-serif;font-size:34px;font-weight:700;line-height:1.15;text-shadow:0 4px 24px rgba(0,0,0,0.6)}
-.hero-title span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero-sub{margin-top:12px;font-size:15px;color:rgba(255,255,255,0.85);text-shadow:0 2px 10px rgba(0,0,0,0.6)}
+.video-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(13,13,13,0.9) 100%);pointer-events:none}
 .scroll-cue{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;animation:bob 1.8s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
 .scroll-cue svg{width:22px;height:22px}
-.skip-btn{position:absolute;top:calc(18px + env(safe-area-inset-top));right:20px;z-index:5;background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:12px;font-weight:500;padding:8px 16px;border-radius:20px;cursor:pointer}
+.skip-btn{position:absolute;top:calc(18px + env(safe-area-inset-top));right:66px;z-index:5;background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:12px;font-weight:500;padding:8px 16px;border-radius:20px;cursor:pointer}
 .mute-btn{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom));right:20px;z-index:5;background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.25);color:#fff;width:40px;height:40px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
 /* ===== ТОПБАР (общий для обеих сцен) ===== */
@@ -39,50 +34,19 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 .nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:35;opacity:0;pointer-events:none;transition:opacity 0.3s}
 .nav-overlay.open{opacity:1;pointer-events:auto}
 .nav-close{align-self:flex-end;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;margin-bottom:24px;width:34px;height:34px}
-.nav-panel .brand-name{font-size:20px;margin-bottom:6px}
+.nav-panel .brand-name{font-size:20px;margin-bottom:6px;text-shadow:none}
 .nav-tagline{font-size:12px;color:var(--muted);margin-bottom:32px}
-.nav-btn{display:block;width:100%;text-align:center;padding:15px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px;cursor:pointer;border:none}
+.nav-btn{display:block;width:100%;text-align:center;padding:15px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px;cursor:pointer;border:none;color:var(--text)}
 .nav-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
-.nav-btn.secondary{background:transparent;border:1px solid var(--border);color:var(--text)}
+.nav-btn.secondary{background:transparent;border:1px solid var(--border)}
 .nav-footer{margin-top:auto;font-size:11px;color:var(--muted);text-align:center;line-height:1.8}
 .nav-footer a{color:var(--muted)}
 
-/* ===== СЦЕНА 2: КАРТИНКА + ОТЗЫВЫ ===== */
+/* ===== СЦЕНА 2: ФОТО (чисто, без формы поверх) ===== */
 #scene-reviews{background:#000}
 #scene-reviews .bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
-.reviews-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,13,13,0.15) 0%,rgba(13,13,13,0.55) 38%,rgba(13,13,13,0.97) 66%,var(--bg) 100%)}
-.reviews-scroll{position:relative;z-index:3;margin-top:auto;padding:0 20px calc(28px + env(safe-area-inset-bottom));max-height:78vh;overflow-y:auto}
-.reviews-heading{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:700;text-align:center;margin-bottom:4px;text-shadow:0 4px 18px rgba(0,0,0,0.7)}
-.reviews-heading span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.reviews-heading-sub{text-align:center;font-size:13px;color:var(--muted);margin-bottom:20px}
-
-.review-card{background:rgba(22,22,22,0.82);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:18px;padding:22px 18px;margin-bottom:16px}
-.stars-row{display:flex;justify-content:center;gap:8px;margin-bottom:16px}
-.star-btn{background:none;border:none;font-size:30px;line-height:1;cursor:pointer;color:#3a3a3a;transition:transform 0.15s,color 0.15s;padding:2px}
-.star-btn.active{color:#ffd23f;transform:scale(1.12)}
-.review-input-row{margin-bottom:12px}
-.review-input-row label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
-.review-input-row input,.review-input-row textarea{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:13px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none}
-.review-input-row textarea{height:78px}
-.review-input-row input:focus,.review-input-row textarea:focus{border-color:var(--accent)}
-.review-submit{width:100%;padding:15px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:4px}
-.review-submit:disabled{opacity:0.5}
-.review-msg{text-align:center;font-size:12px;margin-top:10px;min-height:16px;color:var(--muted)}
-.review-msg.ok{color:#6bffb8}
-
-.testimonials-title{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin:26px 0 12px;text-align:center}
-.testimonial{display:flex;gap:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px}
-.testimonial-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;flex-shrink:0;color:#fff}
-.testimonial-body{flex:1;min-width:0}
-.testimonial-name-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
-.testimonial-name{font-size:13px;font-weight:600}
-.testimonial-stars{font-size:11px;color:#ffd23f;letter-spacing:1px}
-.testimonial-text{font-size:13px;color:#ccc;line-height:1.45}
-
-.final-cta{display:flex;gap:10px;margin-top:22px}
-.final-cta a{flex:1;text-align:center;padding:15px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;text-decoration:none}
-.final-cta .primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
-.final-cta .secondary{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text)}
+.reviews-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,13,13,0.1) 0%,rgba(13,13,13,0.05) 40%,rgba(13,13,13,0.75) 100%)}
+.bottom-hint{position:absolute;left:0;right:0;bottom:calc(30px + env(safe-area-inset-bottom));z-index:3;text-align:center;color:rgba(255,255,255,0.85);font-size:12px;letter-spacing:0.3px;text-shadow:0 2px 10px rgba(0,0,0,0.6)}
 </style>
 </head>
 <body>
@@ -112,9 +76,10 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 <div class="nav-tagline">Настоящие знакомства рядом</div>
 <a class="nav-btn primary" href="login.html">Войти</a>
 <a class="nav-btn secondary" href="login.html#register">Регистрация</a>
+<a class="nav-btn secondary" href="reviews.html">⭐ Отзывы</a>
+<a class="nav-btn secondary" href="rules.html">📜 Правила</a>
 <div class="nav-footer">
 <div>Сделано в <a href="https://vektorizi-ru.vercel.app/" target="_blank" rel="noopener">Студии Вектор</a></div>
-<div><a href="rules.html">Правила сервиса</a></div>
 </div>
 </div>
 
@@ -123,69 +88,25 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 <section class="scene" id="scene-video">
 <video id="hero-video" src="landing-video-6.mp4" autoplay muted playsinline preload="auto"></video>
 <div class="video-shade"></div>
-<button class="skip-btn" onclick="goToReviews()">Пропустить</button>
+<button class="skip-btn" onclick="goToPhoto()">Пропустить</button>
 <button class="mute-btn" id="mute-btn" onclick="toggleMute()">🔇</button>
-<div class="hero-copy">
-<div class="hero-title">Настоящие <span>знакомства</span><br>рядом с тобой</div>
-<div class="hero-sub">Люди, дела и совпадения — в одном месте</div>
-</div>
-<div class="scroll-cue" onclick="goToReviews()">
+<div class="scroll-cue" onclick="goToPhoto()">
 <span>Листай</span>
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
 </div>
 </section>
 
-<section class="scene" id="scene-reviews">
+<section class="scene" id="scene-photo">
 <img class="bg-img" src="landing-cover.jpg" alt="">
 <div class="reviews-shade"></div>
-<div class="reviews-scroll">
-<div class="reviews-heading">Что говорят <span>о нас</span></div>
-<div class="reviews-heading-sub">Оставь свой отзыв — он появится здесь</div>
-
-<div class="review-card">
-<div class="stars-row" id="stars-row">
-<button class="star-btn" data-val="1" onclick="setRating(1)">★</button>
-<button class="star-btn" data-val="2" onclick="setRating(2)">★</button>
-<button class="star-btn" data-val="3" onclick="setRating(3)">★</button>
-<button class="star-btn" data-val="4" onclick="setRating(4)">★</button>
-<button class="star-btn" data-val="5" onclick="setRating(5)">★</button>
-</div>
-<div class="review-input-row">
-<label>Имя</label>
-<input type="text" id="review-name" maxlength="40" placeholder="Как тебя зовут?">
-</div>
-<div class="review-input-row">
-<label>Отзыв</label>
-<textarea id="review-text" maxlength="300" placeholder="Расскажи, как всё прошло..."></textarea>
-</div>
-<button class="review-submit" id="review-submit-btn" onclick="submitReview()">Отправить отзыв</button>
-<div class="review-msg" id="review-msg"></div>
-</div>
-
-<div class="testimonials-title">Отзывы пользователей</div>
-<div id="testimonials-list">
-<div class="review-msg">⏳ Загружаем отзывы...</div>
-</div>
-
-<div class="final-cta">
-<a class="secondary" href="login.html">Войти</a>
-<a class="primary" href="login.html#register">Начать сейчас</a>
-</div>
-</div>
+<div class="bottom-hint">☰ Открой меню — вход, регистрация, отзывы</div>
 </section>
 
 </div>
 
-<script src="theme.js"></script>
-<script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var db = createBlizkoClient();
 var video = document.getElementById('hero-video');
-var scroller = document.getElementById('scroller');
-var currentRating = 0;
 
-// ===== Навигация (гамбургер) =====
 function openNav() {
 document.getElementById('nav-panel').classList.add('open');
 document.getElementById('nav-overlay').classList.add('open');
@@ -195,9 +116,8 @@ document.getElementById('nav-panel').classList.remove('open');
 document.getElementById('nav-overlay').classList.remove('open');
 }
 
-// ===== Видео-сцена =====
-function goToReviews() {
-document.getElementById('scene-reviews').scrollIntoView({ behavior: 'smooth' });
+function goToPhoto() {
+document.getElementById('scene-photo').scrollIntoView({ behavior: 'smooth' });
 }
 
 function toggleMute() {
@@ -205,90 +125,11 @@ video.muted = !video.muted;
 document.getElementById('mute-btn').textContent = video.muted ? '🔇' : '🔊';
 }
 
-// Автопереход к отзывам, когда видео доиграло до конца
 video.addEventListener('ended', function() {
-goToReviews();
+goToPhoto();
 });
 
-// На части браузеров автоплей может не начаться (даже с muted) — подстраховка,
-// чтобы человек не застрял на чёрном экране: если видео за 4с не начало
-// воспроизведение, тихо предлагаем скролл дальше (кнопка "Пропустить" и так видна).
 video.play().catch(function() {});
-
-// ===== Отзывы =====
-function setRating(val) {
-currentRating = val;
-document.querySelectorAll('.star-btn').forEach(function(btn) {
-btn.classList.toggle('active', parseInt(btn.dataset.val, 10) <= val);
-});
-}
-
-async function submitReview() {
-var name = document.getElementById('review-name').value.trim();
-var text = document.getElementById('review-text').value.trim();
-var msgEl = document.getElementById('review-msg');
-if (!name) { msgEl.textContent = 'Впиши своё имя'; msgEl.className = 'review-msg'; return; }
-if (currentRating === 0) { msgEl.textContent = 'Поставь оценку звёздами'; msgEl.className = 'review-msg'; return; }
-var btn = document.getElementById('review-submit-btn');
-btn.disabled = true;
-msgEl.textContent = 'Отправляем...';
-msgEl.className = 'review-msg';
-var { error } = await db.from('reviews').insert({ name: name, rating: currentRating, text: text || null });
-btn.disabled = false;
-if (error) {
-console.error('Ошибка отправки отзыва:', error);
-msgEl.textContent = 'Не получилось отправить, попробуй ещё раз';
-msgEl.className = 'review-msg';
-return;
-}
-msgEl.textContent = '✓ Спасибо за отзыв!';
-msgEl.className = 'review-msg ok';
-document.getElementById('review-name').value = '';
-document.getElementById('review-text').value = '';
-setRating(0);
-loadTestimonials();
-}
-
-function initials(name) {
-return (name || '?').trim().charAt(0).toUpperCase();
-}
-
-async function loadTestimonials() {
-var wrap = document.getElementById('testimonials-list');
-var { data, error } = await db.from('reviews')
-.select('name, rating, text')
-.eq('approved', true)
-.order('created_at', { ascending: false })
-.limit(12);
-if (error) {
-console.error('Ошибка загрузки отзывов:', error);
-wrap.innerHTML = '<div class="review-msg">Не удалось загрузить отзывы</div>';
-return;
-}
-if (!data || data.length === 0) {
-wrap.innerHTML = '<div class="review-msg">Пока никто не оставил отзыв — будь первым!</div>';
-return;
-}
-wrap.innerHTML = '';
-data.forEach(function(r) {
-var stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
-var item = document.createElement('div');
-item.className = 'testimonial';
-item.innerHTML =
-'<div class="testimonial-avatar">' + initials(r.name) + '</div>' +
-'<div class="testimonial-body">' +
-'<div class="testimonial-name-row"><span class="testimonial-name">' + escapeHtml(r.name) + '</span><span class="testimonial-stars">' + stars + '</span></div>' +
-(r.text ? '<div class="testimonial-text">' + escapeHtml(r.text) + '</div>' : '') +
-'</div>';
-wrap.appendChild(item);
-});
-}
-
-function escapeHtml(str) {
-return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-loadTestimonials();
 </script>
 </body>
 </html>
