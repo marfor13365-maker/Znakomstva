@@ -11,29 +11,25 @@
 html,body{height:100%;background:var(--bg);overflow:hidden}
 body{font-family:'Inter',sans-serif;color:var(--text)}
 
-.scroller{height:100vh;height:100dvh;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-behavior:smooth}
-.scroller::-webkit-scrollbar{display:none}
-.scene{height:100vh;height:100dvh;width:100%;scroll-snap-align:start;position:relative;overflow:hidden}
-
-/* ===== СЦЕНА 1: ВИДЕО (чисто, без текста поверх) ===== */
-#scene-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.video-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(13,13,13,0.9) 100%);pointer-events:none}
-.scroll-cue{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;animation:bob 1.8s ease-in-out infinite}
-@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
-.scroll-cue svg{width:22px;height:22px}
-.skip-btn{position:absolute;top:calc(18px + env(safe-area-inset-top));right:66px;z-index:5;background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:12px;font-weight:500;padding:8px 16px;border-radius:20px;cursor:pointer}
+/* ===== ВИДЕО НА ВЕСЬ ЭКРАН, БЕЗ ВТОРОЙ СЦЕНЫ И ПОДСКАЗОК ===== */
+.video-wrap{position:fixed;inset:0}
+.video-wrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.video-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 75%,rgba(0,0,0,0.3) 100%);pointer-events:none}
 .mute-btn{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom));right:20px;z-index:5;background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.25);color:#fff;width:40px;height:40px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
-/* ===== ТОПБАР (общий для обеих сцен) ===== */
+/* ===== ТОПБАР ===== */
 .topbar{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(16px + env(safe-area-inset-top)) 20px 16px}
 .brand{display:flex;align-items:center;gap:9px}
 .brand-name{font-family:'Unbounded',sans-serif;font-size:17px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:0 2px 12px rgba(0,0,0,0.5)}
 .menu-btn{background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.25);color:#fff;width:40px;height:40px;border-radius:50%;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.nav-panel{position:fixed;top:0;right:0;bottom:0;width:78%;max-width:300px;background:var(--card);border-left:1px solid var(--border);z-index:40;transform:translateX(100%);transition:transform 0.32s cubic-bezier(.2,.8,.2,1);padding:calc(24px + env(safe-area-inset-top)) 22px 24px;display:flex;flex-direction:column}
+
+/* ===== ВЫПАДАЮЩЕЕ МЕНЮ ===== */
+.nav-panel{position:fixed;top:0;right:0;bottom:0;width:78%;max-width:300px;background:var(--card);border-left:1px solid var(--border);z-index:40;transform:translateX(100%);transition:transform 0.32s cubic-bezier(.2,.8,.2,1);padding:calc(24px + env(safe-area-inset-top)) 24px 24px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .nav-panel.open{transform:translateX(0)}
 .nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:35;opacity:0;pointer-events:none;transition:opacity 0.3s}
 .nav-overlay.open{opacity:1;pointer-events:auto}
-.nav-close{align-self:flex-end;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;margin-bottom:24px;width:34px;height:34px}
+.nav-close{align-self:flex-end;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;margin-bottom:18px;width:34px;height:34px}
+.nav-logo{width:64px;height:64px;margin-bottom:14px}
 .nav-panel .brand-name{font-size:20px;margin-bottom:6px;text-shadow:none}
 .nav-tagline{font-size:12px;color:var(--muted);margin-bottom:32px}
 .nav-btn{display:block;width:100%;text-align:center;padding:15px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px;cursor:pointer;border:none;color:var(--text)}
@@ -41,12 +37,6 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 .nav-btn.secondary{background:transparent;border:1px solid var(--border)}
 .nav-footer{margin-top:auto;font-size:11px;color:var(--muted);text-align:center;line-height:1.8}
 .nav-footer a{color:var(--muted)}
-
-/* ===== СЦЕНА 2: ФОТО (чисто, без формы поверх) ===== */
-#scene-reviews{background:#000}
-#scene-reviews .bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
-.reviews-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,13,13,0.1) 0%,rgba(13,13,13,0.05) 40%,rgba(13,13,13,0.75) 100%)}
-.bottom-hint{position:absolute;left:0;right:0;bottom:calc(30px + env(safe-area-inset-bottom));z-index:3;text-align:center;color:rgba(255,255,255,0.85);font-size:12px;letter-spacing:0.3px;text-shadow:0 2px 10px rgba(0,0,0,0.6)}
 </style>
 </head>
 <body>
@@ -72,6 +62,17 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 <div class="nav-overlay" id="nav-overlay" onclick="closeNav()"></div>
 <div class="nav-panel" id="nav-panel">
 <button class="nav-close" onclick="closeNav()">✕</button>
+<svg class="nav-logo" viewBox="0 0 100 100" aria-hidden="true">
+<defs>
+<linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fe37a"/><stop offset="1" stop-color="#0fa958"/></linearGradient>
+<clipPath id="cl2"><rect x="0" y="0" width="50" height="100"/></clipPath>
+<clipPath id="cr2"><rect x="50" y="0" width="50" height="100"/></clipPath>
+</defs>
+<circle cx="50" cy="50" r="48" fill="url(#bg2)"/>
+<path id="ph2" d="M50 76 C 26 58, 18 42, 27 30 C 34 21, 46 22, 50 33 C 54 22, 66 21, 73 30 C 82 42, 74 58, 50 76 Z"/>
+<use href="#ph2" clip-path="url(#cl2)" fill="#3fb7ff"/>
+<use href="#ph2" clip-path="url(#cr2)" fill="#ff4d9d"/>
+</svg>
 <div class="brand-name">Znakomstor</div>
 <div class="nav-tagline">Настоящие знакомства рядом</div>
 <a class="nav-btn primary" href="login.html">Войти</a>
@@ -83,25 +84,10 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 </div>
 </div>
 
-<div class="scroller" id="scroller">
-
-<section class="scene" id="scene-video">
-<video id="hero-video" src="landing-video-6.mp4" autoplay muted playsinline preload="auto"></video>
+<div class="video-wrap">
+<video id="hero-video" src="landing-video-6.mp4" autoplay muted loop playsinline preload="auto"></video>
 <div class="video-shade"></div>
-<button class="skip-btn" onclick="goToPhoto()">Пропустить</button>
 <button class="mute-btn" id="mute-btn" onclick="toggleMute()">🔇</button>
-<div class="scroll-cue" onclick="goToPhoto()">
-<span>Листай</span>
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-</div>
-</section>
-
-<section class="scene" id="scene-photo">
-<img class="bg-img" src="landing-cover.jpg" alt="">
-<div class="reviews-shade"></div>
-<div class="bottom-hint">☰ Открой меню — вход, регистрация, отзывы</div>
-</section>
-
 </div>
 
 <script>
@@ -116,18 +102,10 @@ document.getElementById('nav-panel').classList.remove('open');
 document.getElementById('nav-overlay').classList.remove('open');
 }
 
-function goToPhoto() {
-document.getElementById('scene-photo').scrollIntoView({ behavior: 'smooth' });
-}
-
 function toggleMute() {
 video.muted = !video.muted;
 document.getElementById('mute-btn').textContent = video.muted ? '🔇' : '🔊';
 }
-
-video.addEventListener('ended', function() {
-goToPhoto();
-});
 
 video.play().catch(function() {});
 </script>
