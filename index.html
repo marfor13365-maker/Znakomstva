@@ -32,6 +32,7 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 .nav-btn{display:block;width:100%;text-align:center;padding:15px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px;cursor:pointer;border:none;color:var(--text)}
 .nav-btn.primary{background:linear-gradient(135deg,var(--green1),var(--green2));color:#fff}
 .nav-btn.secondary{background:transparent;border:1px solid var(--border)}
+.lang-btn{width:auto;display:inline-flex;align-items:center;gap:6px;padding:10px 18px;margin:0 0 20px}
 .nav-footer{margin-top:auto;font-size:11px;color:var(--muted);text-align:center;line-height:1.8}
 .nav-footer a{color:var(--muted)}
 </style>
@@ -57,13 +58,14 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 <use href="#ph2" clip-path="url(#cr2)" fill="#ff4d9d"/>
 </svg>
 <div class="brand-name">Znakomstor</div>
-<div class="nav-tagline">Настоящие знакомства рядом</div>
-<a class="nav-btn primary" href="login.html">Войти</a>
-<a class="nav-btn secondary" href="login.html#register">Регистрация</a>
-<a class="nav-btn secondary" href="reviews.html">⭐ Отзывы</a>
-<a class="nav-btn secondary" href="rules.html">📜 Правила</a>
+<div class="nav-tagline" data-i18n="tagline">Настоящие знакомства рядом</div>
+<a class="nav-btn primary" href="login.html" data-i18n="login">Войти</a>
+<a class="nav-btn secondary" href="login.html#register" data-i18n="register">Регистрация</a>
+<a class="nav-btn secondary" href="reviews.html" data-i18n="reviews_link">⭐ Отзывы</a>
+<a class="nav-btn secondary" href="rules.html" data-i18n="rules_link">📜 Правила</a>
+<button id="lang-toggle-btn" class="nav-btn secondary lang-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
 <div class="nav-footer">
-<div>Сделано в <a href="https://vektorizi-ru.vercel.app/" target="_blank" rel="noopener">Студии Вектор</a></div>
+<div><span data-i18n="made_in">Сделано в</span> <a href="https://vektorizi-ru.vercel.app/" target="_blank" rel="noopener">Студии Вектор</a></div>
 </div>
 </div>
 
@@ -75,6 +77,7 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 <div class="cover-shade"></div>
 </div>
 
+<script src="theme.js"></script>
 <script>
 function openNav() {
 document.getElementById('nav-panel').classList.add('open');
