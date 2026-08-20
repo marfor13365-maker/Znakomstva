@@ -83,6 +83,7 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 .final-cta a{flex:1;text-align:center;padding:15px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;text-decoration:none}
 .final-cta .primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
 .final-cta .secondary{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text)}
+.lang-btn{margin-top:6px}
 </style>
 </head>
 <body>
@@ -109,12 +110,13 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 <div class="nav-panel" id="nav-panel">
 <button class="nav-close" onclick="closeNav()">✕</button>
 <div class="brand-name">Znakomstor</div>
-<div class="nav-tagline">Настоящие знакомства рядом</div>
-<a class="nav-btn primary" href="index.html">Войти</a>
-<a class="nav-btn secondary" href="index.html#register">Регистрация</a>
+<div class="nav-tagline" data-i18n="tagline">Настоящие знакомства рядом</div>
+<a class="nav-btn primary" href="index.html" data-i18n="login">Войти</a>
+<a class="nav-btn secondary" href="index.html#register" data-i18n="register">Регистрация</a>
+<button id="lang-toggle-btn" class="nav-btn secondary lang-btn" onclick="BlizkoTheme.toggleLang()">EN</button>
 <div class="nav-footer">
-<div>Сделано в <a href="https://vektorizi-ru.vercel.app/" target="_blank" rel="noopener">Студии Вектор</a></div>
-<div><a href="rules.html">Правила сервиса</a></div>
+<div><span data-i18n="made_in">Сделано в</span> <a href="https://vektorizi-ru.vercel.app/" target="_blank" rel="noopener">Студии Вектор</a></div>
+<div><a href="rules.html" data-i18n="rules_footer_link">Правила сервиса</a></div>
 </div>
 </div>
 
@@ -123,14 +125,14 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 <section class="scene" id="scene-video">
 <video id="hero-video" src="landing-video-6.mp4" autoplay muted playsinline preload="auto"></video>
 <div class="video-shade"></div>
-<button class="skip-btn" onclick="goToReviews()">Пропустить</button>
+<button class="skip-btn" onclick="goToReviews()" data-i18n="skip">Пропустить</button>
 <button class="mute-btn" id="mute-btn" onclick="toggleMute()">🔇</button>
 <div class="hero-copy">
-<div class="hero-title">Настоящие <span>знакомства</span><br>рядом с тобой</div>
-<div class="hero-sub">Люди, дела и совпадения — в одном месте</div>
+<div class="hero-title"><span data-i18n="hero_title_1">Настоящие</span> <span data-i18n="hero_title_span">знакомства</span><br><span data-i18n="hero_title_2">рядом с тобой</span></div>
+<div class="hero-sub" data-i18n="hero_sub">Люди, дела и совпадения — в одном месте</div>
 </div>
 <div class="scroll-cue" onclick="goToReviews()">
-<span>Листай</span>
+<span data-i18n="swipe_hint">Листай</span>
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
 </div>
 </section>
@@ -139,8 +141,8 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 <img class="bg-img" src="landing-cover.jpg" alt="">
 <div class="reviews-shade"></div>
 <div class="reviews-scroll">
-<div class="reviews-heading">Что говорят <span>о нас</span></div>
-<div class="reviews-heading-sub">Оставь свой отзыв — он появится здесь</div>
+<div class="reviews-heading"><span data-i18n="reviews_heading_1">Что говорят</span> <span data-i18n="reviews_heading_span">о нас</span></div>
+<div class="reviews-heading-sub" data-i18n="reviews_heading_sub">Оставь свой отзыв — он появится здесь</div>
 
 <div class="review-card">
 <div class="stars-row" id="stars-row">
@@ -151,25 +153,25 @@ body{font-family:'Inter',sans-serif;color:var(--text)}
 <button class="star-btn" data-val="5" onclick="setRating(5)">★</button>
 </div>
 <div class="review-input-row">
-<label>Имя</label>
-<input type="text" id="review-name" maxlength="40" placeholder="Как тебя зовут?">
+<label data-i18n="name_label">Имя</label>
+<input type="text" id="review-name" maxlength="40" placeholder="Как тебя зовут?" data-i18n-placeholder="name_placeholder">
 </div>
 <div class="review-input-row">
-<label>Отзыв</label>
-<textarea id="review-text" maxlength="300" placeholder="Расскажи, как всё прошло..."></textarea>
+<label data-i18n="review_label">Отзыв</label>
+<textarea id="review-text" maxlength="300" placeholder="Расскажи, как всё прошло..." data-i18n-placeholder="review_placeholder"></textarea>
 </div>
-<button class="review-submit" id="review-submit-btn" onclick="submitReview()">Отправить отзыв</button>
+<button class="review-submit" id="review-submit-btn" onclick="submitReview()" data-i18n="send_review">Отправить отзыв</button>
 <div class="review-msg" id="review-msg"></div>
 </div>
 
-<div class="testimonials-title">Отзывы пользователей</div>
+<div class="testimonials-title" data-i18n="testimonials_title">Отзывы пользователей</div>
 <div id="testimonials-list">
-<div class="review-msg">⏳ Загружаем отзывы...</div>
+<div class="review-msg" data-i18n="loading_reviews">⏳ Загружаем отзывы...</div>
 </div>
 
 <div class="final-cta">
-<a class="secondary" href="index.html">Войти</a>
-<a class="primary" href="index.html#register">Начать сейчас</a>
+<a class="secondary" href="index.html" data-i18n="login">Войти</a>
+<a class="primary" href="index.html#register" data-i18n="start_now">Начать сейчас</a>
 </div>
 </div>
 </section>
@@ -227,21 +229,21 @@ async function submitReview() {
 var name = document.getElementById('review-name').value.trim();
 var text = document.getElementById('review-text').value.trim();
 var msgEl = document.getElementById('review-msg');
-if (!name) { msgEl.textContent = 'Впиши своё имя'; msgEl.className = 'review-msg'; return; }
-if (currentRating === 0) { msgEl.textContent = 'Поставь оценку звёздами'; msgEl.className = 'review-msg'; return; }
+if (!name) { msgEl.textContent = BlizkoTheme.getText('enter_name_err'); msgEl.className = 'review-msg'; return; }
+if (currentRating === 0) { msgEl.textContent = BlizkoTheme.getText('set_rating_err'); msgEl.className = 'review-msg'; return; }
 var btn = document.getElementById('review-submit-btn');
 btn.disabled = true;
-msgEl.textContent = 'Отправляем...';
+msgEl.textContent = BlizkoTheme.getText('sending');
 msgEl.className = 'review-msg';
 var { error } = await db.from('reviews').insert({ name: name, rating: currentRating, text: text || null });
 btn.disabled = false;
 if (error) {
 console.error('Ошибка отправки отзыва:', error);
-msgEl.textContent = 'Не получилось отправить, попробуй ещё раз';
+msgEl.textContent = BlizkoTheme.getText('send_fail');
 msgEl.className = 'review-msg';
 return;
 }
-msgEl.textContent = '✓ Спасибо за отзыв!';
+msgEl.textContent = BlizkoTheme.getText('thanks_review');
 msgEl.className = 'review-msg ok';
 document.getElementById('review-name').value = '';
 document.getElementById('review-text').value = '';
@@ -262,11 +264,11 @@ var { data, error } = await db.from('reviews')
 .limit(12);
 if (error) {
 console.error('Ошибка загрузки отзывов:', error);
-wrap.innerHTML = '<div class="review-msg">Не удалось загрузить отзывы</div>';
+wrap.innerHTML = '<div class="review-msg">' + BlizkoTheme.getText('load_fail') + '</div>';
 return;
 }
 if (!data || data.length === 0) {
-wrap.innerHTML = '<div class="review-msg">Пока никто не оставил отзыв — будь первым!</div>';
+wrap.innerHTML = '<div class="review-msg">' + BlizkoTheme.getText('no_reviews_yet') + '</div>';
 return;
 }
 wrap.innerHTML = '';
