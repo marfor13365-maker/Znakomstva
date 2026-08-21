@@ -266,7 +266,16 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     trade_service_seek_label: 'Услуга — ищет',
     trade_service_offer_label: 'Услуга — предлагает',
     trade_job_seek_label: 'Работа — ищет',
-    trade_job_offer_label: 'Вакансия — предлагает'
+    trade_job_offer_label: 'Вакансия — предлагает',
+    // ---- добавлено: полноэкранная лента и перевод ----
+    grid_mode: 'Сетка',
+    translate_link: 'Перевести',
+    hide_translation: 'Скрыть перевод',
+    translating: 'Переводим...',
+    view_comments_link: 'Смотреть комментарии',
+    text_post_placeholder: 'О чём думаешь?',
+    post_type_photo: '📷 Фото/видео',
+    post_type_text: '📝 Текст'
   };
 
   var LANG_EN = {
@@ -516,7 +525,16 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     trade_service_seek_label: 'Service — looking for',
     trade_service_offer_label: 'Service — offers',
     trade_job_seek_label: 'Job — looking for',
-    trade_job_offer_label: 'Job opening — offers'
+    trade_job_offer_label: 'Job opening — offers',
+    // ---- добавлено: полноэкранная лента и перевод ----
+    grid_mode: 'Grid',
+    translate_link: 'Translate',
+    hide_translation: 'Hide translation',
+    translating: 'Translating...',
+    view_comments_link: 'View comments',
+    text_post_placeholder: "What's on your mind?",
+    post_type_photo: '📷 Photo/video',
+    post_type_text: '📝 Text'
   };
 
   function getLang() {
