@@ -117,6 +117,21 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .upload-content{flex:1;display:flex;flex-direction:column;padding:20px;gap:16px;overflow-y:auto}
 .photo-pick{width:100%;aspect-ratio:1;background:var(--input-bg);border:2px dashed var(--border);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;transition:border-color 0.2s}
 .photo-pick:active{border-color:var(--accent)}
+.photo-pick-multi{display:flex;flex-wrap:wrap;gap:8px}
+.photo-pick-thumb{position:relative;width:72px;height:72px;border-radius:10px;overflow:hidden;background:var(--input-bg)}
+.photo-pick-thumb img,.photo-pick-thumb video{width:100%;height:100%;object-fit:cover}
+.photo-pick-thumb .thumb-del{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;border:none;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.photo-pick-add{width:72px;height:72px;border-radius:10px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--muted);cursor:pointer;background:var(--input-bg);flex-shrink:0}
+.photo-pick-add:active{border-color:var(--accent)}
+.fp-carousel{position:relative}
+.fp-carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none}
+.fp-carousel-track::-webkit-scrollbar{display:none}
+.fp-carousel-slide{flex:0 0 100%;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;background:#000;min-width:100%}
+.fp-carousel-slide img,.fp-carousel-slide video{width:100%;max-height:70vh;object-fit:contain}
+.fp-carousel-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:5px;pointer-events:none}
+.fp-carousel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4)}
+.fp-carousel-dot.active{background:#fff}
+.fp-carousel-counter{position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.55);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;pointer-events:none}
 .pick-hint{font-size:36px;margin-bottom:8px}
 .pick-text{font-size:13px;color:var(--muted)}
 .caption-input{background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:80px;transition:border-color 0.2s}
@@ -130,6 +145,52 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .bottom-btn .ico{font-size:22px}
 input[type="file"]{display:none}
 .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+
+/* ===== ПОЛНОЭКРАННАЯ ЛЕНТА (feed-stream) ===== */
+#feed-stream-wrap{display:none;padding-top:76px}
+.feed-post{border-bottom:8px solid var(--card);padding-bottom:12px;margin-bottom:4px}
+.feed-post-header{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.feed-post-avatar{width:38px;height:38px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;border:1px solid var(--border);cursor:pointer}
+.feed-post-avatar img{width:100%;height:100%;object-fit:cover}
+.feed-post-headinfo{flex:1;min-width:0;cursor:pointer}
+.feed-post-name{font-weight:600;font-size:14px}
+.feed-post-city{font-size:11px;color:var(--muted)}
+.feed-follow-btn{background:var(--accent);border:none;color:white;font-size:11px;font-weight:600;padding:6px 14px;border-radius:10px;cursor:pointer;flex-shrink:0}
+.feed-follow-btn.following{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.feed-trade-badges{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px}
+.feed-post-media{width:100%;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.feed-post-media img{width:100%;max-height:70vh;object-fit:contain;display:block;touch-action:none;-webkit-user-drag:none;-webkit-user-select:none;user-select:none;will-change:transform}
+.feed-post-media video{width:100%;max-height:70vh;object-fit:contain;display:block;background:#000}
+.feed-post-actions{display:flex;align-items:center;gap:16px;padding:10px 14px 4px}
+.feed-post-actions button{background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;display:flex;align-items:center;gap:5px;padding:2px}
+.feed-post-actions button span{font-size:13px;font-weight:600;color:var(--muted)}
+.feed-post-actions .fp-liked{color:var(--accent)}
+.feed-post-actions .fp-match-btn{margin-left:auto;background:var(--accent);color:white;font-family:'Unbounded',sans-serif;font-size:11px;font-weight:600;padding:8px 14px;border-radius:12px}
+.feed-post-actions .fp-delete-btn{color:var(--accent)}
+.feed-post-caption{padding:2px 14px 4px;font-size:13px;line-height:1.5}
+.feed-post-caption b{margin-right:6px}
+.fp-translate-link{color:var(--muted);font-size:12px;cursor:pointer;display:block;margin-top:4px}
+.fp-translate-link:active{opacity:0.7}
+.fp-translation{margin-top:4px;color:var(--text);font-size:13px;line-height:1.5;padding-top:4px;border-top:1px dashed var(--border)}
+.feed-post-views{padding:0 14px;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.feed-post-time{padding:2px 14px 0;font-size:11px;color:var(--muted);text-transform:uppercase}
+.fp-view-comments-link{padding:6px 14px 0;font-size:13px;color:var(--muted);cursor:pointer}
+.feed-post-comments{padding:8px 14px 0}
+.fp-comment-item{display:flex;gap:8px;margin-bottom:10px;align-items:flex-start}
+.fp-comment-item .comment-avatar{width:26px;height:26px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1px solid var(--border)}
+.fp-comment-item .comment-avatar img{width:100%;height:100%;object-fit:cover}
+.fp-comment-body{flex:1;font-size:13px;line-height:1.4}
+.fp-comment-body b{margin-right:6px}
+.fp-comment-del{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;flex-shrink:0}
+.feed-post-comment-input{display:flex;gap:8px;margin:8px 0 4px}
+.feed-post-comment-input input{flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:18px;padding:9px 14px;color:var(--text);font-size:13px;outline:none}
+.feed-post-comment-input input:focus{border-color:var(--accent)}
+.feed-post-comment-input button{background:var(--accent);border:none;color:white;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:13px;flex-shrink:0}
+.feed-sentinel{height:1px}
+.feed-end-msg{text-align:center;color:var(--muted);font-size:12px;padding:24px 0}
+.post-type-toggle{display:flex;gap:8px;margin-bottom:4px}
+.post-type-btn{flex:1;padding:9px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;cursor:pointer}
+.post-type-btn.active{border-color:var(--accent);background:rgba(255,77,109,0.15);color:var(--accent2);font-weight:600}
 </style>
 </head>
 <body>
@@ -139,7 +200,8 @@ input[type="file"]{display:none}
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
 <button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
-<button class="nav-menu-item current" onclick="location.href='feed.html'">🏠 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item" id="nav-mode-grid" onclick="switchViewMode('grid')">🔲 <span data-i18n="grid_mode">Сетка</span></button>
+<button class="nav-menu-item" id="nav-mode-feed" onclick="switchViewMode('feed')">📰 <span data-i18n="feed">Лента</span></button>
 <button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
 <button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
 <button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
@@ -171,6 +233,10 @@ input[type="file"]{display:none}
 </div>
 <div id="grid-wrap">
 <div class="loading">⏳ <span data-i18n="loading">Загрузка...</span></div>
+</div>
+<div id="feed-stream-wrap">
+<div id="feed-stream-list"></div>
+<div class="feed-sentinel" id="feed-sentinel"></div>
 </div>
 <!-- Просмотр фото -->
 <div class="modal" id="view-modal">
@@ -231,17 +297,21 @@ input[type="file"]{display:none}
 <button class="publish-btn" id="publish-btn" onclick="publishPost()" disabled data-i18n="publish">Опубликовать</button>
 </div>
 <div class="upload-content">
-<div class="photo-pick" id="photo-pick" onclick="document.getElementById('post-file').click()">
-<div class="pick-hint">📷</div>
-<div class="pick-text" data-i18n="tap_to_select">Нажми чтобы выбрать фото или видео</div>
+<div class="post-type-toggle">
+<button class="post-type-btn active" id="post-type-photo-btn" onclick="setPostType('photo')" data-i18n="post_type_photo">📷 Фото/видео</button>
+<button class="post-type-btn" id="post-type-text-btn" onclick="setPostType('text')" data-i18n="post_type_text">📝 Текст</button>
 </div>
+<div class="photo-pick-multi" id="photo-pick-multi">
+<div class="photo-pick-add" id="photo-pick-add" onclick="document.getElementById('post-file').click()">📷</div>
+</div>
+<div class="pick-text" id="photo-pick-hint-text" data-i18n="tap_to_select" style="text-align:center">Нажми чтобы выбрать фото или видео</div>
 <textarea class="caption-input" id="caption-input" placeholder="Напиши что-нибудь..." data-i18n-placeholder="write_something"></textarea>
 <div class="upload-progress" id="upload-progress">
 <div class="upload-bar" id="upload-bar"></div>
 </div>
 </div>
 </div>
-<input type="file" id="post-file" accept="image/*,video/*" onchange="handlePostPhoto(this)">
+<input type="file" id="post-file" accept="image/*,video/*" multiple onchange="handlePostPhoto(this)">
 <script src="theme.js"></script>
 <script src="photo-viewer.js"></script>
 <script src="config.js"></script>
@@ -267,13 +337,22 @@ var db = createBlizkoClient();
 var BACKEND_URL = 'https://vector-chat-api.onrender.com';
 var currentUser = null;
 var myProfileComplete = false;
-var pendingPhotoUrl = null;
-var pendingMediaType = 'photo';
+var pendingMediaFiles = []; // [{url, type}] — первый элемент станет photo_url поста, остальные — extra_media
+var MAX_CAROUSEL_ITEMS = 10;
 var posts = [];
 var myTradeFields = {};
 var lastSeenMap = {};
 var followedIds = {};
 var matchIds = {};
+var viewMode = (function() { try { return localStorage.getItem('blizko_view_mode') || 'grid'; } catch(e) { return 'grid'; } })();
+var feedStreamPosts = [];
+var feedStreamOffset = 0;
+var feedStreamLoading = false;
+var feedStreamDone = false;
+var feedStreamObserverAttached = false;
+var FEED_PAGE_SIZE = 6;
+var currentPostType = 'photo';
+var translationCache = {};
 
 function toggleNavMenu() {
 document.getElementById('nav-menu').classList.toggle('show');
@@ -297,6 +376,27 @@ if (menu) menu.classList.remove('show');
 }
 });
 
+// ===== ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА: СЕТКА / ЛЕНТА =====
+function updateViewModeUI() {
+document.getElementById('grid-wrap').style.display = viewMode === 'grid' ? 'block' : 'none';
+document.getElementById('feed-stream-wrap').style.display = viewMode === 'feed' ? 'block' : 'none';
+var gridBtn = document.getElementById('nav-mode-grid');
+var feedBtn = document.getElementById('nav-mode-feed');
+if (gridBtn) gridBtn.classList.toggle('current', viewMode === 'grid');
+if (feedBtn) feedBtn.classList.toggle('current', viewMode === 'feed');
+}
+
+function switchViewMode(mode) {
+viewMode = mode;
+try { localStorage.setItem('blizko_view_mode', mode); } catch(e) {}
+var menu = document.getElementById('nav-menu');
+if (menu) menu.classList.remove('show');
+updateViewModeUI();
+if (mode === 'feed' && feedStreamPosts.length === 0) {
+loadFeedStream(true);
+}
+}
+
 function timeAgo(dateStr) {
 var d = new Date(dateStr);
 var now = new Date();
@@ -308,6 +408,493 @@ if (diff < 86400) return Math.floor(diff/3600) + ' ' + BlizkoTheme.getText('h') 
 if (diff < 86400*7) return Math.floor(diff/86400) + (lang === 'en' ? ' d ago' : ' д назад');
 return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'ru-RU');
 }
+
+// ===== ПЕРЕВОД (Grok через бэкенд) =====
+async function translateText(text) {
+if (!text) return '';
+var targetLang = BlizkoTheme.getLang();
+var cacheKey = targetLang + '::' + text;
+if (translationCache[cacheKey]) return translationCache[cacheKey];
+try {
+var r = await fetch(BACKEND_URL + '/api/translate', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ text: text, target_lang: targetLang })
+});
+var data = await r.json();
+var translated = data.translated || text;
+translationCache[cacheKey] = translated;
+return translated;
+} catch (e) {
+console.error('translateText error:', e);
+return text;
+}
+}
+
+async function handleTranslateClick(linkEl) {
+var textWrap = linkEl.closest('[data-original-text]');
+if (!textWrap) return;
+var original = textWrap.getAttribute('data-original-text');
+var existing = textWrap.querySelector('.fp-translation');
+if (existing) {
+existing.remove();
+linkEl.textContent = BlizkoTheme.getText('translate_link');
+return;
+}
+linkEl.textContent = BlizkoTheme.getText('translating');
+var translated = await translateText(original);
+var div = document.createElement('div');
+div.className = 'fp-translation';
+div.textContent = translated;
+textWrap.appendChild(div);
+linkEl.textContent = BlizkoTheme.getText('hide_translation');
+}
+
+// ===== ПОЛНОЭКРАННАЯ ЛЕНТА =====
+function timeAgoShort(dateStr) {
+return timeAgo(dateStr);
+}
+
+function feedTradeBadgesHtml(post) {
+if (!post.profiles || post.user_id === currentUser.id) return '';
+var matches = blizkoComputeTradeMatches(myTradeFields, post.profiles);
+if (matches.length === 0) return '';
+return '<div class="feed-trade-badges">' + matches.map(function(m) {
+return '<span class="trade-badge ' + m.type + '">✨ ' + escapeHtmlComment(m.label) + '</span>';
+}).join('') + '</div>';
+}
+
+function escapeAttr(str) {
+return (str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function linkifyFeedText(escapedText) {
+return escapedText.replace(/(https?:\/\/[^\s<]+)|(\bwww\.[^\s<]+)/gi, function(match) {
+var trail = '';
+var m = match.match(/[.,!?;:]+$/);
+if (m) { trail = m[0]; match = match.slice(0, -trail.length); }
+var href = /^https?:\/\//i.test(match) ? match : 'https://' + match;
+return '<a href="' + href + '" target="_blank" rel="noopener noreferrer" style="color:var(--accent2);text-decoration:underline;word-break:break-all">' + match + '</a>' + trail;
+});
+}
+
+function getPostMediaList(post) {
+var list = [];
+if (post.photo_url) list.push({ url: post.photo_url, type: post.media_type || 'photo' });
+var extra = post.extra_media;
+if (typeof extra === 'string') { try { extra = JSON.parse(extra); } catch (e) { extra = []; } }
+if (Array.isArray(extra)) {
+extra.forEach(function(m) { if (m && m.url) list.push({ url: m.url, type: m.type || 'photo' }); });
+}
+return list;
+}
+
+function buildMediaSlideHtml(m) {
+return m.type === 'video'
+? '<video class="fp-media-el" src="' + m.url + '" controls playsinline preload="metadata"></video>'
+: '<img class="fp-media-el" src="' + m.url + '" loading="lazy" alt="">';
+}
+
+function buildFeedMediaHtml(mediaList) {
+if (mediaList.length === 0) return '';
+if (mediaList.length === 1) {
+return '<div class="feed-post-media">' + buildMediaSlideHtml(mediaList[0]) + '</div>';
+}
+// Карусель из нескольких фото/видео — свайп по горизонтали, точки-индикатор и счётчик,
+// как в ВК/Instagram. Пинч-зум на слайдах карусели намеренно НЕ включаем — жест
+// увеличения конфликтовал бы с горизонтальным свайпом между слайдами.
+var slides = mediaList.map(function(m) { return '<div class="fp-carousel-slide">' + buildMediaSlideHtml(m) + '</div>'; }).join('');
+var dots = mediaList.map(function(_, idx) { return '<span class="fp-carousel-dot' + (idx === 0 ? ' active' : '') + '"></span>'; }).join('');
+return '<div class="feed-post-media fp-carousel">' +
+'<div class="fp-carousel-track">' + slides + '</div>' +
+'<div class="fp-carousel-counter">1/' + mediaList.length + '</div>' +
+'<div class="fp-carousel-dots">' + dots + '</div>' +
+'</div>';
+}
+
+function buildFeedPostHtml(post, extra) {
+var p = post.profiles || {};
+var userName = p.name || BlizkoTheme.getText('you');
+var initials = userName.charAt(0).toUpperCase();
+var isOwn = post.user_id === currentUser.id;
+var isFollowing = !!followedIds[post.user_id];
+var alreadyLikedProfile = !!myLikesGiven[post.user_id];
+
+var mediaList = getPostMediaList(post);
+var mediaHtml = buildFeedMediaHtml(mediaList);
+
+var actionsHtml = '<div class="feed-post-actions">' +
+'<button class="' + (extra.liked ? 'fp-liked' : '') + '" data-action="toggle-like">' + (extra.liked ? '❤️' : '🤍') + ' <span class="fp-like-count">' + extra.likeCount + '</span></button>' +
+'<button data-action="toggle-comments">💬 <span class="fp-comment-count">' + extra.commentCount + '</span></button>' +
+'<button data-action="share">🔗</button>';
+if (isOwn) {
+actionsHtml += '<button class="fp-delete-btn" data-action="delete-post" style="margin-left:auto">🗑</button>';
+} else if (!alreadyLikedProfile) {
+actionsHtml += '<button class="fp-match-btn" data-action="match-like">' + BlizkoTheme.getText('match') + '</button>';
+}
+actionsHtml += '</div>';
+
+var captionHtml = '';
+if (post.caption) {
+captionHtml = '<div class="feed-post-caption" data-original-text="' + escapeAttr(post.caption) + '">' +
+'<b>' + escapeHtmlComment(userName) + '</b>' + linkifyFeedText(escapeHtmlComment(post.caption)) +
+'<span class="fp-translate-link" data-action="translate-caption">' + BlizkoTheme.getText('translate_link') + '</span>' +
+'</div>';
+}
+
+var followBtnHtml = isOwn ? '' : '<button class="feed-follow-btn' + (isFollowing ? ' following' : '') + '" data-action="toggle-follow">' + BlizkoTheme.getText(isFollowing ? 'following' : 'follow') + '</button>';
+
+return (
+'<div class="feed-post" data-post-id="' + post.id + '" data-user-id="' + post.user_id + '" data-comments-enabled="' + (post.comments_enabled !== false) + '" data-is-own="' + isOwn + '">' +
+'<div class="feed-post-header">' +
+'<div class="feed-post-avatar" data-action="open-profile">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '<span>' + initials + '</span>') + '</div>' +
+'<div class="feed-post-headinfo" data-action="open-profile"><div class="feed-post-name">' + escapeHtmlComment(userName) + '</div><div class="feed-post-city">' + escapeHtmlComment(p.city || '') + '</div></div>' +
+followBtnHtml +
+'</div>' +
+feedTradeBadgesHtml(post) +
+mediaHtml +
+actionsHtml +
+captionHtml +
+'<div class="feed-post-views">👁 <span class="fp-views-count">' + extra.views + '</span></div>' +
+'<div class="feed-post-time">' + timeAgoShort(post.created_at) + '</div>' +
+(extra.commentCount > 0 ? '<div class="fp-view-comments-link" data-action="toggle-comments">' + BlizkoTheme.getText('view_comments_link') + ' (' + extra.commentCount + ')</div>' : '') +
+'<div class="feed-post-comments" style="display:none">' +
+'<div class="fp-comments-list"></div>' +
+'<div class="feed-post-comment-input"><input type="text" class="fp-comment-input" placeholder="' + BlizkoTheme.getText('write_comment') + '" maxlength="300"><button data-action="send-comment">➤</button></div>' +
+'</div>' +
+'</div>'
+);
+}
+
+function attachFeedMediaViewers(container) {
+// Пинч-зум — только для одиночных фото (не для слайдов карусели, см. комментарий выше)
+container.querySelectorAll('.feed-post-media:not(.fp-carousel) img.fp-media-el').forEach(function(img) {
+if (img.dataset.viewerAttached) return;
+img.dataset.viewerAttached = '1';
+if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.attach) {
+BlizkoPhotoViewer.attach(img, { onImmersiveChange: function() {} });
+}
+});
+// Точки-индикатор и счётчик карусели обновляются по scroll (scroll не всплывает,
+// поэтому обработчик вешаем на каждый .fp-carousel-track отдельно).
+container.querySelectorAll('.fp-carousel-track').forEach(function(track) {
+if (track.dataset.scrollBound) return;
+track.dataset.scrollBound = '1';
+var wrap = track.closest('.fp-carousel');
+var counter = wrap.querySelector('.fp-carousel-counter');
+var dots = wrap.querySelectorAll('.fp-carousel-dot');
+var total = dots.length;
+track.addEventListener('scroll', function() {
+var idx = Math.round(track.scrollLeft / track.clientWidth);
+idx = Math.max(0, Math.min(total - 1, idx));
+if (counter) counter.textContent = (idx + 1) + '/' + total;
+dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+});
+});
+}
+
+async function fetchCountsMap(table, idCol, itemTypeFilter, ids) {
+if (!ids || ids.length === 0) return {};
+var q = db.from(table).select(idCol);
+if (itemTypeFilter) q = q.eq('item_type', itemTypeFilter);
+q = q.in(idCol, ids);
+var { data } = await q;
+var map = {};
+(data || []).forEach(function(r) { map[r[idCol]] = (map[r[idCol]] || 0) + 1; });
+return map;
+}
+
+async function fetchMyLikeSet(ids) {
+if (!ids || ids.length === 0) return {};
+var { data } = await db.from('post_likes').select('post_id').eq('user_id', currentUser.id).in('post_id', ids);
+var set = {};
+(data || []).forEach(function(r) { set[r.post_id] = true; });
+return set;
+}
+
+async function loadFeedStream(reset) {
+if (feedStreamLoading) return;
+if (reset) {
+feedStreamPosts = [];
+feedStreamOffset = 0;
+feedStreamDone = false;
+document.getElementById('feed-stream-list').innerHTML = '';
+}
+if (feedStreamDone) return;
+feedStreamLoading = true;
+var listEl = document.getElementById('feed-stream-list');
+if (reset) listEl.innerHTML = '<div class="loading">⏳ ' + BlizkoTheme.getText('loading') + '</div>';
+var { data, error } = await db.from('posts')
+.select('*, profiles(name, city, photo_url, product_buy, product_sell, service_seek, service_offer, job_seek, job_offer)')
+.eq('visible_in_feed', true)
+.order('created_at', { ascending: false })
+.range(feedStreamOffset, feedStreamOffset + FEED_PAGE_SIZE - 1);
+feedStreamLoading = false;
+if (reset) listEl.innerHTML = '';
+if (error) {
+console.error('loadFeedStream error:', error);
+if (feedStreamPosts.length === 0) listEl.innerHTML = '<div class="loading">' + BlizkoTheme.getText('error_loading_short') + '</div>';
+return;
+}
+if (!data || data.length === 0) {
+feedStreamDone = true;
+if (feedStreamPosts.length === 0) {
+listEl.innerHTML = '<div class="empty-state"><div class="icon">📸</div><p>' + BlizkoTheme.getText('no_photos') + '</p></div>';
+} else {
+var endMsg = document.createElement('div');
+endMsg.className = 'feed-end-msg';
+endMsg.textContent = '•';
+listEl.appendChild(endMsg);
+}
+return;
+}
+feedStreamOffset += data.length;
+if (data.length < FEED_PAGE_SIZE) feedStreamDone = true;
+
+var ids = data.map(function(p) { return p.id; });
+var viewCounts = await fetchCountsMap('media_views', 'item_id', 'post', ids);
+var likeCounts = await fetchCountsMap('post_likes', 'post_id', null, ids);
+var myLikeSet = await fetchMyLikeSet(ids);
+var commentCounts = await fetchCountsMap('post_comments', 'post_id', null, ids);
+
+var frag = document.createDocumentFragment();
+data.forEach(function(post) {
+feedStreamPosts.push(post);
+var wrap = document.createElement('div');
+wrap.innerHTML = buildFeedPostHtml(post, {
+views: viewCounts[post.id] || 0,
+likeCount: likeCounts[post.id] || 0,
+liked: !!myLikeSet[post.id],
+commentCount: commentCounts[post.id] || 0
+});
+frag.appendChild(wrap.firstElementChild);
+});
+listEl.appendChild(frag);
+attachFeedMediaViewers(listEl);
+ensureFeedSentinelObserved();
+}
+
+function ensureFeedSentinelObserved() {
+if (feedStreamObserverAttached) return;
+feedStreamObserverAttached = true;
+var sentinel = document.getElementById('feed-sentinel');
+if (!sentinel || typeof IntersectionObserver === 'undefined') return;
+var observer = new IntersectionObserver(function(entries) {
+entries.forEach(function(entry) {
+if (entry.isIntersecting && viewMode === 'feed') {
+loadFeedStream(false);
+}
+});
+}, { rootMargin: '400px' });
+observer.observe(sentinel);
+}
+
+function findFeedPost(postId) {
+return feedStreamPosts.find(function(p) { return String(p.id) === String(postId); });
+}
+
+async function feedToggleLike(postEl) {
+var postId = postEl.getAttribute('data-post-id');
+var btn = postEl.querySelector('[data-action="toggle-like"]');
+var countEl = btn.querySelector('.fp-like-count');
+var isLiked = btn.classList.contains('fp-liked');
+if (isLiked) {
+await db.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
+btn.classList.remove('fp-liked');
+btn.innerHTML = '🤍 <span class="fp-like-count">' + (parseInt(countEl.textContent, 10) - 1) + '</span>';
+} else {
+await db.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
+btn.classList.add('fp-liked');
+btn.innerHTML = '❤️ <span class="fp-like-count">' + (parseInt(countEl.textContent, 10) + 1) + '</span>';
+}
+}
+
+async function feedToggleFollow(postEl) {
+var userId = postEl.getAttribute('data-user-id');
+var btn = postEl.querySelector('[data-action="toggle-follow"]');
+if (!btn) return;
+var isFollowing = btn.classList.contains('following');
+if (isFollowing) {
+await db.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', userId);
+followedIds[userId] = false;
+btn.classList.remove('following');
+btn.textContent = BlizkoTheme.getText('follow');
+} else {
+await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
+followedIds[userId] = true;
+btn.classList.add('following');
+btn.textContent = BlizkoTheme.getText('following');
+}
+}
+
+async function feedOpenProfile(postEl) {
+var userId = postEl.getAttribute('data-user-id');
+if (!userId) return;
+if (userId === currentUser.id) { window.location.href = 'profile.html'; return; }
+var { data: profile } = await db.from('profiles').select('profile_visibility').eq('id', userId).single();
+if (!profile) { alert(BlizkoTheme.getText('profile_not_found')); return; }
+var visibility = profile.profile_visibility || 'matches';
+if (visibility === 'none') { alert(BlizkoTheme.getText('profile_locked')); return; }
+if (visibility === 'matches') {
+var { data: match } = await db.from('matches').select('id')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + userId + '),and(user1.eq.' + userId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+if (!match) { alert(BlizkoTheme.getText('profile_match_only')); return; }
+}
+window.location.href = 'view-profile.html?user=' + userId;
+}
+
+function feedShare(postEl) {
+var postId = postEl.getAttribute('data-post-id');
+var shareUrl = window.location.origin + window.location.pathname.replace('feed.html', '') + 'feed.html?post=' + postId;
+if (navigator.clipboard) {
+navigator.clipboard.writeText(shareUrl).then(function() {
+alert((BlizkoTheme.getLang() === 'en' ? 'Link copied!' : 'Ссылка скопирована!') + ' 🔗');
+}).catch(function() { prompt(BlizkoTheme.getLang() === 'en' ? 'Copy the link:' : 'Скопируй ссылку:', shareUrl); });
+} else {
+prompt(BlizkoTheme.getLang() === 'en' ? 'Copy the link:' : 'Скопируй ссылку:', shareUrl);
+}
+}
+
+async function feedMatchLike(postEl) {
+var userId = postEl.getAttribute('data-user-id');
+if (!userId) return;
+await db.from('likes').upsert({
+from_user: currentUser.id,
+to_user: userId,
+is_like: true
+}, { onConflict: 'from_user,to_user' });
+myLikesGiven[userId] = true;
+var btn = postEl.querySelector('[data-action="match-like"]');
+if (btn) btn.remove();
+var { data: matchData } = await db.from('matches').select('*')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + userId + '),and(user1.eq.' + userId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+if (matchData) {
+setTimeout(function() {
+if (confirm(BlizkoTheme.getText('mutual_like_confirm'))) {
+window.location.href = 'chat.html?match=' + matchData.id;
+}
+}, 300);
+}
+}
+
+async function feedDeletePost(postEl) {
+var postId = postEl.getAttribute('data-post-id');
+if (!confirm(BlizkoTheme.getText('confirm_delete'))) return;
+var { error } = await db.from('posts').delete().eq('id', postId);
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
+postEl.remove();
+feedStreamPosts = feedStreamPosts.filter(function(p) { return String(p.id) !== String(postId); });
+await loadFeed();
+}
+
+async function feedToggleComments(postEl) {
+var commentsBlock = postEl.querySelector('.feed-post-comments');
+var isOpen = commentsBlock.style.display !== 'none';
+if (isOpen) { commentsBlock.style.display = 'none'; return; }
+commentsBlock.style.display = 'block';
+await feedLoadComments(postEl);
+}
+
+async function feedLoadComments(postEl) {
+var postId = postEl.getAttribute('data-post-id');
+var isOwner = postEl.getAttribute('data-is-own') === 'true';
+var commentsEnabled = postEl.getAttribute('data-comments-enabled') !== 'false';
+var listEl = postEl.querySelector('.fp-comments-list');
+var inputRow = postEl.querySelector('.feed-post-comment-input');
+if (!commentsEnabled && !isOwner) {
+inputRow.style.display = 'none';
+listEl.innerHTML = '<div class="comments-disabled-msg">' + BlizkoTheme.getText('comments_disabled') + '</div>';
+return;
+}
+inputRow.style.display = 'flex';
+listEl.innerHTML = '<div class="comments-disabled-msg">⏳</div>';
+var { data: comments, error } = await db.from('post_comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
+if (error) { listEl.innerHTML = '<div class="comments-disabled-msg">' + BlizkoTheme.getText('error_loading_short') + '</div>'; return; }
+if (!comments || comments.length === 0) { listEl.innerHTML = '<div class="comments-disabled-msg">' + BlizkoTheme.getText('no_comments') + '</div>'; return; }
+var userIds = [];
+comments.forEach(function(c) { if (userIds.indexOf(c.user_id) === -1) userIds.push(c.user_id); });
+var profilesMap = {};
+if (userIds.length > 0) {
+var { data: profs } = await db.from('profiles').select('id, name, photo_url').in('id', userIds);
+(profs || []).forEach(function(p) { profilesMap[p.id] = p; });
+}
+listEl.innerHTML = '';
+comments.forEach(function(c) {
+var cp = profilesMap[c.user_id] || {};
+var canDelete = c.user_id === currentUser.id || isOwner;
+var cName = cp.name || BlizkoTheme.getText('you');
+var cInitials = cName.charAt(0).toUpperCase();
+var item = document.createElement('div');
+item.className = 'fp-comment-item';
+item.setAttribute('data-comment-id', c.id);
+item.innerHTML =
+'<div class="comment-avatar">' + (cp.photo_url ? '<img src="' + cp.photo_url + '">' : '<span>' + cInitials + '</span>') + '</div>' +
+'<div class="fp-comment-body" data-original-text="' + escapeAttr(c.text) + '">' +
+'<b>' + escapeHtmlComment(cName) + '</b>' + linkifyFeedText(escapeHtmlComment(c.text)) +
+'<span class="fp-translate-link" data-action="translate-caption">' + BlizkoTheme.getText('translate_link') + '</span>' +
+'</div>' +
+(canDelete ? '<button class="fp-comment-del" data-action="delete-comment">✕</button>' : '');
+listEl.appendChild(item);
+});
+}
+
+async function feedSendComment(postEl) {
+var postId = postEl.getAttribute('data-post-id');
+var input = postEl.querySelector('.fp-comment-input');
+var text = input.value.trim();
+if (!text) return;
+var { error } = await db.from('post_comments').insert({ post_id: postId, user_id: currentUser.id, text: text });
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
+input.value = '';
+await feedLoadComments(postEl);
+var countEl = postEl.querySelector('.fp-comment-count');
+if (countEl) countEl.textContent = parseInt(countEl.textContent, 10) + 1;
+}
+
+async function feedDeleteComment(commentEl) {
+var commentId = commentEl.getAttribute('data-comment-id');
+if (!confirm(BlizkoTheme.getLang() === 'en' ? 'Delete comment?' : 'Удалить комментарий?')) return;
+var { error } = await db.from('post_comments').delete().eq('id', commentId);
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
+var postEl = commentEl.closest('.feed-post');
+await feedLoadComments(postEl);
+var countEl = postEl.querySelector('.fp-comment-count');
+if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) - 1);
+}
+
+// Делегирование кликов по всей ленте — один обработчик на контейнер вместо
+// множества inline onclick на каждый пост (постов может быть очень много).
+(function attachFeedStreamDelegation() {
+var streamEl = document.getElementById('feed-stream-list');
+if (!streamEl) return;
+streamEl.addEventListener('click', function(e) {
+var actionEl = e.target.closest('[data-action]');
+if (!actionEl) return;
+var postEl = e.target.closest('.feed-post');
+var action = actionEl.getAttribute('data-action');
+if (action === 'translate-caption') { handleTranslateClick(actionEl); return; }
+if (action === 'delete-comment') { feedDeleteComment(e.target.closest('.fp-comment-item')); return; }
+if (!postEl) return;
+switch (action) {
+case 'open-profile': feedOpenProfile(postEl); break;
+case 'toggle-follow': feedToggleFollow(postEl); break;
+case 'toggle-like': feedToggleLike(postEl); break;
+case 'toggle-comments': feedToggleComments(postEl); break;
+case 'share': feedShare(postEl); break;
+case 'match-like': feedMatchLike(postEl); break;
+case 'delete-post': feedDeletePost(postEl); break;
+case 'send-comment': feedSendComment(postEl); break;
+}
+});
+streamEl.addEventListener('keydown', function(e) {
+if (e.key === 'Enter' && e.target.classList.contains('fp-comment-input')) {
+var postEl = e.target.closest('.feed-post');
+if (postEl) feedSendComment(postEl);
+}
+});
+})();
 
 async function init() {
 var r = await db.auth.getSession();
@@ -342,6 +929,8 @@ myProfileComplete = myTradeProfile.is_active === true;
 await loadFollowedAndMatches();
 await loadSeenData();
 await loadFeed();
+updateViewModeUI();
+if (viewMode === 'feed') { loadFeedStream(true); }
 blizkoRenderTradeBell(db, currentUser.id, 'trade-bell-badge');
 if (typeof window.callModule !== 'undefined' && window.callModule.initGlobalCallListener) {
 window.callModule.initCallModule(db, currentUser.id);
@@ -759,6 +1348,7 @@ var { error } = await db.from('posts').delete().eq('id', currentViewedPostId);
 if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
 closeModal();
 await loadFeed();
+if (viewMode === 'feed') loadFeedStream(true);
 }
 
 function closeModal() { document.getElementById('view-modal').classList.remove('show'); }
@@ -808,46 +1398,79 @@ document.getElementById('upload-modal').classList.add('show');
 
 function closeUpload() {
 document.getElementById('upload-modal').classList.remove('show');
-pendingPhotoUrl = null;
-pendingMediaType = 'photo';
-document.getElementById('photo-pick').innerHTML = '<div class="pick-hint">📷</div><div class="pick-text">' + BlizkoTheme.getText('tap_to_select') + '</div>';
+pendingMediaFiles = [];
 document.getElementById('caption-input').value = '';
 document.getElementById('publish-btn').disabled = true;
 document.getElementById('upload-bar').style.width = '0%';
+setPostType('photo');
+renderMediaThumbs();
+}
+
+function renderMediaThumbs() {
+var wrap = document.getElementById('photo-pick-multi');
+var hintEl = document.getElementById('photo-pick-hint-text');
+if (!wrap) return;
+wrap.innerHTML = '';
+pendingMediaFiles.forEach(function(m, idx) {
+var thumb = document.createElement('div');
+thumb.className = 'photo-pick-thumb';
+thumb.innerHTML = (m.type === 'video' ? '<video src="' + m.url + '" muted></video>' : '<img src="' + m.url + '">') +
+'<button class="thumb-del" onclick="removePendingMedia(' + idx + ')">✕</button>';
+wrap.appendChild(thumb);
+});
+if (pendingMediaFiles.length < MAX_CAROUSEL_ITEMS) {
+var addBtn = document.createElement('div');
+addBtn.className = 'photo-pick-add';
+addBtn.id = 'photo-pick-add';
+addBtn.textContent = '📷';
+addBtn.onclick = function() { document.getElementById('post-file').click(); };
+wrap.appendChild(addBtn);
+}
+if (hintEl) hintEl.style.display = pendingMediaFiles.length > 0 ? 'none' : 'block';
+if (currentPostType === 'photo') {
+document.getElementById('publish-btn').disabled = pendingMediaFiles.length === 0;
+}
+}
+
+function removePendingMedia(idx) {
+pendingMediaFiles.splice(idx, 1);
+renderMediaThumbs();
 }
 
 async function handlePostPhoto(input) {
-var file = input.files[0];
-if (!file) return;
-var isVideo = file.type.startsWith('video');
-pendingMediaType = isVideo ? 'video' : 'photo';
-if (isVideo && file.size > 30 * 1024 * 1024) { alert(BlizkoTheme.getLang() === 'en' ? 'Video must be under 30MB' : 'Видео не более 30MB'); return; }
-if (!isVideo && file.size > 10 * 1024 * 1024) { alert(BlizkoTheme.getText('photo_size_limit')); return; }
-var reader = new FileReader();
-reader.onload = function(e) {
-if (isVideo) {
-document.getElementById('photo-pick').innerHTML = '<video src="' + e.target.result + '" muted style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover"></video>';
-} else {
-document.getElementById('photo-pick').innerHTML = '<img src="' + e.target.result + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover">';
+var files = Array.from(input.files || []);
+if (files.length === 0) return;
+if (pendingMediaFiles.length + files.length > MAX_CAROUSEL_ITEMS) {
+alert(BlizkoTheme.getLang() === 'en'
+? 'Max ' + MAX_CAROUSEL_ITEMS + ' items per post'
+: 'Максимум ' + MAX_CAROUSEL_ITEMS + ' файлов в одном посте');
+files = files.slice(0, MAX_CAROUSEL_ITEMS - pendingMediaFiles.length);
 }
-};
-reader.readAsDataURL(file);
 document.getElementById('upload-progress').style.display = 'block';
-document.getElementById('upload-bar').style.width = '30%';
+for (var i = 0; i < files.length; i++) {
+var file = files[i];
+var isVideo = file.type.startsWith('video');
+if (isVideo && file.size > 30 * 1024 * 1024) { alert(BlizkoTheme.getLang() === 'en' ? 'Video must be under 30MB' : 'Видео не более 30MB'); continue; }
+if (!isVideo && file.size > 10 * 1024 * 1024) { alert(BlizkoTheme.getText('photo_size_limit')); continue; }
+document.getElementById('upload-bar').style.width = Math.round((i / files.length) * 90) + '%';
 var ext = file.name.split('.').pop();
-var fileName = 'posts/' + currentUser.id + '_' + Date.now() + '.' + ext;
+var fileName = 'posts/' + currentUser.id + '_' + Date.now() + '_' + i + '.' + ext;
 try {
 var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
-document.getElementById('upload-bar').style.width = '100%';
-setTimeout(function() { document.getElementById('upload-progress').style.display = 'none'; }, 600);
-if (r.error) { alert(BlizkoTheme.getText('upload_error_prefix') + r.error.message); return; }
-pendingPhotoUrl = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-document.getElementById('publish-btn').disabled = false;
+if (r.error) { alert(BlizkoTheme.getText('upload_error_prefix') + r.error.message); continue; }
+var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+pendingMediaFiles.push({ url: url, type: isVideo ? 'video' : 'photo' });
 } catch (e) {
-document.getElementById('upload-progress').style.display = 'none';
-document.getElementById('upload-bar').style.width = '0%';
 alert(BlizkoTheme.getText('upload_fail_alert') + '\n\n' + (e && e.message ? e.message : e));
 }
+}
+document.getElementById('upload-bar').style.width = '100%';
+setTimeout(function() {
+document.getElementById('upload-progress').style.display = 'none';
+document.getElementById('upload-bar').style.width = '0%';
+}, 500);
+renderMediaThumbs();
+input.value = '';
 }
 
 async function checkModerationOrAlert(photoUrl, mediaType) {
@@ -869,17 +1492,68 @@ return true;
 }
 }
 
+function setPostType(type) {
+currentPostType = type;
+document.getElementById('post-type-photo-btn').classList.toggle('active', type === 'photo');
+document.getElementById('post-type-text-btn').classList.toggle('active', type === 'text');
+document.getElementById('photo-pick-multi').style.display = type === 'photo' ? 'flex' : 'none';
+var hintEl = document.getElementById('photo-pick-hint-text');
+if (type === 'text') {
+pendingMediaFiles = [];
+if (hintEl) hintEl.style.display = 'none';
+document.getElementById('publish-btn').disabled = false;
+} else {
+if (hintEl) hintEl.style.display = pendingMediaFiles.length > 0 ? 'none' : 'block';
+document.getElementById('publish-btn').disabled = pendingMediaFiles.length === 0;
+}
+}
+
 async function publishPost() {
-if (!pendingPhotoUrl) return;
+if (currentPostType === 'photo' && pendingMediaFiles.length === 0) return;
 if (!myProfileComplete) {
 alert(BlizkoTheme.getLang() === 'en' ? 'Fill in your profile first to publish posts.' : 'Сначала заполни анкету, чтобы публиковать посты.');
 return;
 }
 var caption = document.getElementById('caption-input').value.trim();
+if (currentPostType === 'text' && !caption) {
+alert(BlizkoTheme.getLang() === 'en' ? 'Write something first.' : 'Сначала напиши что-нибудь.');
+return;
+}
 var btn = document.getElementById('publish-btn');
 btn.disabled = true; btn.textContent = '...';
-var passedModeration = await checkModerationOrAlert(pendingPhotoUrl, pendingMediaType);
-if (!passedModeration) { btn.disabled = false; btn.textContent = BlizkoTheme.getText('publish'); return; }
+
+if (currentPostType === 'text') {
+// Текстовый пост: photo_url и media_type — null, только caption.
+// ВАЖНО: колонка posts.photo_url должна допускать NULL в базе (ALTER TABLE
+// posts ALTER COLUMN photo_url DROP NOT NULL), иначе вставка вернёт ошибку.
+var { error: textErr } = await db.from('posts').insert({
+user_id: currentUser.id,
+photo_url: null,
+caption: caption,
+media_type: null,
+profile_photo_id: null,
+visible_in_feed: true
+});
+if (textErr) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + textErr.message); btn.disabled = false; btn.textContent = BlizkoTheme.getText('publish'); return; }
+closeUpload();
+await loadFeed();
+if (viewMode === 'feed') loadFeedStream(true);
+notifyPostSubscribers();
+return;
+}
+
+// Модерация КАЖДОГО файла карусели отдельно — если хоть один не проходит,
+// публикация целиком отменяется (частичная карусель без одного слайда была бы
+// хуже, чем явная ошибка с просьбой убрать проблемный файл).
+for (var i = 0; i < pendingMediaFiles.length; i++) {
+var m = pendingMediaFiles[i];
+var passed = await checkModerationOrAlert(m.url, m.type);
+if (!passed) { btn.disabled = false; btn.textContent = BlizkoTheme.getText('publish'); return; }
+}
+
+var mainMedia = pendingMediaFiles[0];
+var extraMedia = pendingMediaFiles.slice(1); // остальные фото/видео карусели → posts.extra_media (jsonb)
+
 var profilePhotoId = null;
 var { count: galleryCount } = await db.from('profile_photos')
 .select('id', { count: 'exact', head: true })
@@ -887,23 +1561,25 @@ var { count: galleryCount } = await db.from('profile_photos')
 if ((galleryCount || 0) < 9) {
 var { data: profPhoto, error: profErr } = await db.from('profile_photos').insert({
 user_id: currentUser.id,
-photo_url: pendingPhotoUrl,
-media_type: pendingMediaType,
+photo_url: mainMedia.url,
+media_type: mainMedia.type,
 position: galleryCount || 0
 }).select().single();
 if (!profErr && profPhoto) profilePhotoId = profPhoto.id;
 }
 var { error } = await db.from('posts').insert({
 user_id: currentUser.id,
-photo_url: pendingPhotoUrl,
+photo_url: mainMedia.url,
 caption: caption,
-media_type: pendingMediaType,
+media_type: mainMedia.type,
 profile_photo_id: profilePhotoId,
-visible_in_feed: true
+visible_in_feed: true,
+extra_media: extraMedia
 });
 if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); btn.disabled = false; btn.textContent = BlizkoTheme.getText('publish'); return; }
 closeUpload();
 await loadFeed();
+if (viewMode === 'feed') loadFeedStream(true);
 notifyPostSubscribers();
 if (!profilePhotoId) {
 setTimeout(function() {
