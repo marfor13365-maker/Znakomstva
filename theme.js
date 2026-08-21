@@ -238,7 +238,13 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     send_btn: 'Отправить',
     error_loading_short: 'Ошибка загрузки',
     upload_error_prefix: 'Ошибка загрузки: ',
-    upload_fail_alert: 'Не удалось загрузить файл (обрыв соединения или файл слишком большой).'
+    upload_fail_alert: 'Не удалось загрузить файл (обрыв соединения или файл слишком большой).',
+    // ---- добавлено: страница "Кто меня лайкнул" ----
+    likes_page_title: 'Кто меня лайкнул',
+    no_likes_yet: 'Пока никто не лайкнул.\nЗаполни профиль и добавь фото —\nтебя будут находить чаще!',
+    mutual_like_tag: '✓ Взаимный лайк',
+    like_back_btn: '❤️ Лайкнуть в ответ',
+    skip_plain: 'Пропустить'
   };
 
   var LANG_EN = {
@@ -460,7 +466,13 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     send_btn: 'Send',
     error_loading_short: 'Error loading',
     upload_error_prefix: 'Upload error: ',
-    upload_fail_alert: 'Failed to upload the file (connection issue or file too large).'
+    upload_fail_alert: 'Failed to upload the file (connection issue or file too large).',
+    // ---- добавлено: страница "Кто меня лайкнул" ----
+    likes_page_title: 'Who liked me',
+    no_likes_yet: 'No likes yet.\nFill in your profile and add photos —\nyou\'ll be found more often!',
+    mutual_like_tag: '✓ Mutual like',
+    like_back_btn: '❤️ Like back',
+    skip_plain: 'Skip'
   };
 
   function getLang() {
