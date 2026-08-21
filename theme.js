@@ -244,7 +244,29 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     no_likes_yet: 'Пока никто не лайкнул.\nЗаполни профиль и добавь фото —\nтебя будут находить чаще!',
     mutual_like_tag: '✓ Взаимный лайк',
     like_back_btn: '❤️ Лайкнуть в ответ',
-    skip_plain: 'Пропустить'
+    skip_plain: 'Пропустить',
+    // ---- добавлено: страница просмотра чужой анкеты (view-profile.html) ----
+    about: 'О себе',
+    gallery: 'Галерея',
+    delete_match: '🗑 Удалить матч',
+    extra_label: 'Дополнительно',
+    field_match_tag: '✨ Совпадение',
+    no_bio: 'Пользователь ничего не написал о себе',
+    gallery_empty: 'Галерея пуста',
+    gallery_locked_none: 'Пользователь закрыл галерею для всех.',
+    gallery_locked_matches: 'Галерея доступна только мэтчам.',
+    config_error: '❌ Ошибка: config.js не загружен.',
+    profile_not_found_full: '⚠️ Анкета не найдена',
+    loading_error_prefix: '⚠️ Ошибка загрузки: ',
+    chat_deleted: 'Чат удалён.',
+    delete_error_prefix: 'Ошибка при удалении: ',
+    qr_title_other: 'QR-код анкеты',
+    trade_product_buy_label: 'Товар — хочет купить',
+    trade_product_sell_label: 'Товар — хочет продать',
+    trade_service_seek_label: 'Услуга — ищет',
+    trade_service_offer_label: 'Услуга — предлагает',
+    trade_job_seek_label: 'Работа — ищет',
+    trade_job_offer_label: 'Вакансия — предлагает'
   };
 
   var LANG_EN = {
@@ -472,7 +494,29 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     no_likes_yet: 'No likes yet.\nFill in your profile and add photos —\nyou\'ll be found more often!',
     mutual_like_tag: '✓ Mutual like',
     like_back_btn: '❤️ Like back',
-    skip_plain: 'Skip'
+    skip_plain: 'Skip',
+    // ---- добавлено: страница просмотра чужой анкеты (view-profile.html) ----
+    about: 'About',
+    gallery: 'Gallery',
+    delete_match: '🗑 Delete match',
+    extra_label: 'Additional',
+    field_match_tag: '✨ Match',
+    no_bio: "This user hasn't written anything about themselves",
+    gallery_empty: 'Gallery is empty',
+    gallery_locked_none: 'This user has closed their gallery to everyone.',
+    gallery_locked_matches: 'Gallery is only available for matches.',
+    config_error: '❌ Error: config.js failed to load.',
+    profile_not_found_full: '⚠️ Profile not found',
+    loading_error_prefix: '⚠️ Error loading: ',
+    chat_deleted: 'Chat deleted.',
+    delete_error_prefix: 'Error while deleting: ',
+    qr_title_other: 'Profile QR code',
+    trade_product_buy_label: 'Product — wants to buy',
+    trade_product_sell_label: 'Product — wants to sell',
+    trade_service_seek_label: 'Service — looking for',
+    trade_service_offer_label: 'Service — offers',
+    trade_job_seek_label: 'Job — looking for',
+    trade_job_offer_label: 'Job opening — offers'
   };
 
   function getLang() {
