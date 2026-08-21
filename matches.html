@@ -44,22 +44,22 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <div class="nav-menu-wrap">
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
-<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
-<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 Лента</button>
-<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 Знакомства</button>
-<button class="nav-menu-item" onclick="location.href='likes.html'">💖 Лайки</button>
-<button class="nav-menu-item current" onclick="location.href='matches.html'">💬 Чаты</button>
-<button class="nav-menu-item" onclick="location.href='profile.html'">👤 Профиль</button>
+<button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
+<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
+<button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
+<button class="nav-menu-item current" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
+<button class="nav-menu-item" onclick="location.href='profile.html'">👤 <span data-i18n="profile">Профиль</span></button>
 </div>
 </div>
-<div class="page-title">Матчи</div>
+<div class="page-title" data-i18n="matches">Матчи</div>
 </div>
 <div class="search-wrap">
-<input type="text" id="user-search-input" placeholder="Поиск по нику, например &ivan482" oninput="onSearchInput()">
+<input type="text" id="user-search-input" placeholder="Поиск по нику, например &ivan482" oninput="onSearchInput()" data-i18n-placeholder="search_username_placeholder">
 </div>
 <div id="search-results" style="display:none"></div>
 <div class="list" id="list-wrap">
-<div class="loading">⏳ Загрузка...</div>
+<div class="loading">⏳ <span data-i18n="loading_users">Загрузка...</span></div>
 </div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
@@ -87,7 +87,7 @@ var resultsEl = document.getElementById('search-results');
 var listEl = document.getElementById('list-wrap');
 listEl.style.display = 'none';
 resultsEl.style.display = 'block';
-resultsEl.innerHTML = '<div class="loading">⏳ Ищем...</div>';
+resultsEl.innerHTML = '<div class="loading">' + BlizkoTheme.getText('searching') + '</div>';
 var { data, error } = await db.from('profiles')
 .select('id, name, age, username, photo_url, city')
 .ilike('username', q + '%')
@@ -95,11 +95,11 @@ var { data, error } = await db.from('profiles')
 .limit(20);
 if (error) {
 console.error('Ошибка поиска по нику:', error);
-resultsEl.innerHTML = '<div class="loading">Ошибка поиска</div>';
+resultsEl.innerHTML = '<div class="loading">' + BlizkoTheme.getText('search_error') + '</div>';
 return;
 }
 if (!data || data.length === 0) {
-resultsEl.innerHTML = '<div class="empty-state" style="padding:30px 20px"><div class="icon">🔍</div><p>Никого не нашлось по этому нику</p></div>';
+resultsEl.innerHTML = '<div class="empty-state" style="padding:30px 20px"><div class="icon">🔍</div><p>' + BlizkoTheme.getText('no_user_found') + '</p></div>';
 return;
 }
 resultsEl.innerHTML = '';
@@ -110,21 +110,19 @@ item.onclick = function() { openFoundProfile(p.id); };
 item.innerHTML =
 '<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
 '<div class="match-info">' +
-'<div class="match-name">' + (p.name || 'Пользователь') + (p.age ? ', ' + p.age : '') + '</div>' +
+'<div class="match-name">' + (p.name || BlizkoTheme.getText('you')) + (p.age ? ', ' + p.age : '') + '</div>' +
 '<div class="match-last username">&' + (p.username || '') + (p.city ? ' · ' + p.city : '') + '</div>' +
 '</div>';
 resultsEl.appendChild(item);
 });
 }
 
-// Та же логика приватности, что и при переходе из ленты — найти по нику не значит
-// автоматически получить доступ к закрытой анкете.
 async function openFoundProfile(userId) {
 var { data: profile } = await db.from('profiles').select('profile_visibility').eq('id', userId).single();
-if (!profile) { alert('Профиль не найден'); return; }
+if (!profile) { alert(BlizkoTheme.getText('profile_not_found')); return; }
 var visibility = profile.profile_visibility || 'matches';
 if (visibility === 'none') {
-alert('🔒 Этот пользователь закрыл свою анкету для всех.');
+alert(BlizkoTheme.getText('profile_locked'));
 return;
 }
 if (visibility === 'matches') {
@@ -132,7 +130,7 @@ var { data: match } = await db.from('matches').select('id')
 .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + userId + '),and(user1.eq.' + userId + ',user2.eq.' + currentUser.id + ')')
 .maybeSingle();
 if (!match) {
-alert('🔒 Анкета доступна только для мэтчей. Лайкни этого пользователя, чтобы открыть анкету.');
+alert(BlizkoTheme.getText('profile_match_only'));
 return;
 }
 }
@@ -172,9 +170,9 @@ if (!r.data.session) {
 wrap.innerHTML =
 '<div class="empty-state" style="padding:60px 20px;">' +
 '<div class="icon">🔒</div>' +
-'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
-'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
-'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'login.html\'">Войти</button>' +
+'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">' + BlizkoTheme.getText('session_expired') + '</p>' +
+'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">' + BlizkoTheme.getText('please_login_again') + '</p>' +
+'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'login.html\'">' + BlizkoTheme.getText('login') + '</button>' +
 '</div>';
 return;
 }
@@ -188,9 +186,9 @@ var { data: matches, error } = await db.from('matches')
 .select('*')
 .or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id)
 .order('created_at', { ascending: false });
-if (error) { console.error(error); wrap.innerHTML = '<div class="loading">Ошибка загрузки</div>'; return; }
+if (error) { console.error(error); wrap.innerHTML = '<div class="loading">' + BlizkoTheme.getText('error_loading_short') + '</div>'; return; }
 if (!matches || matches.length === 0) {
-wrap.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>Пока нет матчей.<br>Лайкни кого-нибудь в Знакомствах!</p></div>';
+wrap.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>' + BlizkoTheme.getText('no_matches_yet').replace(/\n/g,'<br>') + '</p></div>';
 return;
 }
 wrap.innerHTML = '';
@@ -201,7 +199,6 @@ var { data: profile } = await db.from('profiles').select('name, photo_url').eq('
 var p = profile || {};
 var item = document.createElement('div');
 item.className = 'match-item';
-// При тапе — переход в чат с этим матчем
 item.onclick = (function(mid) {
 return function() {
 window.location.href = 'chat.html?match=' + mid;
@@ -210,8 +207,8 @@ window.location.href = 'chat.html?match=' + mid;
 item.innerHTML =
 '<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
 '<div class="match-info">' +
-'<div class="match-name">' + (p.name || 'Пользователь') + '</div>' +
-'<div class="match-last">Нажмите, чтобы открыть чат</div>' +
+'<div class="match-name">' + (p.name || BlizkoTheme.getText('you')) + '</div>' +
+'<div class="match-last">' + BlizkoTheme.getText('tap_to_open_chat') + '</div>' +
 '</div>';
 wrap.appendChild(item);
 }
