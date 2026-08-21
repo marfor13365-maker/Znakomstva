@@ -112,12 +112,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <div class="nav-menu-wrap">
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
-<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
-<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 Лента</button>
-<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 Знакомства</button>
-<button class="nav-menu-item" onclick="location.href='likes.html'">💖 Лайки</button>
-<button class="nav-menu-item" onclick="location.href='matches.html'">💬 Чаты</button>
-<button class="nav-menu-item" onclick="location.href='profile.html'">👤 Профиль</button>
+<button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
+<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
+<button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
+<button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
+<button class="nav-menu-item" onclick="location.href='profile.html'">👤 <span data-i18n="profile">Профиль</span></button>
 </div>
 </div>
 <div class="page-title" data-i18n="profile">Анкета</div>
@@ -126,7 +126,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 </div>
 <div class="content" id="content">
-<div class="loading">⏳ Загрузка...</div>
+<div class="loading">⏳ <span data-i18n="loading">Загрузка...</span></div>
 </div>
 <div class="viewer-overlay" id="viewer-overlay">
 <button class="viewer-close" onclick="closeViewer()">✕</button>
@@ -143,38 +143,37 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <button class="like-btn" id="gallery-like-btn" onclick="toggleGalleryPostLike()">🤍 <span id="gallery-like-count">0</span></button>
 </div>
 <div class="comments-section">
-<div class="comments-title">Комментарии</div>
+<div class="comments-title" data-i18n="comments">Комментарии</div>
 <div id="gallery-comments-list"></div>
 <div class="comment-input-row" id="gallery-comment-input-row">
-<input type="text" id="gallery-comment-input" placeholder="Написать комментарий..." maxlength="300">
+<input type="text" id="gallery-comment-input" placeholder="Написать комментарий..." maxlength="300" data-i18n-placeholder="write_comment">
 <button onclick="sendGalleryComment()">➤</button>
 </div>
-<div class="comments-disabled-msg" id="gallery-comments-disabled-msg" style="display:none">Комментарии отключены автором</div>
+<div class="comments-disabled-msg" id="gallery-comments-disabled-msg" style="display:none" data-i18n="comments_disabled">Комментарии отключены автором</div>
 </div>
 </div>
 </div>
 </div>
 <div class="qr-modal" id="target-qr-modal">
 <div class="qr-modal-inner">
-<div class="qr-title">QR-код анкеты</div>
+<div class="qr-title" data-i18n="qr_title_other">QR-код анкеты</div>
 <div class="loading" id="target-qr-loading" style="padding:20px 0">⏳ Генерируем...</div>
-<img id="target-qr-img" src="" alt="QR-код" style="display:none" onload="document.getElementById('target-qr-loading').style.display='none';this.style.display='block'" onerror="document.getElementById('target-qr-loading').textContent='⚠️ Не удалось создать QR-код'">
+<img id="target-qr-img" src="" alt="QR-код" style="display:none" onload="document.getElementById('target-qr-loading').style.display='none';this.style.display='block'" onerror="document.getElementById('target-qr-loading').textContent=BlizkoTheme.getText('qr_error')">
 <div class="qr-username" id="target-qr-username-text"></div>
 <div class="qr-actions">
-<button class="btn" style="background:var(--accent);border:none;color:white;padding:12px;border-radius:12px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer" onclick="copyTargetProfileLink()">🔗 Скопировать ссылку</button>
-<button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:12px;border-radius:12px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer" onclick="closeTargetQrModal()">Закрыть</button>
+<button class="btn" style="background:var(--accent);border:none;color:white;padding:12px;border-radius:12px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer" onclick="copyTargetProfileLink()" data-i18n="qr_copy_link">🔗 Скопировать ссылку</button>
+<button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:12px;border-radius:12px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer" onclick="closeTargetQrModal()" data-i18n="qr_close">Закрыть</button>
 </div>
 </div>
 </div>
 <script src="theme.js"></script>
 <script src="trade-match.js"></script>
 <script src="config.js"></script>
-<script src="trade-match.js"></script>
 <script src="photo-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
-document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">❌ Ошибка: config.js не загружен.</div>';
+document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">' + BlizkoTheme.getText('config_error') + '</div>';
 } else {
 var db = createBlizkoClient();
 var currentUser = null;
@@ -190,10 +189,10 @@ if (!currentTargetUsername) return;
 var text = '&' + currentTargetUsername;
 if (navigator.clipboard) {
 navigator.clipboard.writeText(text).then(function() {
-alert('Никнейм скопирован: ' + text);
-}).catch(function() { prompt('Скопируй никнейм:', text); });
+alert((BlizkoTheme.getLang() === 'en' ? 'Username copied: ' : 'Никнейм скопирован: ') + text);
+}).catch(function() { prompt(BlizkoTheme.getLang() === 'en' ? 'Copy the username:' : 'Скопируй никнейм:', text); });
 } else {
-prompt('Скопируй никнейм:', text);
+prompt(BlizkoTheme.getLang() === 'en' ? 'Copy the username:' : 'Скопируй никнейм:', text);
 }
 }
 
@@ -206,10 +205,10 @@ if (!currentTargetUsername) return;
 var url = getTargetProfileShareUrl();
 if (navigator.clipboard) {
 navigator.clipboard.writeText(url).then(function() {
-alert('Ссылка скопирована!');
-}).catch(function() { prompt('Скопируй ссылку:', url); });
+alert(BlizkoTheme.getLang() === 'en' ? 'Link copied!' : 'Ссылка скопирована!');
+}).catch(function() { prompt(BlizkoTheme.getLang() === 'en' ? 'Copy the link:' : 'Скопируй ссылку:', url); });
 } else {
-prompt('Скопируй ссылку:', url);
+prompt(BlizkoTheme.getLang() === 'en' ? 'Copy the link:' : 'Скопируй ссылку:', url);
 }
 }
 
@@ -220,7 +219,7 @@ var img = document.getElementById('target-qr-img');
 var loading = document.getElementById('target-qr-loading');
 img.style.display = 'none';
 loading.style.display = 'block';
-loading.textContent = '⏳ Генерируем...';
+loading.textContent = BlizkoTheme.getText('qr_generating');
 document.getElementById('target-qr-modal').classList.add('show');
 img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(getTargetProfileShareUrl());
 }
@@ -282,14 +281,14 @@ return data ? data.id : null;
 }
 
 window.deleteMatch = async function(matchId) {
-if (!confirm('Удалить этот чат? Все сообщения будут удалены.')) return;
+if (!confirm(BlizkoTheme.getText('confirm_delete_chat'))) return;
 try {
 await db.from('messages').delete().eq('match_id', matchId);
 await db.from('matches').delete().eq('id', matchId);
-alert('Чат удалён.');
+alert(BlizkoTheme.getText('chat_deleted'));
 window.location.href = 'matches.html';
 } catch(e) {
-alert('Ошибка при удалении: ' + e.message);
+alert(BlizkoTheme.getText('delete_error_prefix') + e.message);
 }
 };
 
@@ -303,7 +302,6 @@ return;
 currentUser = r.data.session.user;
 var targetId = getTargetUserId();
 if (!targetId) {
-// Ссылка вида view-profile.html?u=nickname (шаринг/QR-код) — сначала находим id по нику
 var usernameParam = getTargetUsername();
 if (usernameParam) {
 var { data: byUsername } = await db.from('profiles').select('id').eq('username', usernameParam).maybeSingle();
@@ -317,13 +315,12 @@ return;
 currentTargetId = targetId;
 var { data: profile, error } = await db.from('profiles').select('*').eq('id', targetId).single();
 if (error || !profile) {
-document.getElementById('content').innerHTML = '<div class="loading">⚠️ Анкета не найдена</div>';
+document.getElementById('content').innerHTML = '<div class="loading">' + BlizkoTheme.getText('profile_not_found_full') + '</div>';
 console.error('Ошибка загрузки профиля:', error);
 return;
 }
 currentMatchId = await getMatchId(targetId);
 
-// Подтягиваем СВОИ значения доп.полей, чтобы подсветить совпадения с этим профилем
 if (currentUser.id !== targetId) {
 var { data: myProfile } = await db.from('profiles').select('children_count, job, business, product_buy, product_sell, service_seek, service_offer, job_seek, job_offer').eq('id', currentUser.id).maybeSingle();
 myOwnExtra = myProfile || {};
@@ -331,17 +328,14 @@ myOwnExtra = myProfile || {};
 myOwnExtra = {};
 }
 
-// Владелец мог полностью закрыть анкету (не только галерею) — проверяем ДО рендера,
-// иначе прямая ссылка/QR обходили бы это ограничение в обход проверки, которая раньше
-// делалась только на странице-источнике (лента, поиск), а не тут.
 var isOwn = currentUser.id === profile.id;
 var pv = profile.profile_visibility || 'matches';
 if (!isOwn && pv === 'none') {
-document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>Пользователь закрыл анкету для всех.</p></div>';
+document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>' + BlizkoTheme.getText('profile_locked').replace('🔒 ', '') + '</p></div>';
 return;
 }
 if (!isOwn && pv === 'matches' && !currentMatchId) {
-document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>Анкета доступна только мэтчам. Лайкни пользователя, чтобы открыть её.</p></div>';
+document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>' + BlizkoTheme.getText('profile_match_only').replace('🔒 ', '') + '</p></div>';
 return;
 }
 
@@ -352,7 +346,7 @@ if (typeof BlizkoTheme.applyLang === 'function') BlizkoTheme.applyLang();
 }
 } catch(e) {
 console.error('Ошибка инициализации:', e);
-document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">⚠️ Ошибка загрузки: ' + e.message + '</div>';
+document.getElementById('content').innerHTML = '<div class="loading" style="color:var(--accent);">' + BlizkoTheme.getText('loading_error_prefix') + e.message + '</div>';
 }
 }
 
@@ -364,7 +358,7 @@ var html =
 '<div class="avatar-wrap">' +
 '<div class="avatar-circle">' + (profile.photo_url ? '<img src="' + profile.photo_url + '">' : '👤') + '</div>' +
 '</div>' +
-'<div class="profile-name">' + (profile.name || 'Пользователь') + (profile.age ? ', ' + profile.age : '') + '</div>' +
+'<div class="profile-name">' + (profile.name || BlizkoTheme.getText('you')) + (profile.age ? ', ' + profile.age : '') + '</div>' +
 '<div class="profile-meta">' + (profile.city ? '📍 ' + profile.city : '') + '</div>' +
 (profile.username ? '<div class="username-row"><span class="username-badge">&' + escapeHtml(profile.username) + '</span><button class="username-icon-btn" onclick="copyTargetUsername()" title="Скопировать">📋</button><button class="username-icon-btn" onclick="openTargetQrModal()" title="QR-код">▦</button></div>' : '') +
 '<div class="actions-row">';
@@ -376,16 +370,14 @@ html += '<button class="btn message-btn" onclick="window.location.href=\'matches
 }
 html += '</div></div>';
 html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text">' +
-(profile.about ? linkifyText(escapeHtml(profile.about)) : '<span style="color:var(--muted)">Пользователь ничего не написал о себе</span>') +
+(profile.about ? linkifyText(escapeHtml(profile.about)) : '<span style="color:var(--muted)" data-i18n="no_bio">Пользователь ничего не написал о себе</span>') +
 '</div></div>';
 var extraHtml = buildExtraFieldsHtml(profile);
 if (extraHtml) {
-html += '<div class="section"><div class="section-title">Дополнительно</div><div class="about-text extra-fields">' + extraHtml + '</div></div>';
+html += '<div class="section"><div class="section-title">' + BlizkoTheme.getText('extra_label') + '</div><div class="about-text extra-fields">' + extraHtml + '</div></div>';
 }
 html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
 
-// Владелец профиля решает, кому видна его галерея (посты в ленте — отдельная история,
-// это касается именно фото в профиле): "всем" / "только мэтчам" / "никому"
 var visibility = profile.posts_visibility || 'all';
 var isOwnProfile = currentUser.id === profile.id;
 var canSeeGallery = isOwnProfile || visibility === 'all' || (visibility === 'matches' && !!currentMatchId);
@@ -393,8 +385,8 @@ var canSeeGallery = isOwnProfile || visibility === 'all' || (visibility === 'mat
 if (!canSeeGallery) {
 html += '<div class="locked-state"><div class="icon">🔒</div><p>' +
 (visibility === 'none'
-? 'Пользователь закрыл галерею для всех.'
-: 'Галерея доступна только мэтчам.') +
+? BlizkoTheme.getText('gallery_locked_none')
+: BlizkoTheme.getText('gallery_locked_matches')) +
 '</p></div>';
 content.innerHTML = html;
 } else {
@@ -411,9 +403,6 @@ function escapeHtml(str) {
 return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Делает URL в тексте "О себе" кликабельными. Работает уже ПОСЛЕ escapeHtml —
-// это безопасно, т.к. HTML-сущности (&amp; и т.п.) браузер сам раскодирует
-// внутри href при разборе атрибута, ссылка соберётся корректно.
 function linkifyText(escapedText) {
 return escapedText.replace(/(https?:\/\/[^\s<]+)|(\bwww\.[^\s<]+)/gi, function(match) {
 var trail = '';
@@ -424,18 +413,22 @@ return '<a href="' + href + '" target="_blank" rel="noopener noreferrer" style="
 });
 }
 
-var CHILDREN_LABELS = { '0': 'Нет детей', '1': '1 ребёнок', '2': '2 ребёнка', '3+': '3 и больше' };
+function getChildrenLabel(val) {
+var map = {
+'0': BlizkoTheme.getText('no_children'),
+'1': BlizkoTheme.getText('child_1'),
+'2': BlizkoTheme.getText('child_2'),
+'3+': BlizkoTheme.getText('child_3plus')
+};
+return map[val] || val;
+}
 
-// fuzzyEq теперь в trade-match.js (blizkoFuzzyEq) — общая для всех страниц.
-// Собирает HTML для необязательных полей. Дети/работа/бизнес сравниваются "как есть"
-// (совпадение = у обоих одно и то же значение). Товар и услуга сравниваются НАКРЕСТ:
-// то, что ты ищешь/хочешь купить — с тем, что человек предлагает/продаёт, и наоборот.
 function buildExtraFieldsHtml(profile) {
 var html = '';
 var plainRows = [
-{ key: 'children_count', label: 'Дети', display: profile.children_count ? (CHILDREN_LABELS[profile.children_count] || profile.children_count) : null },
-{ key: 'job', label: 'Работа', display: profile.job || null },
-{ key: 'business', label: 'Бизнес', display: profile.business || null }
+{ key: 'children_count', label: BlizkoTheme.getText('children_label'), display: profile.children_count ? getChildrenLabel(profile.children_count) : null },
+{ key: 'job', label: BlizkoTheme.getText('job_label'), display: profile.job || null },
+{ key: 'business', label: BlizkoTheme.getText('business_label'), display: profile.business || null }
 ];
 plainRows.forEach(function(row) {
 if (!row.display) return;
@@ -444,7 +437,7 @@ var isMatch = myVal && profile[row.key] && String(myVal).trim().toLowerCase() ==
 html += '<div class="extra-field-row">' +
 '<span class="extra-field-label">' + row.label + ':</span> ' +
 '<span class="extra-field-value">' + escapeHtml(row.display) + '</span>' +
-(isMatch ? '<span class="extra-field-match">✨ Совпадение</span>' : '') +
+(isMatch ? '<span class="extra-field-match">' + BlizkoTheme.getText('field_match_tag') + '</span>' : '') +
 '</div>';
 });
 
@@ -453,17 +446,17 @@ if (!value) return '';
 return '<div class="extra-field-row">' +
 '<span class="extra-field-label">' + label + ':</span> ' +
 '<span class="extra-field-value">' + escapeHtml(value) + '</span>' +
-(matched ? '<span class="extra-field-match">✨ Совпадение</span>' : '') +
+(matched ? '<span class="extra-field-match">' + BlizkoTheme.getText('field_match_tag') + '</span>' : '') +
 '</div>';
 }
 
 var myExtra = myOwnExtra || {};
-html += tradeRow('Товар — хочет купить', profile.product_buy, blizkoFuzzyEq(profile.product_buy, myExtra.product_sell));
-html += tradeRow('Товар — хочет продать', profile.product_sell, blizkoFuzzyEq(profile.product_sell, myExtra.product_buy));
-html += tradeRow('Услуга — ищет', profile.service_seek, blizkoFuzzyEq(profile.service_seek, myExtra.service_offer));
-html += tradeRow('Услуга — предлагает', profile.service_offer, blizkoFuzzyEq(profile.service_offer, myExtra.service_seek));
-html += tradeRow('Работа — ищет', profile.job_seek, blizkoFuzzyEq(profile.job_seek, myExtra.job_offer));
-html += tradeRow('Вакансия — предлагает', profile.job_offer, blizkoFuzzyEq(profile.job_offer, myExtra.job_seek));
+html += tradeRow(BlizkoTheme.getText('trade_product_buy_label'), profile.product_buy, blizkoFuzzyEq(profile.product_buy, myExtra.product_sell));
+html += tradeRow(BlizkoTheme.getText('trade_product_sell_label'), profile.product_sell, blizkoFuzzyEq(profile.product_sell, myExtra.product_buy));
+html += tradeRow(BlizkoTheme.getText('trade_service_seek_label'), profile.service_seek, blizkoFuzzyEq(profile.service_seek, myExtra.service_offer));
+html += tradeRow(BlizkoTheme.getText('trade_service_offer_label'), profile.service_offer, blizkoFuzzyEq(profile.service_offer, myExtra.service_seek));
+html += tradeRow(BlizkoTheme.getText('trade_job_seek_label'), profile.job_seek, blizkoFuzzyEq(profile.job_seek, myExtra.job_offer));
+html += tradeRow(BlizkoTheme.getText('trade_job_offer_label'), profile.job_offer, blizkoFuzzyEq(profile.job_offer, myExtra.job_seek));
 
 return html;
 }
@@ -475,14 +468,12 @@ galleryItems = data || [];
 var grid = document.getElementById('gallery-grid');
 if (!grid) return;
 if (galleryItems.length === 0) {
-grid.innerHTML = '<div style="padding:0 4px;color:var(--muted);font-size:13px">Галерея пуста</div>';
+grid.innerHTML = '<div style="padding:0 4px;color:var(--muted);font-size:13px">' + BlizkoTheme.getText('gallery_empty') + '</div>';
 return;
 }
 
 var photoIds = galleryItems.map(function(p) { return p.id; });
 
-// У каждого фото в галерее есть связанный пост (создаётся автоматически при добавлении
-// фото — виден в ленте или скрыт), именно в нём хранятся общие лайки и комментарии
 galleryPostMap = {};
 try {
 var { data: linkedPosts } = await db.from('posts').select('*').eq('user_id', targetId).in('profile_photo_id', photoIds);
@@ -563,8 +554,6 @@ footer.style.display = 'block';
 loadGalleryPostLikes(linkedPost.id);
 loadGalleryComments(linkedPost.id, linkedPost.comments_enabled !== false, linkedPost.user_id === currentUser.id);
 } else {
-// На случай если у фото почему-то ещё нет связанного поста (например, добавлено
-// до применения миграции) — просто скрываем блок реакций для этого фото
 currentGalleryPostId = null;
 footer.style.display = 'none';
 }
@@ -636,11 +625,11 @@ var { data: comments, error: cErr } = await db.from('post_comments')
 .order('created_at', { ascending: true });
 if (cErr) {
 console.error('loadGalleryComments error:', cErr);
-list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Ошибка загрузки комментариев</div>';
+list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">' + BlizkoTheme.getText('error_loading_short') + '</div>';
 return;
 }
 if (!comments || comments.length === 0) {
-list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Пока нет комментариев</div>';
+list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">' + BlizkoTheme.getText('no_comments') + '</div>';
 return;
 }
 var userIds = [];
@@ -654,7 +643,7 @@ list.innerHTML = '';
 comments.forEach(function(c) {
 var cp = profilesMap[c.user_id] || {};
 var canDelete = c.user_id === currentUser.id || isOwner;
-var cName = cp.name || 'Пользователь';
+var cName = cp.name || BlizkoTheme.getText('you');
 var cInitials = cName.charAt(0).toUpperCase();
 var item = document.createElement('div');
 item.className = 'comment-item';
@@ -678,16 +667,16 @@ var input = document.getElementById('gallery-comment-input');
 var text = input.value.trim();
 if (!text || !currentGalleryPostId) return;
 var { error } = await db.from('post_comments').insert({ post_id: currentGalleryPostId, user_id: currentUser.id, text: text });
-if (error) { alert('Ошибка: ' + error.message); return; }
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
 input.value = '';
 var linkedPost = currentLinkedPost();
 loadGalleryComments(currentGalleryPostId, linkedPost ? linkedPost.comments_enabled !== false : true, linkedPost ? linkedPost.user_id === currentUser.id : false);
 };
 
 window.deleteGalleryComment = async function(commentId) {
-if (!confirm('Удалить комментарий?')) return;
+if (!confirm(BlizkoTheme.getLang() === 'en' ? 'Delete comment?' : 'Удалить комментарий?')) return;
 var { error } = await db.from('post_comments').delete().eq('id', commentId);
-if (error) { alert('Ошибка удаления: ' + error.message); return; }
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
 var linkedPost = currentLinkedPost();
 loadGalleryComments(currentGalleryPostId, linkedPost ? linkedPost.comments_enabled !== false : true, linkedPost ? linkedPost.user_id === currentUser.id : false);
 };
