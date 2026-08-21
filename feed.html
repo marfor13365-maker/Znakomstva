@@ -18,7 +18,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .add-btn:active{opacity:0.7}
 .bell-btn{position:relative;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.5)}
 .bell-btn:active{opacity:0.8}
-.bell-btn:active{opacity:0.8}
 .bell-badge{position:absolute;top:-4px;right:-4px;background:#ffd23f;color:#1a1400;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg)}
 .nav-menu-wrap{position:relative}
 .hamburger-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);flex-shrink:0}
@@ -139,12 +138,12 @@ input[type="file"]{display:none}
 <div class="nav-menu-wrap">
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
-<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
-<button class="nav-menu-item current" onclick="location.href='feed.html'">🏠 Лента</button>
-<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 Знакомства</button>
-<button class="nav-menu-item" onclick="location.href='likes.html'">💖 Лайки</button>
-<button class="nav-menu-item" onclick="location.href='matches.html'">💬 Чаты</button>
-<button class="nav-menu-item" onclick="location.href='profile.html'">👤 Профиль</button>
+<button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
+<button class="nav-menu-item current" onclick="location.href='feed.html'">🏠 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
+<button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
+<button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
+<button class="nav-menu-item" onclick="location.href='profile.html'">👤 <span data-i18n="profile">Профиль</span></button>
 </div>
 </div>
 <div class="brand">
@@ -171,7 +170,7 @@ input[type="file"]{display:none}
 </div>
 </div>
 <div id="grid-wrap">
-<div class="loading">⏳ Загрузка...</div>
+<div class="loading">⏳ <span data-i18n="loading">Загрузка...</span></div>
 </div>
 <!-- Просмотр фото -->
 <div class="modal" id="view-modal">
@@ -184,7 +183,7 @@ input[type="file"]{display:none}
 <div class="modal-city" id="modal-city"></div>
 </div>
 </div>
-<button class="follow-btn" id="follow-btn" onclick="toggleFollow()" style="display:none">Подписаться</button>
+<button class="follow-btn" id="follow-btn" onclick="toggleFollow()" style="display:none" data-i18n="follow">Подписаться</button>
 </div>
 <div class="modal-photo" id="modal-photo-wrap"><img id="modal-img" src="" alt=""><video id="modal-video" src="" controls playsinline style="display:none;max-width:100%;max-height:100%" onerror="console.error('Видео не загрузилось:', this.src, this.error)"></video><div class="immersive-caption-overlay" id="immersive-caption-overlay"></div></div>
 <div class="modal-footer" id="modal-footer">
@@ -193,34 +192,34 @@ input[type="file"]{display:none}
 </div>
 <div class="modal-caption" id="modal-caption"></div>
 <div class="modal-time" id="modal-time"></div>
-<div class="modal-views" id="modal-views">👁 <span id="views-count">0</span></div>
-<button class="profile-link-btn-bottom" id="profile-link-bottom" onclick="openUserProfile()">👤 Открыть анкету</button>
-<button class="match-btn" id="match-btn" onclick="openMatchSheet()">❤️ Match</button>
-<div class="match-sent" id="match-sent" style="display:none">✓ Лайк отправлен</div>
+<div class="modal-views">👁 <span id="views-count">0</span></div>
+<button class="profile-link-btn-bottom" id="profile-link-bottom" onclick="openUserProfile()" data-i18n="open_profile">👤 Открыть анкету</button>
+<button class="match-btn" id="match-btn" onclick="openMatchSheet()" data-i18n="match">❤️ Match</button>
+<div class="match-sent" id="match-sent" style="display:none" data-i18n="like_sent">✓ Лайк отправлен</div>
 <div class="post-actions-row" id="post-actions-row" style="display:none">
-<button class="icon-action-btn-row" id="delete-action-btn" onclick="deleteCurrentPost()">🗑<span>Удалить</span></button>
-<button class="icon-action-btn-row" onclick="sharePost()">🔗<span>Поделиться</span></button>
-<button class="icon-action-btn-row" id="toggle-comments-btn" onclick="toggleCommentsEnabled()">💬<span>Комм.</span></button>
+<button class="icon-action-btn-row" id="delete-action-btn" onclick="deleteCurrentPost()">🗑<span data-i18n="delete">Удалить</span></button>
+<button class="icon-action-btn-row" onclick="sharePost()">🔗<span data-i18n="share">Поделиться</span></button>
+<button class="icon-action-btn-row" id="toggle-comments-btn" onclick="toggleCommentsEnabled()">💬<span data-i18n="comments">Комм.</span></button>
 </div>
 <div class="comments-section">
-<div class="comments-title">Комментарии</div>
+<div class="comments-title" data-i18n="comments">Комментарии</div>
 <div id="comments-list"></div>
 <div class="comment-input-row" id="comment-input-row">
-<input type="text" id="comment-input" placeholder="Написать комментарий..." maxlength="300">
+<input type="text" id="comment-input" placeholder="Написать комментарий..." maxlength="300" data-i18n-placeholder="write_comment">
 <button onclick="sendComment()">➤</button>
 </div>
-<div class="comments-disabled-msg" id="comments-disabled-msg" style="display:none">Комментарии отключены автором</div>
+<div class="comments-disabled-msg" id="comments-disabled-msg" style="display:none" data-i18n="comments_disabled">Комментарии отключены автором</div>
 </div>
 </div>
 </div>
 <!-- Окно лайка с комментарием -->
 <div class="match-sheet-overlay" id="match-sheet-overlay">
 <div class="match-sheet">
-<div class="match-sheet-title">❤️ Понравился(ась)?</div>
+<div class="match-sheet-title" data-i18n="match_like">❤️ Понравился(ась)?</div>
 <textarea class="match-comment-input" id="match-comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
 <div class="match-sheet-actions">
-<button class="btn btn-outline" onclick="closeMatchSheet()">Отмена</button>
-<button class="btn" onclick="sendMatchLike()">Лайкнуть</button>
+<button class="btn btn-outline" onclick="closeMatchSheet()" data-i18n="cancel">Отмена</button>
+<button class="btn" onclick="sendMatchLike()" data-i18n="like">Лайкнуть</button>
 </div>
 </div>
 </div>
@@ -228,15 +227,15 @@ input[type="file"]{display:none}
 <div class="upload-modal" id="upload-modal">
 <div class="upload-topbar">
 <button class="modal-back" onclick="closeUpload()">←</button>
-<div class="upload-title">Новый пост</div>
-<button class="publish-btn" id="publish-btn" onclick="publishPost()" disabled>Опубликовать</button>
+<div class="upload-title" data-i18n="new_post">Новый пост</div>
+<button class="publish-btn" id="publish-btn" onclick="publishPost()" disabled data-i18n="publish">Опубликовать</button>
 </div>
 <div class="upload-content">
 <div class="photo-pick" id="photo-pick" onclick="document.getElementById('post-file').click()">
 <div class="pick-hint">📷</div>
-<div class="pick-text">Нажми чтобы выбрать фото или видео</div>
+<div class="pick-text" data-i18n="tap_to_select">Нажми чтобы выбрать фото или видео</div>
 </div>
-<textarea class="caption-input" id="caption-input" placeholder="Напиши что-нибудь..."></textarea>
+<textarea class="caption-input" id="caption-input" placeholder="Напиши что-нибудь..." data-i18n-placeholder="write_something"></textarea>
 <div class="upload-progress" id="upload-progress">
 <div class="upload-bar" id="upload-bar"></div>
 </div>
@@ -248,7 +247,6 @@ input[type="file"]{display:none}
 <script src="config.js"></script>
 <script src="trade-match.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- Подключаем модуль звонков -->
 <script type="module">
 import { initCallModule, initGlobalCallListener, startCall, endCall, declineCall, toggleMute, toggleSpeaker, toggleRecording, setRingMode, getRingMode } from './call-webrtc.js';
 window.callModule = {
@@ -265,7 +263,6 @@ getRingMode
 };
 </script>
 <script>
-// ===== СОЗДАЁМ КЛИЕНТ =====
 var db = createBlizkoClient();
 var BACKEND_URL = 'https://vector-chat-api.onrender.com';
 var currentUser = null;
@@ -300,21 +297,18 @@ if (menu) menu.classList.remove('show');
 }
 });
 
-// fuzzyEq/computeTradeMatches теперь в trade-match.js (общий для feed.html, swipe.html,
-// view-profile.html и trade-matches.html) — используем blizkoComputeTradeMatches(myTradeFields, author).
-
 function timeAgo(dateStr) {
 var d = new Date(dateStr);
 var now = new Date();
 var diff = Math.floor((now - d) / 1000);
-if (diff < 60) return 'только что';
-if (diff < 3600) return Math.floor(diff/60) + ' мин назад';
-if (diff < 86400) return Math.floor(diff/3600) + ' ч назад';
-if (diff < 86400*7) return Math.floor(diff/86400) + ' д назад';
-return d.toLocaleDateString('ru-RU');
+var lang = BlizkoTheme.getLang();
+if (diff < 60) return BlizkoTheme.getText('just_now');
+if (diff < 3600) return Math.floor(diff/60) + ' ' + BlizkoTheme.getText('min') + (lang === 'en' ? ' ago' : ' назад');
+if (diff < 86400) return Math.floor(diff/3600) + ' ' + BlizkoTheme.getText('h') + (lang === 'en' ? ' ago' : ' назад');
+if (diff < 86400*7) return Math.floor(diff/86400) + (lang === 'en' ? ' d ago' : ' д назад');
+return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'ru-RU');
 }
 
-// ===== ИНИЦИАЛИЗАЦИЯ =====
 async function init() {
 var r = await db.auth.getSession();
 if (!r.data.session) {
@@ -327,9 +321,9 @@ if (wrap) {
 wrap.innerHTML = `
 <div class="empty-state" style="padding:60px 20px;">
 <div class="icon">🔒</div>
-<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>
-<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>
-<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href='login.html'">Войти</button>
+<p style="font-size:16px;color:var(--text);margin-bottom:8px;">${BlizkoTheme.getText('session_expired')}</p>
+<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">${BlizkoTheme.getText('please_login_again')}</p>
+<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href='login.html'">${BlizkoTheme.getText('login')}</button>
 </div>
 `;
 }
@@ -349,7 +343,6 @@ await loadFollowedAndMatches();
 await loadSeenData();
 await loadFeed();
 blizkoRenderTradeBell(db, currentUser.id, 'trade-bell-badge');
-// ===== ИНИЦИАЛИЗАЦИЯ ГЛОБАЛЬНОГО СЛУШАТЕЛЯ ЗВОНКОВ =====
 if (typeof window.callModule !== 'undefined' && window.callModule.initGlobalCallListener) {
 window.callModule.initCallModule(db, currentUser.id);
 window.callModule.initGlobalCallListener();
@@ -357,7 +350,6 @@ console.log('[feed] Глобальный слушатель звонков ак�
 }
 }
 
-// ===== ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ) =====
 async function loadFollowedAndMatches() {
 var { data: follows } = await db.from('follows').select('following_id').eq('follower_id', currentUser.id);
 followedIds = {};
@@ -413,17 +405,15 @@ last_seen_at: now
 
 async function loadFeed() {
 var wrap = document.getElementById('grid-wrap');
-// visible_in_feed=false — это фото, которые лежат только в галерее профиля
-// (ещё не опубликованы в ленте), лента их не показывает
 var { data, error } = await db.from('posts')
 .select('*, profiles(name, city, photo_url, product_buy, product_sell, service_seek, service_offer, job_seek, job_offer)')
 .eq('visible_in_feed', true)
 .order('created_at', { ascending: false })
 .limit(60);
-if (error) { console.error('loadFeed error:', error); wrap.innerHTML = '<div class="loading">Ошибка загрузки</div>'; return; }
+if (error) { console.error('loadFeed error:', error); wrap.innerHTML = '<div class="loading">' + BlizkoTheme.getText('error_loading_short') + '</div>'; return; }
 posts = data || [];
 if (posts.length === 0) {
-wrap.innerHTML = '<div class="empty-state"><div class="icon">📸</div><p>Пока нет фото.<br>Будь первым — добавь своё!</p></div>';
+wrap.innerHTML = '<div class="empty-state"><div class="icon">📸</div><p>' + BlizkoTheme.getText('no_photos') + '</p></div>';
 return;
 }
 var postIds = posts.map(function(p) { return p.id; });
@@ -453,7 +443,7 @@ var dotHtml = hasNew ? '<div class="grid-new-dot show"></div>' : '';
 var tradeMatches = (post.profiles && post.user_id !== currentUser.id) ? blizkoComputeTradeMatches(myTradeFields, post.profiles) : [];
 var tradeDotHtml = tradeMatches.length > 0 ? '<div class="grid-trade-dot" title="' + escapeHtmlComment(tradeMatches.map(function(m){return m.label;}).join(' • ')) + '"></div>' : '';
 var viewsCount = viewCounts[post.id] || 0;
-var userName = (post.profiles && post.profiles.name) ? post.profiles.name : 'Пользователь';
+var userName = (post.profiles && post.profiles.name) ? post.profiles.name : BlizkoTheme.getText('you');
 item.innerHTML = mediaHtml + dotHtml + tradeDotHtml +
 '<div class="overlay"><div class="overlay-row">' +
 '<div class="user-name">' + userName + '</div>' +
@@ -491,10 +481,10 @@ window.location.href = 'profile.html';
 return;
 }
 var { data: profile } = await db.from('profiles').select('profile_visibility').eq('id', userId).single();
-if (!profile) { alert('Профиль не найден'); return; }
+if (!profile) { alert(BlizkoTheme.getText('profile_not_found')); return; }
 var visibility = profile.profile_visibility || 'matches';
 if (visibility === 'none') {
-alert('🔒 Этот пользователь закрыл свою анкету для всех.');
+alert(BlizkoTheme.getText('profile_locked'));
 return;
 }
 if (visibility === 'matches') {
@@ -503,7 +493,7 @@ var { data: match } = await db.from('matches')
 .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + userId + '),and(user1.eq.' + userId + ',user2.eq.' + currentUser.id + ')')
 .maybeSingle();
 if (!match) {
-alert('🔒 Анкета доступна только для мэтчей. Лайкни этого пользователя, чтобы открыть анкету.');
+alert(BlizkoTheme.getText('profile_match_only'));
 return;
 }
 }
@@ -519,7 +509,7 @@ currentViewedAuthorId = post.user_id;
 currentViewedPostId = post.id;
 markAuthorSeen(post.user_id);
 updateDotsForUser(post.user_id);
-var userName = p.name || 'Пользователь';
+var userName = p.name || BlizkoTheme.getText('you');
 var initials = userName.charAt(0).toUpperCase();
 document.getElementById('modal-name').textContent = userName;
 document.getElementById('modal-city').textContent = p.city || '';
@@ -614,10 +604,10 @@ if (!followBtn) return;
 var { data } = await db.from('follows').select('id').eq('follower_id', currentUser.id).eq('following_id', authorId).maybeSingle();
 if (data) {
 followBtn.classList.add('following');
-followBtn.textContent = '✓ Подписан';
+followBtn.textContent = BlizkoTheme.getText('following');
 } else {
 followBtn.classList.remove('following');
-followBtn.textContent = 'Подписаться';
+followBtn.textContent = BlizkoTheme.getText('follow');
 }
 }
 
@@ -669,7 +659,7 @@ var disabledMsg = document.getElementById('comments-disabled-msg');
 var toggleBtn = document.getElementById('toggle-comments-btn');
 if (toggleBtn) {
 toggleBtn.classList.toggle('disabled-state', !commentsEnabled);
-toggleBtn.innerHTML = commentsEnabled ? '💬<span>Комм.</span>' : '🚫<span>Комм.</span>';
+toggleBtn.innerHTML = commentsEnabled ? ('💬<span>' + BlizkoTheme.getText('comments') + '</span>') : ('🚫<span>' + BlizkoTheme.getText('comments') + '</span>');
 }
 if (!commentsEnabled && !isOwner) {
 inputRow.style.display = 'none';
@@ -685,11 +675,11 @@ var { data: comments, error: cErr } = await db.from('post_comments')
 .order('created_at', { ascending: true });
 if (cErr) {
 console.error('loadComments error:', cErr);
-list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Ошибка загрузки комментариев</div>';
+list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">' + BlizkoTheme.getText('error_loading_short') + '</div>';
 return;
 }
 if (!comments || comments.length === 0) {
-list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Пока нет комментариев</div>';
+list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">' + BlizkoTheme.getText('no_comments') + '</div>';
 return;
 }
 var userIds = [];
@@ -703,7 +693,7 @@ list.innerHTML = '';
 comments.forEach(function(c) {
 var cp = profilesMap[c.user_id] || {};
 var canDelete = c.user_id === currentUser.id || isOwner;
-var cName = cp.name || 'Пользователь';
+var cName = cp.name || BlizkoTheme.getText('you');
 var cInitials = cName.charAt(0).toUpperCase();
 var item = document.createElement('div');
 item.className = 'comment-item';
@@ -724,16 +714,16 @@ var input = document.getElementById('comment-input');
 var text = input.value.trim();
 if (!text || !currentViewedPostId) return;
 var { error } = await db.from('post_comments').insert({ post_id: currentViewedPostId, user_id: currentUser.id, text: text });
-if (error) { alert('Ошибка: ' + error.message); return; }
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
 input.value = '';
 var post = posts.find(function(p) { return p.id === currentViewedPostId; });
 loadComments(currentViewedPostId, post ? post.comments_enabled !== false : true, post ? post.user_id === currentUser.id : false);
 }
 
 async function deleteComment(commentId) {
-if (!confirm('Удалить комментарий?')) return;
+if (!confirm(BlizkoTheme.getText('confirm_delete_chat').split('?')[0] + '?')) return;
 var { error } = await db.from('post_comments').delete().eq('id', commentId);
-if (error) { alert('Ошибка удаления: ' + error.message); return; }
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
 var post = posts.find(function(p) { return p.id === currentViewedPostId; });
 loadComments(currentViewedPostId, post ? post.comments_enabled !== false : true, post ? post.user_id === currentUser.id : false);
 }
@@ -753,20 +743,20 @@ var shareUrl = window.location.origin + window.location.pathname.replace('feed.h
 if (navigator.clipboard) {
 try {
 await navigator.clipboard.writeText(shareUrl);
-alert('Ссылка скопирована! 🔗');
+alert((BlizkoTheme.getLang() === 'en' ? 'Link copied!' : 'Ссылка скопирована!') + ' 🔗');
 } catch (e) {
-prompt('Скопируй ссылку:', shareUrl);
+prompt(BlizkoTheme.getLang() === 'en' ? 'Copy the link:' : 'Скопируй ссылку:', shareUrl);
 }
 } else {
-prompt('Скопируй ссылку:', shareUrl);
+prompt(BlizkoTheme.getLang() === 'en' ? 'Copy the link:' : 'Скопируй ссылку:', shareUrl);
 }
 }
 
 async function deleteCurrentPost() {
 if (!currentViewedPostId) return;
-if (!confirm('Удалить этот пост?')) return;
+if (!confirm(BlizkoTheme.getText('confirm_delete'))) return;
 var { error } = await db.from('posts').delete().eq('id', currentViewedPostId);
-if (error) { alert('Ошибка удаления: ' + error.message); return; }
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
 closeModal();
 await loadFeed();
 }
@@ -800,7 +790,7 @@ var { data: matchData } = await db.from('matches').select('*')
 .maybeSingle();
 if (matchData) {
 setTimeout(function() {
-if (confirm('🎉 Это взаимный лайк! Перейти в чат?')) {
+if (confirm(BlizkoTheme.getText('mutual_like_confirm'))) {
 window.location.href = 'chat.html?match=' + matchData.id;
 }
 }, 300);
@@ -809,7 +799,7 @@ window.location.href = 'chat.html?match=' + matchData.id;
 
 function openUpload() {
 if (!myProfileComplete) {
-alert('Сначала заполни анкету (имя, возраст и т.д.) — без этого в ленте вместо имени у тебя будет просто "Пользователь". Заполни анкету, чтобы публиковать посты.');
+alert(BlizkoTheme.getText('fill_profile_hint'));
 window.location.href = 'edit-profile.html';
 return;
 }
@@ -820,7 +810,7 @@ function closeUpload() {
 document.getElementById('upload-modal').classList.remove('show');
 pendingPhotoUrl = null;
 pendingMediaType = 'photo';
-document.getElementById('photo-pick').innerHTML = '<div class="pick-hint">📷</div><div class="pick-text">Нажми чтобы выбрать фото или видео</div>';
+document.getElementById('photo-pick').innerHTML = '<div class="pick-hint">📷</div><div class="pick-text">' + BlizkoTheme.getText('tap_to_select') + '</div>';
 document.getElementById('caption-input').value = '';
 document.getElementById('publish-btn').disabled = true;
 document.getElementById('upload-bar').style.width = '0%';
@@ -831,8 +821,8 @@ var file = input.files[0];
 if (!file) return;
 var isVideo = file.type.startsWith('video');
 pendingMediaType = isVideo ? 'video' : 'photo';
-if (isVideo && file.size > 30 * 1024 * 1024) { alert('Видео не более 30MB'); return; }
-if (!isVideo && file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); return; }
+if (isVideo && file.size > 30 * 1024 * 1024) { alert(BlizkoTheme.getLang() === 'en' ? 'Video must be under 30MB' : 'Видео не более 30MB'); return; }
+if (!isVideo && file.size > 10 * 1024 * 1024) { alert(BlizkoTheme.getText('photo_size_limit')); return; }
 var reader = new FileReader();
 reader.onload = function(e) {
 if (isVideo) {
@@ -850,13 +840,13 @@ try {
 var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
 document.getElementById('upload-bar').style.width = '100%';
 setTimeout(function() { document.getElementById('upload-progress').style.display = 'none'; }, 600);
-if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
+if (r.error) { alert(BlizkoTheme.getText('upload_error_prefix') + r.error.message); return; }
 pendingPhotoUrl = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
 document.getElementById('publish-btn').disabled = false;
 } catch (e) {
 document.getElementById('upload-progress').style.display = 'none';
 document.getElementById('upload-bar').style.width = '0%';
-alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой). Попробуй видео покороче или при более стабильном интернете.\n\n' + (e && e.message ? e.message : e));
+alert(BlizkoTheme.getText('upload_fail_alert') + '\n\n' + (e && e.message ? e.message : e));
 }
 }
 
@@ -869,7 +859,7 @@ body: JSON.stringify({ photo_url: photoUrl, media_type: mediaType })
 });
 var data = await r.json();
 if (!data.safe) {
-alert('Публикация отклонена модерацией' + (data.reason ? ': ' + data.reason : '') + '.');
+alert((BlizkoTheme.getLang() === 'en' ? 'Publication rejected by moderation' : 'Публикация отклонена модерацией') + (data.reason ? ': ' + data.reason : '') + '.');
 return false;
 }
 return true;
@@ -882,14 +872,14 @@ return true;
 async function publishPost() {
 if (!pendingPhotoUrl) return;
 if (!myProfileComplete) {
-alert('Сначала заполни анкету, чтобы публиковать посты.');
+alert(BlizkoTheme.getLang() === 'en' ? 'Fill in your profile first to publish posts.' : 'Сначала заполни анкету, чтобы публиковать посты.');
 return;
 }
 var caption = document.getElementById('caption-input').value.trim();
 var btn = document.getElementById('publish-btn');
 btn.disabled = true; btn.textContent = '...';
 var passedModeration = await checkModerationOrAlert(pendingPhotoUrl, pendingMediaType);
-if (!passedModeration) { btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
+if (!passedModeration) { btn.disabled = false; btn.textContent = BlizkoTheme.getText('publish'); return; }
 var profilePhotoId = null;
 var { count: galleryCount } = await db.from('profile_photos')
 .select('id', { count: 'exact', head: true })
@@ -903,7 +893,6 @@ position: galleryCount || 0
 }).select().single();
 if (!profErr && profPhoto) profilePhotoId = profPhoto.id;
 }
-// Пост из ленты всегда сразу виден в ленте (visible_in_feed по умолчанию true)
 var { error } = await db.from('posts').insert({
 user_id: currentUser.id,
 photo_url: pendingPhotoUrl,
@@ -912,13 +901,15 @@ media_type: pendingMediaType,
 profile_photo_id: profilePhotoId,
 visible_in_feed: true
 });
-if (error) { alert('Ошибка: ' + error.message); btn.disabled = false; btn.textContent = 'Опубликовать'; return; }
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); btn.disabled = false; btn.textContent = BlizkoTheme.getText('publish'); return; }
 closeUpload();
 await loadFeed();
 notifyPostSubscribers();
 if (!profilePhotoId) {
 setTimeout(function() {
-alert('Фото опубликовано в ленте. В профиль не добавлено — там уже максимум 9 фото. Удали что-нибудь в профиле, если хочешь, чтобы новые фото туда тоже попадали.');
+alert(BlizkoTheme.getLang() === 'en'
+? 'Photo published to the feed. Not added to your profile — it already has the max of 9 photos. Delete something in your profile if you want new photos to be added there too.'
+: 'Фото опубликовано в ленте. В профиль не добавлено — там уже максимум 9 фото. Удали что-нибудь в профиле, если хочешь, чтобы новые фото туда тоже попадали.');
 }, 300);
 }
 }
@@ -930,15 +921,15 @@ var { data: subs } = await db.from('post_notify_subs')
 .eq('target_user_id', currentUser.id);
 if (!subs || subs.length === 0) return;
 var { data: myProfile } = await db.from('profiles').select('name').eq('id', currentUser.id).single();
-var authorName = (myProfile && myProfile.name) ? myProfile.name : 'Кто-то из подписок';
+var authorName = (myProfile && myProfile.name) ? myProfile.name : (BlizkoTheme.getLang() === 'en' ? 'Someone you follow' : 'Кто-то из подписок');
 subs.forEach(function(sub) {
 fetch(BACKEND_URL + '/api/send-push', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'QHSRzsipKinthY7dJdPVN-SGTX5iL4CmLOT1bcQU1AA' },
 body: JSON.stringify({
 to_user_id: sub.subscriber_id,
-title: 'Новый пост',
-body: authorName + ' опубликовал(а) новый пост',
+title: BlizkoTheme.getLang() === 'en' ? 'New post' : 'Новый пост',
+body: authorName + (BlizkoTheme.getLang() === 'en' ? ' posted something new' : ' опубликовал(а) новый пост'),
 type: 'new_post',
 fromUserId: currentUser.id,
 url: 'feed.html'
@@ -950,7 +941,6 @@ console.error('notifyPostSubscribers error:', e);
 }
 }
 
-// Запуск
 init();
 </script>
 </body>
