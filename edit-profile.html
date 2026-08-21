@@ -68,15 +68,15 @@ input[type="file"]{display:none}
 <div class="nav-menu-wrap">
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
-<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
-<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 Лента</button>
-<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 Знакомства</button>
-<button class="nav-menu-item" onclick="location.href='likes.html'">💖 Лайки</button>
-<button class="nav-menu-item" onclick="location.href='matches.html'">💬 Чаты</button>
-<button class="nav-menu-item" onclick="location.href='profile.html'">👤 Профиль</button>
+<button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
+<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
+<button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
+<button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
+<button class="nav-menu-item" onclick="location.href='profile.html'">👤 <span data-i18n="profile">Профиль</span></button>
 </div>
 </div>
-<div class="page-title">Моя анкета</div>
+<div class="page-title" data-i18n="my_profile">Моя анкета</div>
 </div>
 <div class="content">
 <div class="avatar-block">
@@ -84,14 +84,14 @@ input[type="file"]{display:none}
 <span class="icon" id="avatar-placeholder">📷</span>
 <img id="avatar-img" src="" style="display:none">
 </div>
-<div class="avatar-hint" id="avatar-hint">Фото анкеты — обязательно для публикации</div>
+<div class="avatar-hint" id="avatar-hint" data-i18n="avatar_required_hint">Фото анкеты — обязательно для публикации</div>
 <div class="upload-progress" id="avatar-upload-progress"><div class="upload-bar" id="avatar-upload-bar"></div></div>
 <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(this)">
 </div>
 <div class="crop-modal" id="crop-modal">
 <div class="crop-modal-inner">
-<div class="crop-title">Настрой фото</div>
-<div class="crop-hint">Потяни, чтобы подвинуть, ползунком — приблизь</div>
+<div class="crop-title" data-i18n="crop_title">Настрой фото</div>
+<div class="crop-hint" data-i18n="crop_hint">Потяни, чтобы подвинуть, ползунком — приблизь</div>
 <div class="crop-circle-wrap" id="crop-circle-wrap">
 <img id="crop-img" src="" alt="">
 </div>
@@ -100,91 +100,91 @@ input[type="file"]{display:none}
 <input type="range" id="crop-zoom" min="0" max="100" value="0" oninput="cropSetZoom(this.value)">
 </div>
 <div class="crop-actions">
-<button class="btn btn-outline" onclick="cropCancel()">Отмена</button>
-<button class="btn" onclick="cropConfirm()">Готово</button>
+<button class="btn btn-outline" onclick="cropCancel()" data-i18n="cancel">Отмена</button>
+<button class="btn" onclick="cropConfirm()" data-i18n="crop_done">Готово</button>
 </div>
 </div>
 </div>
 <div class="section">
-<div class="section-title">О себе</div>
-<div class="form-group"><label>Имя <span class="req">*</span></label><input type="text" id="name" maxlength="40" placeholder="Как тебя зовут?"></div>
+<div class="section-title" data-i18n="about_me">О себе</div>
+<div class="form-group"><label><span data-i18n="name_label">Имя</span> <span class="req">*</span></label><input type="text" id="name" maxlength="40" placeholder="Как тебя зовут?" data-i18n-placeholder="name_placeholder"></div>
 <div class="row">
-<div class="form-group"><label>Возраст <span class="req">*</span></label><input type="number" id="age" min="18" max="99" placeholder="25"></div>
-<div class="form-group"><label>Город</label><input type="text" id="city" maxlength="50" placeholder="Москва"></div>
+<div class="form-group"><label><span data-i18n="age_label">Возраст</span> <span class="req">*</span></label><input type="number" id="age" min="18" max="99" placeholder="25"></div>
+<div class="form-group"><label data-i18n="city_label">Город</label><input type="text" id="city" maxlength="50" placeholder="Москва"></div>
 </div>
-<div class="form-group"><label>О себе</label><textarea id="about" placeholder="Расскажи о себе..."></textarea></div>
+<div class="form-group"><label data-i18n="about_me">О себе</label><textarea id="about" placeholder="Расскажи о себе..." data-i18n-placeholder="about_placeholder"></textarea></div>
 </div>
 <div class="section">
-<div class="section-title">Предпочтения</div>
+<div class="section-title" data-i18n="preferences_section">Предпочтения</div>
 <div class="row">
 <div class="form-group">
-<label>Я <span class="req">*</span></label>
+<label><span data-i18n="i_am_label">Я</span> <span class="req">*</span></label>
 <select id="gender">
-<option value="">Выбери...</option>
-<option value="male">Мужчина</option>
-<option value="female">Женщина</option>
-<option value="other">Другое</option>
+<option value="" data-i18n="choose_placeholder">Выбери...</option>
+<option value="male" data-i18n="gender_male">Мужчина</option>
+<option value="female" data-i18n="gender_female">Женщина</option>
+<option value="other" data-i18n="gender_other">Другое</option>
 </select>
 </div>
 <div class="form-group">
-<label>Ищу <span class="req">*</span></label>
+<label><span data-i18n="looking_for_label">Ищу</span> <span class="req">*</span></label>
 <select id="looking_for">
-<option value="">Выбери...</option>
-<option value="male">Мужчину</option>
-<option value="female">Женщину</option>
-<option value="any">Любого</option>
+<option value="" data-i18n="choose_placeholder">Выбери...</option>
+<option value="male" data-i18n="looking_male">Мужчину</option>
+<option value="female" data-i18n="looking_female">Женщину</option>
+<option value="any" data-i18n="looking_any">Любого</option>
 </select>
 </div>
 </div>
 </div>
 <div class="section">
-<div class="section-title">Дополнительно (необязательно)</div>
-<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:16px">Эти поля можно не заполнять. Но если то, что ты ищешь, совпадёт с тем, что предлагает другой пользователь (или наоборот) — при просмотре анкет друг друга и в "Знакомствах" это будет отмечено как совпадение ✨.</div>
+<div class="section-title" data-i18n="extra_section_title">Дополнительно (необязательно)</div>
+<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:16px" data-i18n="extra_desc">Эти поля можно не заполнять. Но если то, что ты ищешь, совпадёт с тем, что предлагает другой пользователь (или наоборот) — при просмотре анкет друг друга и в "Знакомствах" это будет отмечено как совпадение ✨.</div>
 <div class="form-group">
-<label>Дети</label>
+<label data-i18n="children_label">Дети</label>
 <select id="children_count">
-<option value="">Не указано</option>
-<option value="0">Нет детей</option>
-<option value="1">1 ребёнок</option>
-<option value="2">2 ребёнка</option>
-<option value="3+">3 и больше</option>
+<option value="" data-i18n="not_specified">Не указано</option>
+<option value="0" data-i18n="no_children">Нет детей</option>
+<option value="1" data-i18n="child_1">1 ребёнок</option>
+<option value="2" data-i18n="child_2">2 ребёнка</option>
+<option value="3+" data-i18n="child_3plus">3 и больше</option>
 </select>
 </div>
 <div class="form-group">
-<label>Работа</label>
+<label data-i18n="job_label">Работа</label>
 <select id="job_select"></select>
-<input type="text" id="job_other" maxlength="60" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+<input type="text" id="job_other" maxlength="60" placeholder="Впиши свой вариант" data-i18n-placeholder="own_variant_placeholder" style="display:none;margin-top:8px">
 </div>
-<div class="form-group"><label>Бизнес</label><input type="text" id="business" maxlength="60" placeholder="Например: IT-консалтинг"></div>
+<div class="form-group"><label data-i18n="business_label">Бизнес</label><input type="text" id="business" maxlength="60" placeholder="Например: IT-консалтинг" data-i18n-placeholder="business_placeholder"></div>
 <div class="form-group">
-<label>Товар — хочу продать</label>
+<label data-i18n="product_sell_label">Товар — хочу продать</label>
 <select id="product_sell_select"></select>
-<input type="text" id="product_sell_other" maxlength="60" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+<input type="text" id="product_sell_other" maxlength="60" placeholder="Впиши свой вариант" data-i18n-placeholder="own_variant_placeholder" style="display:none;margin-top:8px">
 </div>
 <div class="form-group">
-<label>Услуга — предлагаю</label>
+<label data-i18n="service_offer_label">Услуга — предлагаю</label>
 <select id="service_offer_select"></select>
-<input type="text" id="service_offer_other" maxlength="60" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+<input type="text" id="service_offer_other" maxlength="60" placeholder="Впиши свой вариант" data-i18n-placeholder="own_variant_placeholder" style="display:none;margin-top:8px">
 </div>
 <div class="form-group">
-<label>Работа — предлагаю вакансию</label>
+<label data-i18n="job_offer_label">Работа — предлагаю вакансию</label>
 <select id="job_offer_select"></select>
-<input type="text" id="job_offer_other" maxlength="60" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+<input type="text" id="job_offer_other" maxlength="60" placeholder="Впиши свой вариант" data-i18n-placeholder="own_variant_placeholder" style="display:none;margin-top:8px">
 </div>
-<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px">А что ты сам ищешь (товар купить / услугу заказать / работу найти) — настраивается в фильтрах на экране "Знакомства", это видно только тебе.</div>
+<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px" data-i18n="seek_hint">А что ты сам ищешь (товар купить / услугу заказать / работу найти) — настраивается в фильтрах на экране "Знакомства", это видно только тебе.</div>
 </div>
 <div class="section">
-<div class="section-title">Приватность анкеты</div>
+<div class="section-title" data-i18n="privacy_section">Приватность анкеты</div>
 <div class="form-group">
-<label>Кто видит мою анкету (о себе, галерею) при просмотре</label>
+<label data-i18n="profile_visibility_label">Кто видит мою анкету (о себе, галерею) при просмотре</label>
 <select id="profile_visibility">
-<option value="all">Открыта всем</option>
-<option value="matches">Только для мэтчей</option>
-<option value="none">Закрыта для всех</option>
+<option value="all" data-i18n="visibility_all">Открыта всем</option>
+<option value="matches" data-i18n="visibility_matches">Только для мэтчей</option>
+<option value="none" data-i18n="visibility_none">Закрыта для всех</option>
 </select>
 </div>
 </div>
-<button class="btn" onclick="publishProfile()" id="publish-btn">Опубликовать анкету</button>
+<button class="btn" onclick="publishProfile()" id="publish-btn" data-i18n="publish_profile_btn">Опубликовать анкету</button>
 <div class="msg" id="msg"></div>
 </div>
 <script src="theme.js"></script>
@@ -235,8 +235,6 @@ showAvatar(p.data.photo_url);
 }
 updatePublishButtonLabel(p.data.is_active === true);
 }
-// Вне if(p.data) — чтобы у select-полей опции появились в любом случае,
-// даже если анкета ещё не создана (у нового пользователя p.data пустой).
 blizkoInitCategoryField('job', BLIZKO_PROFESSIONS, p.data ? p.data.job : null);
 blizkoInitCategoryField('product_sell', BLIZKO_PRODUCTS, p.data ? p.data.product_sell : null);
 blizkoInitCategoryField('service_offer', BLIZKO_SERVICES, p.data ? p.data.service_offer : null);
@@ -245,7 +243,7 @@ blizkoInitCategoryField('job_offer', BLIZKO_PROFESSIONS, p.data ? p.data.job_off
 
 function updatePublishButtonLabel(isActive) {
 var btn = document.getElementById('publish-btn');
-btn.textContent = isActive ? 'Обновить анкету' : 'Опубликовать анкету';
+btn.textContent = BlizkoTheme.getText(isActive ? 'update_profile_btn' : 'publish_profile_btn');
 }
 
 function showAvatar(url) {
@@ -254,7 +252,8 @@ document.getElementById('avatar-img').style.display = 'block';
 document.getElementById('avatar-placeholder').style.display = 'none';
 document.getElementById('avatar-circle').classList.remove('required');
 document.getElementById('avatar-hint').classList.remove('required');
-document.getElementById('avatar-hint').textContent = 'Нажми, чтобы сменить фото';
+document.getElementById('avatar-hint').removeAttribute('data-i18n');
+document.getElementById('avatar-hint').textContent = BlizkoTheme.getText('avatar_change_hint');
 }
 
 // ===== КРОППЕР АВАТАРА =====
@@ -370,7 +369,7 @@ wrap.addEventListener('pointercancel', endDrag);
 function handleAvatarUpload(input) {
 var file = input.files[0];
 if (!file) return;
-if (file.size > 10 * 1024 * 1024) { alert('Фото не более 10MB'); input.value = ''; return; }
+if (file.size > 10 * 1024 * 1024) { alert(BlizkoTheme.getText('photo_size_limit')); input.value = ''; return; }
 openCropper(file, function(blob) {
 uploadAvatarBlob(blob);
 });
@@ -385,7 +384,7 @@ try {
 var r = await db.storage.from('photos').upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
 document.getElementById('avatar-upload-bar').style.width = '100%';
 setTimeout(function() { document.getElementById('avatar-upload-progress').style.display = 'none'; }, 500);
-if (r.error) { alert('Ошибка загрузки: ' + r.error.message); return; }
+if (r.error) { alert(BlizkoTheme.getText('upload_error_prefix') + r.error.message); return; }
 var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
 currentPhotoUrl = url;
 showAvatar(url);
@@ -393,7 +392,7 @@ await db.from('profiles').update({ photo_url: url }).eq('id', currentUser.id);
 } catch (e) {
 document.getElementById('avatar-upload-progress').style.display = 'none';
 document.getElementById('avatar-upload-bar').style.width = '0%';
-alert('Не удалось загрузить файл (обрыв соединения или файл слишком большой).\n\n' + (e && e.message ? e.message : e));
+alert(BlizkoTheme.getText('upload_fail_alert') + '\n\n' + (e && e.message ? e.message : e));
 }
 }
 
@@ -414,19 +413,16 @@ var job_offer = blizkoGetCategoryFieldValue('job_offer');
 if (!currentPhotoUrl) {
 document.getElementById('avatar-circle').classList.add('required');
 document.getElementById('avatar-hint').classList.add('required');
-document.getElementById('avatar-hint').textContent = 'Добавь фото — без него анкету нельзя опубликовать';
-setMsg('⚠️ Добавь фото анкеты', 'error');
+document.getElementById('avatar-hint').textContent = BlizkoTheme.getText('avatar_missing_hint2');
+setMsg(BlizkoTheme.getText('avatar_missing_alert'), 'error');
 window.scrollTo({ top: 0, behavior: 'smooth' });
 return;
 }
-if (!name) { setMsg('Введи имя', 'error'); return; }
-if (!age || age < 18) { setMsg('Укажи возраст от 18 лет', 'error'); return; }
-if (!gender) { setMsg('Укажи свой пол', 'error'); return; }
-if (!looking_for) { setMsg('Укажи кого ищешь', 'error'); return; }
-setMsg('Публикуем...', '');
-// product_buy/service_seek/job_seek сюда намеренно НЕ включены — эти поля теперь
-// редактируются в фильтрах на экране "Знакомства" (swipe.html) и не должны
-// затираться в null при каждой публикации анкеты отсюда.
+if (!name) { setMsg(BlizkoTheme.getText('enter_name_err'), 'error'); return; }
+if (!age || age < 18) { setMsg(BlizkoTheme.getText('age_err'), 'error'); return; }
+if (!gender) { setMsg(BlizkoTheme.getText('gender_err'), 'error'); return; }
+if (!looking_for) { setMsg(BlizkoTheme.getText('looking_for_err'), 'error'); return; }
+setMsg(BlizkoTheme.getText('publishing_msg'), '');
 var r = await db.from('profiles').upsert({
 id: currentUser.id, name, age, city, about, gender, looking_for, profile_visibility,
 children_count: children_count || null,
@@ -440,7 +436,7 @@ is_active: true
 });
 if (r.error) { setMsg(r.error.message, 'error'); }
 else {
-setMsg('Анкета опубликована! ✓', 'success');
+setMsg(BlizkoTheme.getText('profile_published'), 'success');
 updatePublishButtonLabel(true);
 setTimeout(function() { window.location.href = 'profile.html'; }, 1000);
 }
