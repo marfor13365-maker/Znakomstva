@@ -30,7 +30,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .filter-btn:active{opacity:0.8}
 .bell-btn{position:relative;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
 .bell-btn:active{opacity:0.8}
-.bell-btn:active{opacity:0.8}
 .bell-badge{position:absolute;top:-4px;right:-4px;background:#ffd23f;color:#1a1400;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg)}
 .card-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:76px 20px 24px;position:relative;overflow:hidden}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:360px;height:min(560px, calc(100vh - 120px));position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.5);transition:transform 0.1s;touch-action:none}
@@ -86,12 +85,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <div class="nav-menu-wrap">
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
-<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
-<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 Лента</button>
-<button class="nav-menu-item current" onclick="location.href='swipe.html'">😍 Знакомства</button>
-<button class="nav-menu-item" onclick="location.href='likes.html'">💖 Лайки</button>
-<button class="nav-menu-item" onclick="location.href='matches.html'">💬 Чаты</button>
-<button class="nav-menu-item" onclick="location.href='profile.html'">👤 Профиль</button>
+<button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
+<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item current" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
+<button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
+<button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
+<button class="nav-menu-item" onclick="location.href='profile.html'">👤 <span data-i18n="profile">Профиль</span></button>
 </div>
 </div>
 <div class="brand">
@@ -114,25 +113,25 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
 <button class="bell-btn" onclick="location.href='trade-matches.html'" title="Совпадения">🔔<span class="bell-badge" id="trade-bell-badge" style="display:none">0</span></button>
-<button class="filter-btn" onclick="openFilters()">⚙️ Фильтры<span class="filter-badge" id="filter-badge"></span></button>
+<button class="filter-btn" onclick="openFilters()"><span data-i18n="filters_title" id="filter-btn-text">⚙️ Фильтры</span><span class="filter-badge" id="filter-badge"></span></button>
 </div>
 </div>
 <div class="card-wrap" id="card-wrap">
-<div class="loading" style="padding:40px;text-align:center;color:var(--muted)">⏳ Загрузка...</div>
+<div class="loading" style="padding:40px;text-align:center;color:var(--muted)">⏳ <span data-i18n="loading_users">Загрузка...</span></div>
 </div>
 <div class="like-modal" id="filters-modal">
 <div class="like-modal-card">
-<div class="like-modal-title">⚙️ Фильтры</div>
+<div class="like-modal-title" data-i18n="filters_title">⚙️ Фильтры</div>
 <div class="filter-row">
-<span class="filter-label">Показывать</span>
+<span class="filter-label" data-i18n="show_label">Показывать</span>
 <div class="filter-gender-row">
-<button class="filter-gender-btn" id="filter-gender-male" onclick="selectGenderFilter('male')">Мужчины</button>
-<button class="filter-gender-btn" id="filter-gender-female" onclick="selectGenderFilter('female')">Женщины</button>
-<button class="filter-gender-btn" id="filter-gender-any" onclick="selectGenderFilter(null)">Все</button>
+<button class="filter-gender-btn" id="filter-gender-male" onclick="selectGenderFilter('male')" data-i18n="men">Мужчины</button>
+<button class="filter-gender-btn" id="filter-gender-female" onclick="selectGenderFilter('female')" data-i18n="women">Женщины</button>
+<button class="filter-gender-btn" id="filter-gender-any" onclick="selectGenderFilter(null)" data-i18n="all_option">Все</button>
 </div>
 </div>
 <div class="filter-row">
-<span class="filter-label">Возраст</span>
+<span class="filter-label" data-i18n="age_label">Возраст</span>
 <div class="filter-age-inputs">
 <input type="number" id="filter-age-min" placeholder="18" min="18" max="99">
 <span class="filter-age-sep">—</span>
@@ -140,40 +139,40 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 </div>
 <div class="filter-row">
-<span class="filter-label">Город</span>
-<input type="text" class="filter-city-input" id="filter-city" placeholder="Например: Москва">
+<span class="filter-label" data-i18n="city_label">Город</span>
+<input type="text" class="filter-city-input" id="filter-city" placeholder="Например: Москва" data-i18n-placeholder="city_example_ph">
 </div>
 <div class="filter-row" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
-<span class="filter-label">Что вы ищете (видно только тебе, но по нему будут находиться совпадения с тем, что предлагают в анкетах)</span>
+<span class="filter-label" data-i18n="what_seeking_label">Что вы ищете (видно только тебе, но по нему будут находиться совпадения с тем, что предлагают в анкетах)</span>
 </div>
 <div class="filter-row">
-<span class="filter-label">Товар — хочу купить</span>
+<span class="filter-label" data-i18n="product_buy_label">Товар — хочу купить</span>
 <select class="filter-city-input" id="filter-product-buy_select"></select>
-<input type="text" class="filter-city-input" id="filter-product-buy_other" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+<input type="text" class="filter-city-input" id="filter-product-buy_other" placeholder="Впиши свой вариант" data-i18n-placeholder="own_variant_placeholder" style="display:none;margin-top:8px">
 </div>
 <div class="filter-row">
-<span class="filter-label">Услуга — ищу</span>
+<span class="filter-label" data-i18n="service_seek_label">Услуга — ищу</span>
 <select class="filter-city-input" id="filter-service-seek_select"></select>
-<input type="text" class="filter-city-input" id="filter-service-seek_other" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+<input type="text" class="filter-city-input" id="filter-service-seek_other" placeholder="Впиши свой вариант" data-i18n-placeholder="own_variant_placeholder" style="display:none;margin-top:8px">
 </div>
 <div class="filter-row">
-<span class="filter-label">Работа — ищу</span>
+<span class="filter-label" data-i18n="job_seek_label">Работа — ищу</span>
 <select class="filter-city-input" id="filter-job-seek_select"></select>
-<input type="text" class="filter-city-input" id="filter-job-seek_other" placeholder="Впиши свой вариант" style="display:none;margin-top:8px">
+<input type="text" class="filter-city-input" id="filter-job-seek_other" placeholder="Впиши свой вариант" data-i18n-placeholder="own_variant_placeholder" style="display:none;margin-top:8px">
 </div>
 <div class="like-modal-actions">
-<button class="cancel" onclick="resetFilters()">Сбросить</button>
-<button class="send" onclick="applyFilters()">Применить</button>
+<button class="cancel" onclick="resetFilters()" data-i18n="reset_btn">Сбросить</button>
+<button class="send" onclick="applyFilters()" data-i18n="apply_btn">Применить</button>
 </div>
 </div>
 </div>
 <div class="like-modal" id="like-modal">
 <div class="like-modal-card">
-<div class="like-modal-title">❤️ Понравился(ась)?</div>
+<div class="like-modal-title" data-i18n="match_like">❤️ Понравился(ась)?</div>
 <textarea id="like-comment" placeholder="Напиши что-нибудь (необязательно)..."></textarea>
 <div class="like-modal-actions">
-<button class="cancel" onclick="closeLikeModal()">Отмена</button>
-<button class="send" onclick="sendLike()">Лайкнуть</button>
+<button class="cancel" onclick="closeLikeModal()" data-i18n="cancel">Отмена</button>
+<button class="send" onclick="sendLike()" data-i18n="like">Лайкнуть</button>
 </div>
 </div>
 </div>
@@ -208,9 +207,6 @@ return null;
 }
 }
 
-// Нижнего меню на этой странице больше нет (перекрывало кнопки лайк/пропустить на
-// коротких экранах) — вместо него кнопка "назад" сверху. Если попали сюда не из
-// приложения (прямая ссылка, нет истории) — уводим на ленту, а не в никуда.
 function toggleNavMenu() {
 document.getElementById('nav-menu').classList.toggle('show');
 }
@@ -257,9 +253,9 @@ if (!session) {
 wrap.innerHTML =
 '<div class="empty-state" style="padding:60px 20px;">' +
 '<div class="icon">🔒</div>' +
-'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
-'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
-'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'login.html\'">Войти</button>' +
+'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">' + BlizkoTheme.getText('session_expired') + '</p>' +
+'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">' + BlizkoTheme.getText('please_login_again') + '</p>' +
+'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'login.html\'">' + BlizkoTheme.getText('login') + '</button>' +
 '</div>';
 return;
 }
@@ -285,7 +281,6 @@ blizkoRenderTradeBell(db, currentUser.id, 'trade-bell-badge');
 
 async function loadProfiles() {
 var wrap = document.getElementById('card-wrap');
-// photo_url — фото анкеты (аватар), profile_photos — резерв на случай если аватар не задан
 var query = db.from('profiles')
 .select('*, profile_photos(photo_url)')
 .neq('id', currentUser.id)
@@ -295,32 +290,27 @@ if (activeFilters.ageMax) query = query.lte('age', activeFilters.ageMax);
 if (activeFilters.city) query = query.ilike('city', '%' + activeFilters.city + '%');
 if (activeFilters.gender) query = query.eq('gender', activeFilters.gender);
 var { data, error } = await query.limit(20);
-if (error) { console.error(error); wrap.innerHTML = '<div class="empty-state"><p>Ошибка загрузки</p></div>'; return; }
+if (error) { console.error(error); wrap.innerHTML = '<div class="empty-state"><p>' + BlizkoTheme.getText('error_loading_short') + '</p></div>'; return; }
 profiles = data || [];
 if (profiles.length === 0) {
 var hasFilters = activeFilters.ageMin || activeFilters.ageMax || activeFilters.city;
 wrap.innerHTML = hasFilters
-? '<div class="empty-state"><div class="icon">🔍</div><p>Под такие фильтры никого не нашлось.<br>Попробуй расширить критерии.</p></div>'
-: '<div class="empty-state"><div class="icon">😴</div><p>Пока никого нет рядом.<br>Попробуй позже!</p></div>';
+? '<div class="empty-state"><div class="icon">🔍</div><p>' + BlizkoTheme.getText('no_matches_filter').replace(/\n/g,'<br>') + '</p></div>'
+: '<div class="empty-state"><div class="icon">😴</div><p>' + BlizkoTheme.getText('nobody_nearby').replace(/\n/g,'<br>') + '</p></div>';
 return;
 }
 currentIndex = 0;
 renderCard();
 }
 
-// fuzzyEq/computeTradeMatches теперь в trade-match.js (общий для feed.html, swipe.html,
-// view-profile.html и trade-matches.html) — используем blizkoComputeTradeMatches(myTradeFields, candidate).
-
 function renderCard() {
 var wrap = document.getElementById('card-wrap');
 if (currentIndex >= profiles.length) {
-wrap.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>Все анкеты просмотрены!<br>Заходи позже — появятся новые.</p></div>';
+wrap.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>' + BlizkoTheme.getText('all_viewed').replace(/\n/g,'<br>') + '</p></div>';
 return;
 }
 var p = profiles[currentIndex];
 var photos = p.profile_photos || [];
-// Показываем фото анкеты (аватар из edit-profile/profile) — оно и должно быть лицом карточки.
-// Фото из галереи — только запасной вариант, если аватар почему-то не задан.
 var photoUrl = p.photo_url || (photos.length > 0 ? photos[0].photo_url : '');
 var age = p.age ? ', ' + p.age : '';
 var city = p.city ? '📍 ' + p.city : '';
@@ -331,16 +321,16 @@ var badgesHtml = tradeMatches.length > 0
 wrap.innerHTML =
 '<div class="card" id="current-card">' +
 (photoUrl ? '<img src="' + photoUrl + '" alt="">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px">👤</div>') +
-'<div class="like-label label" id="like-label">ЛАЙК</div>' +
-'<div class="nope-label label" id="nope-label">НЕТ</div>' +
+'<div class="like-label label" id="like-label">' + (BlizkoTheme.getLang() === 'en' ? 'LIKE' : 'ЛАЙК') + '</div>' +
+'<div class="nope-label label" id="nope-label">' + (BlizkoTheme.getLang() === 'en' ? 'NOPE' : 'НЕТ') + '</div>' +
 '<div class="card-info">' +
 badgesHtml +
-'<div class="card-name">' + (p.name || 'Пользователь') + age + '</div>' +
+'<div class="card-name">' + (p.name || BlizkoTheme.getText('you')) + age + '</div>' +
 '<div class="card-meta">' + city + '</div>' +
 '<div class="card-bio">' + (p.bio || '') + '</div>' +
 '<div class="card-actions">' +
-'<button class="skip-btn" onclick="skipProfile()">👎 Пропустить</button>' +
-'<button class="like-btn" onclick="openLikeModal()">❤️ Лайк</button>' +
+'<button class="skip-btn" onclick="skipProfile()">' + BlizkoTheme.getText('skip_profile_btn') + '</button>' +
+'<button class="like-btn" onclick="openLikeModal()">' + BlizkoTheme.getText('like_profile_btn') + '</button>' +
 '</div>' +
 '</div>' +
 '</div>';
@@ -448,7 +438,7 @@ var { data: matchData } = await db.from('matches').select('*')
 closeLikeModal();
 if (matchData) {
 setTimeout(function() {
-if (confirm('🎉 Это взаимный лайк! Перейти в чат?')) {
+if (confirm(BlizkoTheme.getText('mutual_like_confirm'))) {
 window.location.href = 'chat.html?match=' + matchData.id;
 }
 }, 300);
@@ -485,9 +475,6 @@ var hasFilters = !!(activeFilters.ageMin || activeFilters.ageMax || activeFilter
 badge.classList.toggle('show', hasFilters);
 }
 
-// "Что ищете" сохраняется не в localStorage, а в самом профиле — эти значения
-// приватны (видны только тебе в этой форме), но участвуют в сравнении с тем,
-// что другие люди ПРЕДЛАГАЮТ в анкете (жёлтая точка в ленте/Знакомствах).
 async function saveMySeekFields() {
 var product_buy = blizkoGetCategoryFieldValue('filter-product-buy');
 var service_seek = blizkoGetCategoryFieldValue('filter-service-seek');
