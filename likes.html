@@ -46,18 +46,18 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <div class="nav-menu-wrap">
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
-<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
-<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 Лента</button>
-<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 Знакомства</button>
-<button class="nav-menu-item current" onclick="location.href='likes.html'">💖 Лайки</button>
-<button class="nav-menu-item" onclick="location.href='matches.html'">💬 Чаты</button>
-<button class="nav-menu-item" onclick="location.href='profile.html'">👤 Профиль</button>
+<button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
+<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
+<button class="nav-menu-item current" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
+<button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
+<button class="nav-menu-item" onclick="location.href='profile.html'">👤 <span data-i18n="profile">Профиль</span></button>
 </div>
 </div>
-<div class="page-title">Кто меня лайкнул</div>
+<div class="page-title" data-i18n="likes_page_title">Кто меня лайкнул</div>
 </div>
 <div class="list" id="list-wrap">
-<div class="loading">⏳ Загрузка...</div>
+<div class="loading">⏳ <span data-i18n="loading">Загрузка...</span></div>
 </div>
 <script src="theme.js"></script>
 <script src="config.js"></script>
@@ -113,9 +113,9 @@ if (!session) {
 wrap.innerHTML =
 '<div class="empty-state" style="padding:60px 20px;">' +
 '<div class="icon">🔒</div>' +
-'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
-'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
-'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'login.html\'">Войти</button>' +
+'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">' + BlizkoTheme.getText('session_expired') + '</p>' +
+'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">' + BlizkoTheme.getText('please_login_again') + '</p>' +
+'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'login.html\'">' + BlizkoTheme.getText('login') + '</button>' +
 '</div>';
 return;
 }
@@ -149,14 +149,10 @@ var { data: myLikes } = await db.from('likes').select('to_user, is_like').eq('fr
 myResponses = {};
 (myLikes || []).forEach(function(l) { myResponses[l.to_user] = l.is_like; });
 if (likesData.length === 0) {
-wrap.innerHTML = '<div class="empty-state"><div class="icon">💖</div><p>Пока никто не лайкнул.<br>Заполни профиль и добавь фото —<br>тебя будут находить чаще!</p></div>';
+wrap.innerHTML = '<div class="empty-state"><div class="icon">💖</div><p>' + BlizkoTheme.getText('no_likes_yet').replace(/\n/g,'<br>') + '</p></div>';
 return;
 }
 wrap.innerHTML = '';
-// ВАЖНО: используем let (а не var) для each-переменной цикла — иначе к моменту клика
-// по карточке цикл уже завершён, и все onclick-обработчики ссылаются на ОДИН И ТОТ ЖЕ
-// (последний) элемент массива. Именно это и было причиной "клик по любой карточке
-// ведёт на последний профиль в списке".
 for (let i = 0; i < likesData.length; i++) {
 let like = likesData[i];
 var p = like.profiles || {};
@@ -165,12 +161,12 @@ var item = document.createElement('div');
 item.className = 'like-item';
 var actionsHtml = '';
 if (alreadyMatched) {
-actionsHtml = '<div class="matched-tag">✓ Взаимный лайк</div>';
+actionsHtml = '<div class="matched-tag">' + BlizkoTheme.getText('mutual_like_tag') + '</div>';
 } else {
 actionsHtml =
 '<div class="like-actions">' +
-'<button class="mini-btn like" onclick="event.stopPropagation();likeBack(\'' + like.from_user + '\', this)">❤️ Лайкнуть в ответ</button>' +
-'<button class="mini-btn skip" onclick="event.stopPropagation();skipLike(\'' + like.from_user + '\', this)">Пропустить</button>' +
+'<button class="mini-btn like" onclick="event.stopPropagation();likeBack(\'' + like.from_user + '\', this)">' + BlizkoTheme.getText('like_back_btn') + '</button>' +
+'<button class="mini-btn skip" onclick="event.stopPropagation();skipLike(\'' + like.from_user + '\', this)">' + BlizkoTheme.getText('skip_plain') + '</button>' +
 '</div>';
 }
 item.onclick = function(e) {
@@ -180,7 +176,7 @@ window.location.href = 'view-profile.html?user=' + like.from_user;
 item.innerHTML =
 '<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
 '<div class="like-info">' +
-'<div class="like-name">' + (p.name || 'Пользователь') + (p.age ? ', ' + p.age : '') + '</div>' +
+'<div class="like-name">' + (p.name || BlizkoTheme.getText('you')) + (p.age ? ', ' + p.age : '') + '</div>' +
 '<div class="like-city">' + (p.city ? '📍 ' + p.city : '') + '</div>' +
 (like.comment ? '<div class="like-comment">💬 ' + escapeHtml(like.comment) + '</div>' : '') +
 actionsHtml +
