@@ -202,7 +202,8 @@ input[type="file"]{display:none}
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
 <button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
-<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item" onclick="goToFeedMode('grid')">🔲 <span data-i18n="grid_mode">Сетка</span></button>
+<button class="nav-menu-item" onclick="goToFeedMode('feed')">📰 <span data-i18n="feed">Лента</span></button>
 <button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
 <button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
 <button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
@@ -320,7 +321,7 @@ input[type="file"]{display:none}
 </select>
 </div>
 <div id="posts-grid-wrap">
-<div class="loading">⏳ <span data-i18n="loading">Загрузка...</span></div>
+<div class="loading"><span data-i18n="loading">Загрузка...</span></div>
 </div>
 <div class="post-upload-modal" id="post-upload-modal">
 <div class="post-upload-topbar">
@@ -1392,6 +1393,11 @@ alert((messages[reason] || fallback) + (detail ? '\n\n' + detail : ''));
 
 function toggleSettingsMenu() {
 document.getElementById('settings-menu').classList.toggle('show');
+}
+
+function goToFeedMode(mode) {
+try { localStorage.setItem('blizko_view_mode', mode); } catch (e) {}
+window.location.href = 'feed.html';
 }
 
 function toggleNavMenu() {
