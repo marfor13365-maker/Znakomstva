@@ -275,7 +275,13 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     view_comments_link: 'Смотреть комментарии',
     text_post_placeholder: 'О чём думаешь?',
     post_type_photo: '📷 Фото/видео',
-    post_type_text: '📝 Текст'
+    post_type_text: '📝 Текст',
+    // ---- добавлено: вкладка "Я лайкнул" на странице Лайков ----
+    tab_received: 'Кто меня лайкнул',
+    tab_sent: 'Я лайкнул',
+    no_sent_likes: 'Ты пока никому не лайкнул(а).\nЛайкай анкеты в "Знакомствах" — они появятся здесь.',
+    like_pending: '⏳ Ожидает ответа',
+    profile_pending_match: '🔒 Анкета откроется полностью, когда он(а) лайкнет в ответ.'
   };
 
   var LANG_EN = {
@@ -534,7 +540,13 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     view_comments_link: 'View comments',
     text_post_placeholder: "What's on your mind?",
     post_type_photo: '📷 Photo/video',
-    post_type_text: '📝 Text'
+    post_type_text: '📝 Text',
+    // ---- добавлено: вкладка "Я лайкнул" на странице Лайков ----
+    tab_received: 'Who liked me',
+    tab_sent: 'People I liked',
+    no_sent_likes: "You haven't liked anyone yet.\nLike profiles in \"Dating\" — they'll show up here.",
+    like_pending: '⏳ Waiting for a reply',
+    profile_pending_match: '🔒 Their profile will open once they like you back.'
   };
 
   function getLang() {
