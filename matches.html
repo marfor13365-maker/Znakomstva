@@ -33,6 +33,17 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
 .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 .btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.like-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:none;align-items:flex-end;justify-content:center;padding:0}
+.like-modal-overlay.show{display:flex}
+.like-modal{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
+.like-modal-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:6px;text-align:center}
+.like-modal-sub{font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px}
+.like-modal textarea{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:80px;margin-bottom:14px}
+.like-modal-actions{display:flex;gap:10px}
+.like-modal-actions .btn{margin:0;flex:1}
+.modal-follow-btn{width:100%;padding:12px;border-radius:14px;background:transparent;border:1px solid var(--accent);color:var(--accent2);font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:14px}
+.modal-follow-btn.following{background:rgba(255,255,255,0.05);border-color:var(--border);color:var(--muted)}
 .search-wrap{padding:14px 20px;border-bottom:1px solid var(--border)}
 .search-wrap input{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:11px 16px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none}
 .search-wrap input:focus{border-color:var(--accent)}
@@ -118,12 +129,14 @@ resultsEl.appendChild(item);
 });
 }
 
+var pendingLikeUserId = null;
+
 async function openFoundProfile(userId) {
-var { data: profile } = await db.from('profiles').select('profile_visibility').eq('id', userId).single();
+var { data: profile } = await db.from('profiles').select('profile_visibility, name').eq('id', userId).single();
 if (!profile) { alert(BlizkoTheme.getText('profile_not_found')); return; }
 var visibility = profile.profile_visibility || 'matches';
 if (visibility === 'none') {
-alert(BlizkoTheme.getText('profile_locked'));
+openLikeModal(userId, BlizkoTheme.getText('send_like_sub_closed'));
 return;
 }
 if (visibility === 'matches') {
@@ -131,11 +144,72 @@ var { data: match } = await db.from('matches').select('id')
 .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + userId + '),and(user1.eq.' + userId + ',user2.eq.' + currentUser.id + ')')
 .maybeSingle();
 if (!match) {
-alert(BlizkoTheme.getText('profile_match_only'));
+openLikeModal(userId, BlizkoTheme.getText('send_like_sub'));
 return;
 }
 }
 window.location.href = 'view-profile.html?user=' + userId;
+}
+
+async function openLikeModal(userId, subText) {
+pendingLikeUserId = userId;
+document.getElementById('like-modal-sub').textContent = subText;
+document.getElementById('like-modal-comment').value = '';
+document.getElementById('like-modal-overlay').classList.add('show');
+await refreshModalFollowButton(userId);
+}
+
+async function refreshModalFollowButton(userId) {
+var btn = document.getElementById('like-modal-follow-btn');
+var { data } = await db.from('follows').select('id').eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
+if (data) {
+btn.textContent = BlizkoTheme.getText('following');
+btn.classList.add('following');
+} else {
+btn.textContent = BlizkoTheme.getText('follow');
+btn.classList.remove('following');
+}
+}
+
+async function toggleModalFollow() {
+if (!pendingLikeUserId) return;
+var btn = document.getElementById('like-modal-follow-btn');
+var isFollowing = btn.classList.contains('following');
+if (isFollowing) {
+await db.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', pendingLikeUserId);
+} else {
+await db.from('follows').insert({ follower_id: currentUser.id, following_id: pendingLikeUserId });
+}
+refreshModalFollowButton(pendingLikeUserId);
+}
+
+function closeLikeModal() {
+document.getElementById('like-modal-overlay').classList.remove('show');
+pendingLikeUserId = null;
+}
+
+async function sendSearchLike() {
+if (!pendingLikeUserId) return;
+var comment = document.getElementById('like-modal-comment').value.trim();
+var { error } = await db.from('likes').upsert({
+from_user: currentUser.id,
+to_user: pendingLikeUserId,
+is_like: true,
+comment: comment || null
+}, { onConflict: 'from_user,to_user' });
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
+var targetId = pendingLikeUserId;
+closeLikeModal();
+var { data: matchData } = await db.from('matches').select('id')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + targetId + '),and(user1.eq.' + targetId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+if (matchData) {
+if (confirm(BlizkoTheme.getText('mutual_like_confirm'))) {
+window.location.href = 'chat.html?match=' + matchData.id;
+}
+} else {
+alert(BlizkoTheme.getText('like_sent'));
+}
 }
 
 function goToFeedMode(mode) {
@@ -222,5 +296,17 @@ wrap.appendChild(item);
 
 init();
 </script>
+<div class="like-modal-overlay" id="like-modal-overlay">
+<div class="like-modal">
+<div class="like-modal-title" data-i18n="send_like_title">❤️ Отправить лайк</div>
+<div class="like-modal-sub" id="like-modal-sub"></div>
+<button class="modal-follow-btn" id="like-modal-follow-btn" onclick="toggleModalFollow()"></button>
+<textarea id="like-modal-comment" maxlength="300"></textarea>
+<div class="like-modal-actions">
+<button class="btn-outline" onclick="closeLikeModal()" data-i18n="cancel">Отмена</button>
+<button class="btn" onclick="sendSearchLike()" data-i18n="send_btn">Отправить</button>
+</div>
+</div>
+</div>
 </body>
 </html>
