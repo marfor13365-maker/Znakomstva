@@ -52,28 +52,29 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <div class="nav-menu-wrap">
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
-<button class="nav-menu-item" onclick="navGoBack()">← Назад</button>
-<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 Лента</button>
-<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 Знакомства</button>
-<button class="nav-menu-item" onclick="location.href='likes.html'">💖 Лайки</button>
-<button class="nav-menu-item" onclick="location.href='matches.html'">💬 Чаты</button>
-<button class="nav-menu-item" onclick="location.href='profile.html'">👤 Профиль</button>
+<button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
+<button class="nav-menu-item" onclick="goToFeedMode('grid')">🔲 <span data-i18n="grid_mode">Сетка</span></button>
+<button class="nav-menu-item" onclick="goToFeedMode('feed')">📰 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
+<button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
+<button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
+<button class="nav-menu-item" onclick="location.href='profile.html'">👤 <span data-i18n="profile">Профиль</span></button>
 </div>
 </div>
-<div class="page-title">✨ Совпадения</div>
+<div class="page-title"><span data-i18n="trade_matches_title">✨ Совпадения</span></div>
 </div>
 <div class="list" id="list-wrap">
-<div class="loading">⏳ Загрузка...</div>
+<div class="loading"><span data-i18n="loading_users">Загрузка...</span></div>
 </div>
 <div class="like-modal-overlay" id="like-modal-overlay">
 <div class="like-modal">
-<div class="like-modal-title">❤️ Отправить лайк</div>
-<div class="like-modal-sub">Анкета открыта только мэтчам — но ты можешь лайкнуть с объяснением, в чём совпадение. Если лайкнет в ответ — откроется чат.</div>
+<div class="like-modal-title" data-i18n="send_like_title">❤️ Отправить лайк</div>
+<div class="like-modal-sub" data-i18n="send_like_sub">Анкета открыта только мэтчам — но ты можешь лайкнуть с объяснением, в чём совпадение. Если лайкнет в ответ — откроется чат.</div>
 <div class="like-modal-tags" id="like-modal-tags"></div>
 <textarea id="like-modal-comment" maxlength="300"></textarea>
 <div class="like-modal-actions">
-<button class="btn-outline" onclick="closeLikeModal()">Отмена</button>
-<button class="btn" onclick="sendLikeWithComment()">Отправить</button>
+<button class="btn-outline" onclick="closeLikeModal()" data-i18n="cancel">Отмена</button>
+<button class="btn" onclick="sendLikeWithComment()" data-i18n="send_btn">Отправить</button>
 </div>
 </div>
 </div>
@@ -84,6 +85,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <script>
 var db = createBlizkoClient();
 var currentUser = null;
+
+function goToFeedMode(mode) {
+try { localStorage.setItem('blizko_view_mode', mode); } catch (e) {}
+window.location.href = 'feed.html';
+}
 
 function toggleNavMenu() {
 document.getElementById('nav-menu').classList.toggle('show');
@@ -118,9 +124,9 @@ if (!r.data.session) {
 wrap.innerHTML =
 '<div class="empty-state" style="padding:60px 20px;">' +
 '<div class="icon">🔒</div>' +
-'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">Сессия истекла</p>' +
-'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Пожалуйста, войдите заново</p>' +
-'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'login.html\'">Войти</button>' +
+'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">' + BlizkoTheme.getText('session_expired') + '</p>' +
+'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">' + BlizkoTheme.getText('please_login_again') + '</p>' +
+'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'login.html\'">' + BlizkoTheme.getText('login') + '</button>' +
 '</div>';
 return;
 }
@@ -132,7 +138,7 @@ async function loadMatches() {
 var wrap = document.getElementById('list-wrap');
 var all = await blizkoGetAllTradeMatches(db, currentUser.id);
 if (all.length === 0) {
-wrap.innerHTML = '<div class="empty-state"><div class="icon">✨</div><p>Пока нет совпадений.<br>Заполни, что ищешь (в фильтрах "Знакомств") и что предлагаешь (в анкете) — здесь появятся люди, у которых это совпадает.</p></div>';
+wrap.innerHTML = '<div class="empty-state"><div class="icon">✨</div><p>' + BlizkoTheme.getText('no_matches_trade').replace(/\n/g,'<br>') + '</p></div>';
 return;
 }
 wrap.innerHTML = '';
@@ -147,18 +153,19 @@ return '<span class="trade-badge ' + m.type + '">✨ ' + m.label + '</span>';
 item.innerHTML =
 '<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
 '<div class="match-info">' +
-'<div class="match-name">' + (p.name || 'Пользователь') + (p.age ? ', ' + p.age : '') + (p.city ? ' · 📍 ' + p.city : '') + '</div>' +
+'<div class="match-name">' + (p.name || BlizkoTheme.getText('you')) + (p.age ? ', ' + p.age : '') + (p.city ? ' · 📍 ' + p.city : '') + '</div>' +
 '<div class="match-tags">' + tagsHtml + '</div>' +
 '</div>';
 wrap.appendChild(item);
 });
 }
 
-// Готовит текст лайка так, чтобы сразу было понятно, из-за чего пишешь — вместо
-// пустого "привет" человек сразу видит причину и может её поправить перед отправкой.
 function buildAutoComment(matches) {
 var reasons = matches.map(function(m) { return m.label; }).join('; ');
-return 'Привет! У нас совпадение: ' + reasons + '. Лайкни в ответ? 😊';
+var lang = BlizkoTheme.getLang();
+return lang === 'en'
+? 'Hi! We have a match: ' + reasons + '. Like me back? 😊'
+: 'Привет! У нас совпадение: ' + reasons + '. Лайкни в ответ? 😊';
 }
 
 var pendingLikeTarget = null;
@@ -186,24 +193,21 @@ to_user: pendingLikeTarget.id,
 is_like: true,
 comment: comment || null
 }, { onConflict: 'from_user,to_user' });
-if (error) { alert('Ошибка: ' + error.message); return; }
+if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
 var targetId = pendingLikeTarget.id;
 closeLikeModal();
 var { data: matchData } = await db.from('matches').select('id')
 .or('and(user1.eq.' + currentUser.id + ',user2.eq.' + targetId + '),and(user1.eq.' + targetId + ',user2.eq.' + currentUser.id + ')')
 .maybeSingle();
 if (matchData) {
-if (confirm('🎉 Это взаимный лайк! Перейти в чат?')) {
+if (confirm(BlizkoTheme.getText('mutual_like_confirm'))) {
 window.location.href = 'chat.html?match=' + matchData.id;
 }
 } else {
-alert('✓ Лайк с сообщением отправлен. Если он лайкнет в ответ — откроется чат.');
+alert(BlizkoTheme.getText('like_sent'));
 }
 }
 
-// Та же логика приватности, что и везде — совпадение по товару/услуге не отменяет
-// настройки видимости анкеты владельца. Разница только в том, что теперь вместо
-// молчаливой блокировки предлагаем лайкнуть с объяснением, а не отправляем в никуда.
 async function openProfile(p, matches) {
 var visibility = p.profile_visibility || 'matches';
 if (visibility === 'matches' || visibility === 'none') {
