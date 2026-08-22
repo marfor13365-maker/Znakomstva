@@ -20,6 +20,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .nav-menu-item:active{background:var(--input-bg)}
 .nav-menu-item.current{color:var(--accent);font-weight:600}
 .page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
+.likes-tabs{display:flex;border-bottom:1px solid var(--border)}
+.likes-tab{flex:1;text-align:center;padding:14px 8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;font-family:'Inter',sans-serif}
+.likes-tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.sent-like-status{font-size:11px;font-weight:600;margin-top:6px}
+.sent-like-status.mutual{color:var(--green)}
+.sent-like-status.pending{color:var(--muted)}
 .list{flex:1}
 .like-item{display:flex;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border)}
 .avatar{width:56px;height:56px;border-radius:50%;background:var(--input-bg);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid var(--border)}
@@ -56,6 +62,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 </div>
 <div class="page-title" data-i18n="likes_page_title">Кто меня лайкнул</div>
+</div>
+<div class="likes-tabs">
+<button class="likes-tab active" id="tab-received" onclick="switchLikesTab('received')" data-i18n="tab_received">Кто меня лайкнул</button>
+<button class="likes-tab" id="tab-sent" onclick="switchLikesTab('sent')" data-i18n="tab_sent">Я лайкнул</button>
 </div>
 <div class="list" id="list-wrap">
 <div class="loading"><span data-i18n="loading">Загрузка...</span></div>
@@ -94,6 +104,126 @@ var menu = document.getElementById('nav-menu');
 if (menu) menu.classList.remove('show');
 }
 });
+
+var currentLikesTab = 'received';
+
+function switchLikesTab(tab) {
+currentLikesTab = tab;
+document.getElementById('tab-received').classList.toggle('active', tab === 'received');
+document.getElementById('tab-sent').classList.toggle('active', tab === 'sent');
+if (tab === 'received') { loadLikes(); } else { loadSentLikes(); }
+}
+
+async function loadSentLikes() {
+var wrap = document.getElementById('list-wrap');
+wrap.innerHTML = '<div class="loading">' + BlizkoTheme.getText('loading') + '</div>';
+var { data: sent, error } = await db.from('likes')
+.select('*, profiles!likes_to_user_fkey(name, age, city, photo_url, profile_visibility)')
+.eq('from_user', currentUser.id)
+.eq('is_like', true)
+.order('created_at', { ascending: false });
+if (error) {
+var fallback = await db.from('likes')
+.select('*')
+.eq('from_user', currentUser.id)
+.eq('is_like', true)
+.order('created_at', { ascending: false });
+sent = fallback.data;
+if (sent) {
+for (var i = 0; i < sent.length; i++) {
+var p = await db.from('profiles').select('name, age, city, photo_url, profile_visibility').eq('id', sent[i].to_user).single();
+sent[i].profiles = p.data;
+}
+}
+}
+sent = sent || [];
+if (sent.length === 0) {
+wrap.innerHTML = '<div class="empty-state"><div class="icon">📤</div><p>' + BlizkoTheme.getText('no_sent_likes').replace(/\n/g, '<br>') + '</p></div>';
+return;
+}
+
+var { data: matches } = await db.from('matches').select('user1, user2')
+.or('user1.eq.' + currentUser.id + ',user2.eq.' + currentUser.id);
+var matchSet = {};
+(matches || []).forEach(function(m) { var other = m.user1 === currentUser.id ? m.user2 : m.user1; matchSet[other] = true; });
+var { data: follows } = await db.from('follows').select('following_id').eq('follower_id', currentUser.id);
+var followSet = {};
+(follows || []).forEach(function(f) { followSet[f.following_id] = true; });
+
+wrap.innerHTML = '';
+sent.forEach(function(like) {
+var p = like.profiles || {};
+var isMutual = !!matchSet[like.to_user];
+var isFollowing = !!followSet[like.to_user];
+var item = document.createElement('div');
+item.className = 'like-item';
+item.setAttribute('data-user-id', like.to_user);
+var statusHtml = isMutual
+? '<div class="sent-like-status mutual">' + BlizkoTheme.getText('mutual_like_tag') + '</div>'
+: '<div class="sent-like-status pending">' + BlizkoTheme.getText('like_pending') + '</div>';
+var actionsHtml = '<div class="like-actions">' +
+'<button class="mini-btn ' + (isFollowing ? 'skip' : 'like') + '" data-action="toggle-follow">' + BlizkoTheme.getText(isFollowing ? 'following' : 'follow') + '</button>' +
+(isMutual ? '<button class="mini-btn skip" data-action="open-chat">' + BlizkoTheme.getText('write_message') + '</button>' : '') +
+'</div>';
+item.innerHTML =
+'<div class="avatar" data-action="open-profile">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
+'<div class="like-info">' +
+'<div class="like-name" data-action="open-profile">' + (p.name || BlizkoTheme.getText('you')) + (p.age ? ', ' + p.age : '') + '</div>' +
+'<div class="like-city">' + (p.city ? '📍 ' + p.city : '') + '</div>' +
+statusHtml +
+actionsHtml +
+'</div>';
+wrap.appendChild(item);
+});
+}
+
+async function sentLikesToggleFollow(userId, btnEl) {
+var isFollowing = btnEl.textContent.trim() === BlizkoTheme.getText('following');
+if (isFollowing) {
+await db.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', userId);
+btnEl.textContent = BlizkoTheme.getText('follow');
+btnEl.classList.remove('skip'); btnEl.classList.add('like');
+} else {
+await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
+btnEl.textContent = BlizkoTheme.getText('following');
+btnEl.classList.remove('like'); btnEl.classList.add('skip');
+}
+}
+
+async function sentLikesOpenChat(userId) {
+var { data: match } = await db.from('matches').select('id')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + userId + '),and(user1.eq.' + userId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+if (match) window.location.href = 'chat.html?match=' + match.id;
+}
+
+async function sentLikesOpenProfile(userId, isMutual) {
+var { data: profile } = await db.from('profiles').select('profile_visibility').eq('id', userId).single();
+if (!profile) { alert(BlizkoTheme.getText('profile_not_found')); return; }
+var vis = profile.profile_visibility || 'matches';
+if (vis === 'none') { alert(BlizkoTheme.getText('profile_locked')); return; }
+if (vis === 'matches' && !isMutual) { alert(BlizkoTheme.getText('profile_pending_match')); return; }
+window.location.href = 'view-profile.html?user=' + userId;
+}
+
+(function attachSentLikesDelegation() {
+var wrap = document.getElementById('list-wrap');
+if (!wrap) return;
+wrap.addEventListener('click', function(e) {
+if (currentLikesTab !== 'sent') return;
+var item = e.target.closest('.like-item[data-user-id]');
+if (!item) return;
+var actionEl = e.target.closest('[data-action]');
+if (!actionEl) return;
+var userId = item.getAttribute('data-user-id');
+var isMutual = !!item.querySelector('.sent-like-status.mutual');
+switch (actionEl.getAttribute('data-action')) {
+case 'toggle-follow': sentLikesToggleFollow(userId, actionEl); break;
+case 'open-chat': sentLikesOpenChat(userId); break;
+case 'open-profile': sentLikesOpenProfile(userId, isMutual); break;
+}
+});
+})();
 
 async function init() {
 var wrap = document.getElementById('list-wrap');
