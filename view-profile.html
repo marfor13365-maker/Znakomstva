@@ -113,7 +113,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
 <div class="nav-menu" id="nav-menu">
 <button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
-<button class="nav-menu-item" onclick="location.href='feed.html'">🏠 <span data-i18n="feed">Лента</span></button>
+<button class="nav-menu-item" onclick="goToFeedMode('grid')">🔲 <span data-i18n="grid_mode">Сетка</span></button>
+<button class="nav-menu-item" onclick="goToFeedMode('feed')">📰 <span data-i18n="feed">Лента</span></button>
 <button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
 <button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
 <button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
@@ -126,7 +127,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 </div>
 </div>
 <div class="content" id="content">
-<div class="loading">⏳ <span data-i18n="loading">Загрузка...</span></div>
+<div class="loading"><span data-i18n="loading">Загрузка...</span></div>
 </div>
 <div class="viewer-overlay" id="viewer-overlay">
 <button class="viewer-close" onclick="closeViewer()">✕</button>
@@ -239,6 +240,11 @@ btn.textContent = btn.textContent === 'EN' ? 'RU' : 'EN';
 location.reload();
 }
 }
+};
+
+window.goToFeedMode = function(mode) {
+try { localStorage.setItem('blizko_view_mode', mode); } catch (e) {}
+window.location.href = 'feed.html';
 };
 
 window.toggleNavMenu = function() {
