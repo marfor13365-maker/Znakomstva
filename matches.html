@@ -44,6 +44,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .like-modal-actions .btn{margin:0;flex:1}
 .modal-follow-btn{width:100%;padding:12px;border-radius:14px;background:transparent;border:1px solid var(--accent);color:var(--accent2);font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:14px}
 .modal-follow-btn.following{background:rgba(255,255,255,0.05);border-color:var(--border);color:var(--muted)}
+.grants-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;justify-content:center}
+.grants-row label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer}
+.grants-row input[type="checkbox"]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.grants-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;text-align:center}
 .search-wrap{padding:14px 20px;border-bottom:1px solid var(--border)}
 .search-wrap input{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:11px 16px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none}
 .search-wrap input:focus{border-color:var(--accent)}
@@ -130,6 +134,50 @@ resultsEl.appendChild(item);
 }
 
 var pendingLikeUserId = null;
+var pendingGrant = { allow_about: false, allow_gallery: false, allow_chat: false };
+
+async function ensureMatchExists(otherUserId) {
+var { data: existing } = await db.from('matches').select('id')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+if (existing) return;
+await db.from('matches').insert({ user1: currentUser.id, user2: otherUserId });
+}
+
+async function loadGrantIntoModal(userId) {
+var { data } = await db.from('access_grants').select('*').eq('granter_id', currentUser.id).eq('grantee_id', userId).maybeSingle();
+pendingGrant = data || { allow_about: false, allow_gallery: false, allow_chat: false };
+var row = document.getElementById('like-modal-grants');
+row.querySelectorAll('.grant-checkbox').forEach(function(cb) {
+cb.checked = !!pendingGrant[cb.getAttribute('data-field')];
+});
+}
+
+async function toggleModalGrant(field, checked) {
+if (!pendingLikeUserId) return;
+pendingGrant[field] = checked;
+var { error } = await db.from('access_grants').upsert({
+granter_id: currentUser.id,
+grantee_id: pendingLikeUserId,
+allow_about: pendingGrant.allow_about,
+allow_gallery: pendingGrant.allow_gallery,
+allow_chat: pendingGrant.allow_chat
+}, { onConflict: 'granter_id,grantee_id' });
+if (error) { console.error('toggleModalGrant error:', error); return; }
+if (field === 'allow_chat' && checked) {
+await ensureMatchExists(pendingLikeUserId);
+}
+}
+
+(function attachModalGrantsDelegation() {
+var row = document.getElementById('like-modal-grants');
+if (!row) return;
+row.addEventListener('change', function(e) {
+var cb = e.target.closest('.grant-checkbox');
+if (!cb) return;
+toggleModalGrant(cb.getAttribute('data-field'), cb.checked);
+});
+})();
 
 async function openFoundProfile(userId) {
 var { data: profile } = await db.from('profiles').select('profile_visibility, name').eq('id', userId).single();
@@ -157,6 +205,7 @@ document.getElementById('like-modal-sub').textContent = subText;
 document.getElementById('like-modal-comment').value = '';
 document.getElementById('like-modal-overlay').classList.add('show');
 await refreshModalFollowButton(userId);
+await loadGrantIntoModal(userId);
 }
 
 async function refreshModalFollowButton(userId) {
@@ -301,6 +350,12 @@ init();
 <div class="like-modal-title" data-i18n="send_like_title">❤️ Отправить лайк</div>
 <div class="like-modal-sub" id="like-modal-sub"></div>
 <button class="modal-follow-btn" id="like-modal-follow-btn" onclick="toggleModalFollow()"></button>
+<div class="grants-label" data-i18n="grants_label">Открыть этому человеку:</div>
+<div class="grants-row" id="like-modal-grants">
+<label><input type="checkbox" class="grant-checkbox" data-field="allow_about"> <span data-i18n="grant_about">Анкету</span></label>
+<label><input type="checkbox" class="grant-checkbox" data-field="allow_gallery"> <span data-i18n="grant_gallery">Галерею</span></label>
+<label><input type="checkbox" class="grant-checkbox" data-field="allow_chat"> <span data-i18n="grant_chat">Чат</span></label>
+</div>
 <textarea id="like-modal-comment" maxlength="300"></textarea>
 <div class="like-modal-actions">
 <button class="btn-outline" onclick="closeLikeModal()" data-i18n="cancel">Отмена</button>
