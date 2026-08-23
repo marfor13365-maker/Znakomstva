@@ -282,7 +282,11 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     no_sent_likes: 'Ты пока никому не лайкнул(а).\nЛайкай анкеты в "Знакомствах" — они появятся здесь.',
     like_pending: '⏳ Ожидает ответа',
     profile_pending_match: '🔒 Анкета откроется полностью, когда он(а) лайкнет в ответ.',
-    send_like_sub_closed: 'Анкета полностью закрыта — просмотреть её будет нельзя, но лайк сохранит этот контакт: если ответит взаимностью, откроется чат.'
+    send_like_sub_closed: 'Анкета полностью закрыта — просмотреть её будет нельзя, но лайк сохранит этот контакт: если ответит взаимностью, откроется чат.',
+    grants_label: 'Открыть этому человеку:',
+    grant_about: 'Анкету',
+    grant_gallery: 'Галерею',
+    grant_chat: 'Чат'
   };
 
   var LANG_EN = {
@@ -548,7 +552,11 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     no_sent_likes: "You haven't liked anyone yet.\nLike profiles in \"Dating\" — they'll show up here.",
     like_pending: '⏳ Waiting for a reply',
     profile_pending_match: '🔒 Their profile will open once they like you back.',
-    send_like_sub_closed: "Their profile is fully closed — you won't be able to view it, but a like saves this contact: if they like back, a chat will open."
+    send_like_sub_closed: "Their profile is fully closed — you won't be able to view it, but a like saves this contact: if they like back, a chat will open.",
+    grants_label: 'Open for this person:',
+    grant_about: 'Profile',
+    grant_gallery: 'Gallery',
+    grant_chat: 'Chat'
   };
 
   function getLang() {
