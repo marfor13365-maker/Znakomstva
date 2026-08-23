@@ -336,16 +336,28 @@ myOwnExtra = {};
 
 var isOwn = currentUser.id === profile.id;
 var pv = profile.profile_visibility || 'matches';
-if (!isOwn && pv === 'none') {
-document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>' + BlizkoTheme.getText('profile_locked').replace('🔒 ', '') + '</p></div>';
-return;
+
+// Индивидуальный грант от владельца анкеты (см. вкладку "Кто меня лайкнул") — открывает
+// доступ конкретно текущему пользователю, даже если общая приватность анкеты закрыта.
+var incomingGrant = null;
+if (!isOwn) {
+var { data: grantRow } = await db.from('access_grants').select('*').eq('granter_id', targetId).eq('grantee_id', currentUser.id).maybeSingle();
+incomingGrant = grantRow || null;
 }
-if (!isOwn && pv === 'matches' && !currentMatchId) {
-document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>' + BlizkoTheme.getText('profile_match_only').replace('🔒 ', '') + '</p></div>';
+var grantAbout = !!(incomingGrant && incomingGrant.allow_about);
+var grantGallery = !!(incomingGrant && incomingGrant.allow_gallery);
+
+var canSeeAbout = isOwn || grantAbout || (pv !== 'none' && (pv === 'all' || (pv === 'matches' && !!currentMatchId)));
+var galleryVis = profile.posts_visibility || 'all';
+var canSeeGalleryFlag = isOwn || grantGallery || (galleryVis !== 'none' && (galleryVis === 'all' || (galleryVis === 'matches' && !!currentMatchId)));
+
+if (!canSeeAbout && !canSeeGalleryFlag) {
+var lockMsg = pv === 'none' ? BlizkoTheme.getText('profile_locked').replace('🔒 ', '') : BlizkoTheme.getText('profile_match_only').replace('🔒 ', '');
+document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>' + lockMsg + '</p></div>';
 return;
 }
 
-renderProfile(profile);
+renderProfile(profile, canSeeAbout, grantGallery);
 if (typeof BlizkoTheme !== 'undefined') {
 if (typeof BlizkoTheme.apply === 'function') BlizkoTheme.apply();
 if (typeof BlizkoTheme.applyLang === 'function') BlizkoTheme.applyLang();
@@ -356,7 +368,7 @@ document.getElementById('content').innerHTML = '<div class="loading" style="colo
 }
 }
 
-function renderProfile(profile) {
+function renderProfile(profile, canSeeAbout, grantGallery) {
 currentTargetUsername = profile.username || null;
 var content = document.getElementById('content');
 var html =
@@ -375,6 +387,7 @@ html += '<button class="btn delete-match-btn" onclick="deleteMatch(\'' + current
 html += '<button class="btn message-btn" onclick="window.location.href=\'matches.html\'" data-i18n="write_message">💬 Написать сообщение</button>';
 }
 html += '</div></div>';
+if (canSeeAbout) {
 html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text">' +
 (profile.about ? linkifyText(escapeHtml(profile.about)) : '<span style="color:var(--muted)" data-i18n="no_bio">Пользователь ничего не написал о себе</span>') +
 '</div></div>';
@@ -382,11 +395,12 @@ var extraHtml = buildExtraFieldsHtml(profile);
 if (extraHtml) {
 html += '<div class="section"><div class="section-title">' + BlizkoTheme.getText('extra_label') + '</div><div class="about-text extra-fields">' + extraHtml + '</div></div>';
 }
+}
 html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
 
 var visibility = profile.posts_visibility || 'all';
 var isOwnProfile = currentUser.id === profile.id;
-var canSeeGallery = isOwnProfile || visibility === 'all' || (visibility === 'matches' && !!currentMatchId);
+var canSeeGallery = isOwnProfile || grantGallery || visibility === 'all' || (visibility === 'matches' && !!currentMatchId);
 
 if (!canSeeGallery) {
 html += '<div class="locked-state"><div class="icon">🔒</div><p>' +
