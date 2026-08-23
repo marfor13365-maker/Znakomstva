@@ -27,6 +27,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .sent-like-status.mutual{color:var(--green)}
 .sent-like-status.pending{color:var(--muted)}
 .sent-like-date{font-size:11px;color:var(--muted);margin-top:2px}
+.grants-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;margin-bottom:8px}
+.grants-row label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer}
+.grants-row input[type="checkbox"]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.grants-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:8px}
 .list{flex:1}
 .like-item{display:flex;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border)}
 .avatar{width:56px;height:56px;border-radius:50%;background:var(--input-bg);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid var(--border)}
@@ -78,6 +82,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 var db = createBlizkoClient();
 var currentUser = null;
 var myResponses = {};
+var myGrants = {};
 
 function goToFeedMode(mode) {
 try { localStorage.setItem('blizko_view_mode', mode); } catch (e) {}
@@ -296,11 +301,21 @@ if (likesData.length === 0) {
 wrap.innerHTML = '<div class="empty-state"><div class="icon">💖</div><p>' + BlizkoTheme.getText('no_likes_yet').replace(/\n/g,'<br>') + '</p></div>';
 return;
 }
+
+var likerIds = likesData.map(function(l) { return l.from_user; });
+var { data: grantsData } = await db.from('access_grants')
+.select('*')
+.eq('granter_id', currentUser.id)
+.in('grantee_id', likerIds);
+myGrants = {};
+(grantsData || []).forEach(function(g) { myGrants[g.grantee_id] = g; });
+
 wrap.innerHTML = '';
 for (let i = 0; i < likesData.length; i++) {
 let like = likesData[i];
 var p = like.profiles || {};
 var alreadyMatched = myResponses.hasOwnProperty(like.from_user) && myResponses[like.from_user] === true;
+var g = myGrants[like.from_user] || { allow_about: false, allow_gallery: false, allow_chat: false };
 var item = document.createElement('div');
 item.className = 'like-item';
 var actionsHtml = '';
@@ -313,8 +328,15 @@ actionsHtml =
 '<button class="mini-btn skip" onclick="event.stopPropagation();skipLike(\'' + like.from_user + '\', this)">' + BlizkoTheme.getText('skip_plain') + '</button>' +
 '</div>';
 }
+var grantsHtml =
+'<div class="grants-label">' + BlizkoTheme.getText('grants_label') + '</div>' +
+'<div class="grants-row" data-user-id="' + like.from_user + '">' +
+'<label><input type="checkbox" class="grant-checkbox" data-field="allow_about"' + (g.allow_about ? ' checked' : '') + '> ' + BlizkoTheme.getText('grant_about') + '</label>' +
+'<label><input type="checkbox" class="grant-checkbox" data-field="allow_gallery"' + (g.allow_gallery ? ' checked' : '') + '> ' + BlizkoTheme.getText('grant_gallery') + '</label>' +
+'<label><input type="checkbox" class="grant-checkbox" data-field="allow_chat"' + (g.allow_chat ? ' checked' : '') + '> ' + BlizkoTheme.getText('grant_chat') + '</label>' +
+'</div>';
 item.onclick = function(e) {
-if (e.target.closest('.like-actions')) return;
+if (e.target.closest('.like-actions') || e.target.closest('.grants-row')) return;
 window.location.href = 'view-profile.html?user=' + like.from_user;
 };
 item.innerHTML =
@@ -324,6 +346,7 @@ item.innerHTML =
 '<div class="like-city">' + (p.city ? '📍 ' + p.city : '') + '</div>' +
 (like.comment ? '<div class="like-comment">💬 ' + escapeHtml(like.comment) + '</div>' : '') +
 actionsHtml +
+grantsHtml +
 '</div>';
 wrap.appendChild(item);
 }
@@ -332,6 +355,45 @@ wrap.appendChild(item);
 function escapeHtml(str) {
 return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+async function ensureMatchExists(otherUserId) {
+var { data: existing } = await db.from('matches').select('id')
+.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + otherUserId + '),and(user1.eq.' + otherUserId + ',user2.eq.' + currentUser.id + ')')
+.maybeSingle();
+if (existing) return;
+await db.from('matches').insert({ user1: currentUser.id, user2: otherUserId });
+}
+
+async function toggleGrant(userId, field, checked) {
+var current = myGrants[userId] || { allow_about: false, allow_gallery: false, allow_chat: false };
+current[field] = checked;
+myGrants[userId] = current;
+var { error } = await db.from('access_grants').upsert({
+granter_id: currentUser.id,
+grantee_id: userId,
+allow_about: current.allow_about,
+allow_gallery: current.allow_gallery,
+allow_chat: current.allow_chat
+}, { onConflict: 'granter_id,grantee_id' });
+if (error) { console.error('toggleGrant error:', error); return; }
+if (field === 'allow_chat' && checked) {
+await ensureMatchExists(userId);
+}
+}
+
+(function attachGrantsDelegation() {
+var wrap = document.getElementById('list-wrap');
+if (!wrap) return;
+wrap.addEventListener('change', function(e) {
+var checkbox = e.target.closest('.grant-checkbox');
+if (!checkbox) return;
+var row = checkbox.closest('.grants-row');
+if (!row) return;
+var userId = row.getAttribute('data-user-id');
+var field = checkbox.getAttribute('data-field');
+toggleGrant(userId, field, checkbox.checked);
+});
+})();
 
 async function likeBack(otherUserId, btnEl) {
 if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
