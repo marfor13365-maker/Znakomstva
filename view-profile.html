@@ -347,9 +347,20 @@ incomingGrant = grantRow || null;
 var grantAbout = !!(incomingGrant && incomingGrant.allow_about);
 var grantGallery = !!(incomingGrant && incomingGrant.allow_gallery);
 
-var canSeeAbout = isOwn || grantAbout || (pv !== 'none' && (pv === 'all' || (pv === 'matches' && !!currentMatchId)));
-var galleryVis = profile.posts_visibility || 'all';
-var canSeeGalleryFlag = isOwn || grantGallery || (galleryVis !== 'none' && (galleryVis === 'all' || (galleryVis === 'matches' && !!currentMatchId)));
+// Если для этой пары (владелец анкеты → текущий пользователь) вообще есть строка
+// в access_grants — значит, доступ уже настроен ИНДИВИДУАЛЬНО, и общая настройка
+// приватности анкеты (profile_visibility/posts_visibility) для НЕГО больше не
+// учитывается — грант становится единственным источником правды. Пока грант не
+// создан ни разу — как раньше, работает общая настройка + правило "мэтч открывает".
+var canSeeAbout, canSeeGalleryFlag;
+if (incomingGrant) {
+canSeeAbout = isOwn || grantAbout;
+canSeeGalleryFlag = isOwn || grantGallery;
+} else {
+canSeeAbout = isOwn || (pv !== 'none' && (pv === 'all' || (pv === 'matches' && !!currentMatchId)));
+var galleryVisFallback = profile.posts_visibility || 'all';
+canSeeGalleryFlag = isOwn || (galleryVisFallback !== 'none' && (galleryVisFallback === 'all' || (galleryVisFallback === 'matches' && !!currentMatchId)));
+}
 
 if (!canSeeAbout && !canSeeGalleryFlag) {
 var lockMsg = pv === 'none' ? BlizkoTheme.getText('profile_locked').replace('🔒 ', '') : BlizkoTheme.getText('profile_match_only').replace('🔒 ', '');
@@ -357,7 +368,7 @@ document.getElementById('content').innerHTML = '<div class="locked-state" style=
 return;
 }
 
-renderProfile(profile, canSeeAbout, grantGallery);
+renderProfile(profile, canSeeAbout, canSeeGalleryFlag);
 if (typeof BlizkoTheme !== 'undefined') {
 if (typeof BlizkoTheme.apply === 'function') BlizkoTheme.apply();
 if (typeof BlizkoTheme.applyLang === 'function') BlizkoTheme.applyLang();
@@ -368,7 +379,7 @@ document.getElementById('content').innerHTML = '<div class="loading" style="colo
 }
 }
 
-function renderProfile(profile, canSeeAbout, grantGallery) {
+function renderProfile(profile, canSeeAbout, canSeeGallery) {
 currentTargetUsername = profile.username || null;
 var content = document.getElementById('content');
 var html =
@@ -398,13 +409,9 @@ html += '<div class="section"><div class="section-title">' + BlizkoTheme.getText
 }
 html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
 
-var visibility = profile.posts_visibility || 'all';
-var isOwnProfile = currentUser.id === profile.id;
-var canSeeGallery = isOwnProfile || grantGallery || visibility === 'all' || (visibility === 'matches' && !!currentMatchId);
-
 if (!canSeeGallery) {
 html += '<div class="locked-state"><div class="icon">🔒</div><p>' +
-(visibility === 'none'
+((profile.posts_visibility || 'all') === 'none'
 ? BlizkoTheme.getText('gallery_locked_none')
 : BlizkoTheme.getText('gallery_locked_matches')) +
 '</p></div>';
