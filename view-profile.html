@@ -47,6 +47,24 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .qr-username{font-family:'Unbounded',sans-serif;font-size:15px;color:var(--accent2);margin-top:14px;margin-bottom:18px}
 .qr-actions{display:flex;flex-direction:column;gap:10px}
 .actions-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+.stats-row{display:flex;justify-content:center;gap:30px;padding:18px 20px;border-bottom:1px solid var(--border);margin-top:6px}
+.stat-item{text-align:center;cursor:pointer}
+.stat-item:active{opacity:0.7}
+.stat-num{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+.list-sheet-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.list-sheet-overlay.show{display:flex}
+.list-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;max-height:75vh;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-top:1px solid var(--border);display:flex;flex-direction:column}
+.list-sheet-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600;margin-bottom:12px;text-align:center}
+.list-sheet-body{overflow-y:auto;flex:1}
+.list-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
+.list-row:last-child{border-bottom:none}
+.list-row:active{opacity:0.7}
+.list-avatar{width:38px;height:38px;border-radius:50%;background:var(--input-bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px}
+.list-avatar img{width:100%;height:100%;object-fit:cover}
+.list-name{font-size:13px;font-weight:600}
+.list-meta{font-size:11px;color:var(--muted)}
+.list-empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 0}
 .actions-row .btn{flex:0 1 auto;min-width:140px;padding:10px 20px;border-radius:14px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;border:none;transition:opacity 0.2s;white-space:nowrap}
 .actions-row .btn:active{opacity:0.7}
 .message-btn{background:var(--accent);color:white}
@@ -153,6 +171,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 <div class="comments-disabled-msg" id="gallery-comments-disabled-msg" style="display:none" data-i18n="comments_disabled">Комментарии отключены автором</div>
 </div>
 </div>
+</div>
+</div>
+<div class="list-sheet-overlay" id="list-sheet-overlay" onclick="if(event.target===this) closeListSheet()">
+<div class="list-sheet">
+<div class="list-sheet-title" id="list-sheet-title"></div>
+<div class="list-sheet-body" id="list-sheet-body"></div>
 </div>
 </div>
 <div class="qr-modal" id="target-qr-modal">
@@ -362,7 +386,11 @@ var galleryVisFallback = profile.posts_visibility || 'all';
 canSeeGalleryFlag = isOwn || (galleryVisFallback !== 'none' && (galleryVisFallback === 'all' || (galleryVisFallback === 'matches' && !!currentMatchId)));
 }
 
-renderProfile(profile, canSeeAbout, canSeeGalleryFlag, !!incomingGrant, pv);
+var fv = profile.followers_visibility || 'all';
+var gv = profile.following_visibility || 'all';
+var canSeeFollowers = isOwn || fv === 'all' || (fv === 'matches' && !!currentMatchId);
+var canSeeFollowing = isOwn || gv === 'all' || (gv === 'matches' && !!currentMatchId);
+renderProfile(profile, canSeeAbout, canSeeGalleryFlag, !!incomingGrant, pv, canSeeFollowers, canSeeFollowing);
 if (typeof BlizkoTheme !== 'undefined') {
 if (typeof BlizkoTheme.apply === 'function') BlizkoTheme.apply();
 if (typeof BlizkoTheme.applyLang === 'function') BlizkoTheme.applyLang();
@@ -373,7 +401,7 @@ document.getElementById('content').innerHTML = '<div class="loading" style="colo
 }
 }
 
-function renderProfile(profile, canSeeAbout, canSeeGallery, hasGrant, pv) {
+function renderProfile(profile, canSeeAbout, canSeeGallery, hasGrant, pv, canSeeFollowers, canSeeFollowing) {
 currentTargetUsername = profile.username || null;
 var content = document.getElementById('content');
 var chatNote = currentMatchId ? (' ' + BlizkoTheme.getText('chat_available_note')) : '';
@@ -393,6 +421,16 @@ html += '<button class="btn delete-match-btn" onclick="deleteMatch(\'' + current
 html += '<button class="btn message-btn" onclick="window.location.href=\'matches.html\'" data-i18n="write_message">💬 Написать сообщение</button>';
 }
 html += '</div></div>';
+if (canSeeFollowers || canSeeFollowing) {
+html += '<div class="stats-row">';
+if (canSeeFollowers) {
+html += '<div class="stat-item" onclick="openListSheet(\'followers\')"><div class="stat-num" id="target-followers-count">…</div><div class="stat-label" data-i18n="followers">подписчиков</div></div>';
+}
+if (canSeeFollowing) {
+html += '<div class="stat-item" onclick="openListSheet(\'following\')"><div class="stat-num" id="target-following-count">…</div><div class="stat-label" data-i18n="following_label">подписок</div></div>';
+}
+html += '</div>';
+}
 if (canSeeAbout) {
 html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text">' +
 (profile.about ? linkifyText(escapeHtml(profile.about)) : '<span style="color:var(--muted)" data-i18n="no_bio">Пользователь ничего не написал о себе</span>') +
