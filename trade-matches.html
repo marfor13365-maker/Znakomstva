@@ -1,228 +1,123 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Znakomstor - Совпадения</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Inter:wght@400;500&display=swap');
-:root{--bg:#0d0d0d;--card:#161616;--border:#2a2a2a;--accent:#ff4d6d;--accent2:#ff8fa3;--text:#f0f0f0;--muted:#888;--input-bg:#1e1e1e;--radius:16px}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-bottom:20px}
-.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
-.nav-menu-wrap{position:relative}
-.hamburger-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);flex-shrink:0}
-.hamburger-btn:active{opacity:0.8}
-.nav-menu{position:absolute;top:46px;left:0;background:var(--card);border:1px solid var(--border);border-radius:14px;min-width:190px;box-shadow:0 8px 30px rgba(0,0,0,0.5);display:none;overflow:hidden;z-index:50}
-.nav-menu.show{display:block}
-.nav-menu-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 16px;background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);font-family:'Inter',sans-serif}
-.nav-menu-item:last-child{border-bottom:none}
-.nav-menu-item:active{background:var(--input-bg)}
-.page-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600}
-.list{flex:1}
-.match-item{display:flex;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border);cursor:pointer}
-.match-item:active{background:var(--card)}
-.avatar{width:52px;height:52px;border-radius:50%;background:var(--input-bg);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid var(--border)}
-.avatar img{width:100%;height:100%;object-fit:cover}
-.match-info{flex:1;min-width:0}
-.match-name{font-weight:600;font-size:14px;margin-bottom:5px}
-.match-tags{display:flex;flex-wrap:wrap;gap:6px}
-.trade-badge{display:inline-block;font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;background:rgba(255,77,109,0.2);color:var(--accent2)}
-.trade-badge.product{background:rgba(76,255,159,0.18);color:#6bffb8}
-.trade-badge.job{background:rgba(255,210,63,0.2);color:#ffd23f}
-.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
-.empty-state .icon{font-size:60px;margin-bottom:16px}
-.empty-state p{font-size:14px;color:var(--muted);line-height:1.6}
-.loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
-.btn{padding:14px 32px;background:var(--accent);border:none;border-radius:12px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
-.like-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:none;align-items:flex-end;justify-content:center;padding:0}
-.like-modal-overlay.show{display:flex}
-.like-modal{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:420px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
-.like-modal-title{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:600;margin-bottom:6px;text-align:center}
-.like-modal-sub{font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px}
-.like-modal-tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px}
-.like-modal textarea{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;resize:none;height:90px;margin-bottom:14px}
-.like-modal-actions{display:flex;gap:10px}
-.like-modal-actions .btn{margin:0;flex:1}
-</style>
-</head>
-<body>
-<div class="topbar">
-<div class="nav-menu-wrap">
-<button class="hamburger-btn" onclick="toggleNavMenu()">☰</button>
-<div class="nav-menu" id="nav-menu">
-<button class="nav-menu-item" onclick="navGoBack()" data-i18n="nav_back">← Назад</button>
-<button class="nav-menu-item" onclick="goToFeedMode('grid')">🔲 <span data-i18n="grid_mode">Сетка</span></button>
-<button class="nav-menu-item" onclick="goToFeedMode('feed')">📰 <span data-i18n="feed">Лента</span></button>
-<button class="nav-menu-item" onclick="location.href='swipe.html'">😍 <span data-i18n="swipe">Знакомства</span></button>
-<button class="nav-menu-item" onclick="location.href='likes.html'">💖 <span data-i18n="likes">Лайки</span></button>
-<button class="nav-menu-item" onclick="location.href='matches.html'">💬 <span data-i18n="chats">Чаты</span></button>
-<button class="nav-menu-item" onclick="location.href='profile.html'">👤 <span data-i18n="profile">Профиль</span></button>
-</div>
-</div>
-<div class="page-title"><span data-i18n="trade_matches_title">✨ Совпадения</span></div>
-</div>
-<div class="list" id="list-wrap">
-<div class="loading"><span data-i18n="loading_users">Загрузка...</span></div>
-</div>
-<div class="like-modal-overlay" id="like-modal-overlay">
-<div class="like-modal">
-<div class="like-modal-title" data-i18n="send_like_title">❤️ Отправить лайк</div>
-<div class="like-modal-sub" data-i18n="send_like_sub">Анкета открыта только мэтчам — но ты можешь лайкнуть с объяснением, в чём совпадение. Если лайкнет в ответ — откроется чат.</div>
-<div class="like-modal-tags" id="like-modal-tags"></div>
-<textarea id="like-modal-comment" maxlength="300"></textarea>
-<div class="like-modal-actions">
-<button class="btn-outline" onclick="closeLikeModal()" data-i18n="cancel">Отмена</button>
-<button class="btn" onclick="sendLikeWithComment()" data-i18n="send_btn">Отправить</button>
-</div>
-</div>
-</div>
-<script src="theme.js"></script>
-<script src="config.js"></script>
-<script src="trade-match.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-var db = createBlizkoClient();
-var currentUser = null;
+// trade-match.js
+// Общая логика сравнения полей "товар/услуга/работа" между профилями.
+// Раньше эта логика была скопирована отдельно в feed.html, swipe.html и
+// view-profile.html — при любом изменении алгоритма пришлось бы править в трёх
+// местах, и со временем они бы разъехались. Теперь один источник правды.
 
-function goToFeedMode(mode) {
-try { localStorage.setItem('blizko_view_mode', mode); } catch (e) {}
-window.location.href = 'feed.html';
+function blizkoFuzzyEq(a, b) {
+var x = (a || '').trim().toLowerCase();
+var y = (b || '').trim().toLowerCase();
+if (!x || !y) return false;
+return x === y || x.indexOf(y) !== -1 || y.indexOf(x) !== -1;
 }
 
-function toggleNavMenu() {
-document.getElementById('nav-menu').classList.toggle('show');
+function blizkoTradeLang() {
+return (typeof BlizkoTheme !== 'undefined') ? BlizkoTheme.getLang() : 'ru';
 }
 
-function navGoBack() {
-var menu = document.getElementById('nav-menu');
-if (menu) menu.classList.remove('show');
-if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) {
-history.back();
-} else {
-window.location.href = 'feed.html';
-}
+function blizkoTradeLabel(ru, en) {
+return blizkoTradeLang() === 'en' ? en : ru;
 }
 
-document.addEventListener('click', function(e) {
-var navWrap = document.querySelector('.nav-menu-wrap');
-if (navWrap && !navWrap.contains(e.target)) {
-var menu = document.getElementById('nav-menu');
-if (menu) menu.classList.remove('show');
+// mine — свои поля (product_buy, product_sell, service_seek, service_offer, job_seek, job_offer)
+// author — поля другого профиля с теми же именами колонок.
+// Возвращает массив { type: 'service'|'product'|'job', label: '...' }.
+function blizkoComputeTradeMatches(mine, author) {
+var matches = [];
+mine = mine || {};
+author = author || {};
+if (mine.service_seek && author.service_offer && blizkoFuzzyEq(mine.service_seek, author.service_offer)) {
+matches.push({ type: 'service', label: blizkoTradeLabel('Совпадение услуги: ', 'Service match: ') + author.service_offer });
 }
-});
-
-async function init() {
-var wrap = document.getElementById('list-wrap');
-var r = await db.auth.getSession();
-if (!r.data.session) {
-var restored = await restoreLastVaultSession(db);
-if (restored) r = await db.auth.getSession();
+if (mine.service_offer && author.service_seek && blizkoFuzzyEq(mine.service_offer, author.service_seek)) {
+matches.push({ type: 'service', label: blizkoTradeLabel('Ищет твою услугу: ', 'Looking for your service: ') + author.service_seek });
 }
-if (!r.data.session) {
-wrap.innerHTML =
-'<div class="empty-state" style="padding:60px 20px;">' +
-'<div class="icon">🔒</div>' +
-'<p style="font-size:16px;color:var(--text);margin-bottom:8px;">' + BlizkoTheme.getText('session_expired') + '</p>' +
-'<p style="font-size:14px;color:var(--muted);margin-bottom:20px;">' + BlizkoTheme.getText('please_login_again') + '</p>' +
-'<button class="btn" style="max-width:200px;margin:0 auto;" onclick="window.location.href=\'login.html\'">' + BlizkoTheme.getText('login') + '</button>' +
-'</div>';
-return;
+if (mine.product_buy && author.product_sell && blizkoFuzzyEq(mine.product_buy, author.product_sell)) {
+matches.push({ type: 'product', label: blizkoTradeLabel('Продаёт то, что ты ищешь: ', 'Selling what you want: ') + author.product_sell });
 }
-currentUser = r.data.session.user;
-await loadMatches();
+if (mine.product_sell && author.product_buy && blizkoFuzzyEq(mine.product_sell, author.product_buy)) {
+matches.push({ type: 'product', label: blizkoTradeLabel('Хочет купить твой товар: ', 'Wants to buy your product: ') + author.product_buy });
 }
-
-async function loadMatches() {
-var wrap = document.getElementById('list-wrap');
-var all = await blizkoGetAllTradeMatches(db, currentUser.id);
-if (all.length === 0) {
-wrap.innerHTML = '<div class="empty-state"><div class="icon">✨</div><p>' + BlizkoTheme.getText('no_matches_trade').replace(/\n/g,'<br>') + '</p></div>';
-return;
+if (mine.job_seek && author.job_offer && blizkoFuzzyEq(mine.job_seek, author.job_offer)) {
+matches.push({ type: 'job', label: blizkoTradeLabel('Есть вакансия: ', 'Has a job opening: ') + author.job_offer });
 }
-wrap.innerHTML = '';
-all.forEach(function(entry) {
-var p = entry.profile;
-var item = document.createElement('div');
-item.className = 'match-item';
-item.onclick = function() { openProfile(p, entry.matches); };
-var tagsHtml = entry.matches.map(function(m) {
-return '<span class="trade-badge ' + m.type + '">✨ ' + m.label + '</span>';
-}).join('');
-item.innerHTML =
-'<div class="avatar">' + (p.photo_url ? '<img src="' + p.photo_url + '">' : '👤') + '</div>' +
-'<div class="match-info">' +
-'<div class="match-name">' + (p.name || BlizkoTheme.getText('you')) + (p.age ? ', ' + p.age : '') + (p.city ? ' · 📍 ' + p.city : '') + '</div>' +
-'<div class="match-tags">' + tagsHtml + '</div>' +
-'</div>';
-wrap.appendChild(item);
-});
+if (mine.job_offer && author.job_seek && blizkoFuzzyEq(mine.job_offer, author.job_seek)) {
+matches.push({ type: 'job', label: blizkoTradeLabel('Ищет твою вакансию: ', 'Looking for your job opening: ') + author.job_seek });
+}
+return matches;
 }
 
-function buildAutoComment(matches) {
-var reasons = matches.map(function(m) { return m.label; }).join('; ');
-var lang = BlizkoTheme.getLang();
-return lang === 'en'
-? 'Hi! We have a match: ' + reasons + '. Like me back? 😊'
-: 'Привет! У нас совпадение: ' + reasons + '. Лайкни в ответ? 😊';
-}
+var TRADE_FIELDS_SELECT = 'id, name, age, city, photo_url, product_buy, product_sell, service_seek, service_offer, job_seek, job_offer, username, profile_visibility';
 
-var pendingLikeTarget = null;
-
-function openLikeModal(p, matches) {
-pendingLikeTarget = p;
-document.getElementById('like-modal-comment').value = buildAutoComment(matches);
-document.getElementById('like-modal-tags').innerHTML = matches.map(function(m) {
-return '<span class="trade-badge ' + m.type + '">✨ ' + m.label + '</span>';
-}).join('');
-document.getElementById('like-modal-overlay').classList.add('show');
-}
-
-function closeLikeModal() {
-document.getElementById('like-modal-overlay').classList.remove('show');
-pendingLikeTarget = null;
-}
-
-async function sendLikeWithComment() {
-if (!pendingLikeTarget) return;
-var comment = document.getElementById('like-modal-comment').value.trim();
-var { error } = await db.from('likes').upsert({
-from_user: currentUser.id,
-to_user: pendingLikeTarget.id,
-is_like: true,
-comment: comment || null
-}, { onConflict: 'from_user,to_user' });
-if (error) { alert(BlizkoTheme.getText('error_loading_short') + ': ' + error.message); return; }
-var targetId = pendingLikeTarget.id;
-closeLikeModal();
-var { data: matchData } = await db.from('matches').select('id')
-.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + targetId + '),and(user1.eq.' + targetId + ',user2.eq.' + currentUser.id + ')')
+// Тянет мои поля + всех кандидатов с хотя бы одним заполненным полем товар/услуга/работа,
+// и считает совпадения по каждому. Используется и для бейджа-счётчика на колокольчике,
+// и для полного списка на странице trade-matches.html — одна и та же функция, чтобы
+// число на колокольчике всегда совпадало с тем, что видно в списке.
+async function blizkoGetAllTradeMatches(db, myUserId) {
+var { data: mine } = await db.from('profiles')
+.select('product_buy, product_sell, service_seek, service_offer, job_seek, job_offer')
+.eq('id', myUserId)
 .maybeSingle();
-if (matchData) {
-if (confirm(BlizkoTheme.getText('mutual_like_confirm'))) {
-window.location.href = 'chat.html?match=' + matchData.id;
+mine = mine || {};
+var hasAnyOfMine = mine.product_buy || mine.product_sell || mine.service_seek || mine.service_offer || mine.job_seek || mine.job_offer;
+if (!hasAnyOfMine) return [];
+
+var { data: candidates, error } = await db.from('profiles')
+.select(TRADE_FIELDS_SELECT)
+.neq('id', myUserId)
+.eq('is_active', true)
+.or('product_buy.not.is.null,product_sell.not.is.null,service_seek.not.is.null,service_offer.not.is.null,job_seek.not.is.null,job_offer.not.is.null');
+if (error) { console.error('blizkoGetAllTradeMatches error:', error); return []; }
+
+var results = [];
+(candidates || []).forEach(function(c) {
+var matches = blizkoComputeTradeMatches(mine, c);
+if (matches.length > 0) results.push({ profile: c, matches: matches });
+});
+return results;
 }
+
+// Ставит число на бейдж колокольчика (скрывает бейдж, если совпадений нет).
+// ============ ОТМЕТКИ "ПРОСМОТРЕНО" ДЛЯ БЕЙДЖА СОВПАДЕНИЙ ============
+// Хранится на устройстве (как и другие "просмотрено"-метки в приложении).
+// Список ID тех, чьё совпадение уже видели на странице trade-matches.html —
+// бейдж на колокольчике считает только НЕ просмотренные совпадения, чтобы
+// метка исчезала после захода в список и не копилась бессмысленно.
+var BLIZKO_TRADE_SEEN_KEY = 'blizko_trade_seen_ids';
+
+function blizkoGetTradeSeenSet() {
+try {
+return new Set(JSON.parse(localStorage.getItem(BLIZKO_TRADE_SEEN_KEY) || '[]'));
+} catch (e) {
+return new Set();
+}
+}
+
+// Вызывать при открытии списка совпадений (trade-matches.html) — помечает всех,
+// кто сейчас в списке, как просмотренных. Новые совпадения, появившиеся ПОСЛЕ
+// этого момента, снова покажутся на бейдже.
+function blizkoMarkTradeMatchesSeen(targetIds) {
+var seen = blizkoGetTradeSeenSet();
+(targetIds || []).forEach(function(id) { seen.add(id); });
+try {
+localStorage.setItem(BLIZKO_TRADE_SEEN_KEY, JSON.stringify(Array.from(seen)));
+} catch (e) {}
+}
+
+async function blizkoRenderTradeBell(db, myUserId, badgeElId) {
+try {
+var all = await blizkoGetAllTradeMatches(db, myUserId);
+var badge = document.getElementById(badgeElId);
+if (!badge) return;
+var seen = blizkoGetTradeSeenSet();
+var unseenCount = all.filter(function(entry) { return !seen.has(entry.profile.id); }).length;
+if (unseenCount > 0) {
+badge.textContent = unseenCount > 99 ? '99+' : String(unseenCount);
+badge.style.display = 'flex';
 } else {
-alert(BlizkoTheme.getText('like_sent'));
+badge.style.display = 'none';
+}
+} catch (e) {
+console.error('blizkoRenderTradeBell error:', e);
 }
 }
-
-async function openProfile(p, matches) {
-var visibility = p.profile_visibility || 'matches';
-if (visibility === 'matches' || visibility === 'none') {
-var { data: match } = await db.from('matches').select('id')
-.or('and(user1.eq.' + currentUser.id + ',user2.eq.' + p.id + '),and(user1.eq.' + p.id + ',user2.eq.' + currentUser.id + ')')
-.maybeSingle();
-if (!match) {
-openLikeModal(p, matches);
-return;
-}
-}
-window.location.href = 'view-profile.html?user=' + p.id;
-}
-
-init();
-</script>
-</body>
-</html>
