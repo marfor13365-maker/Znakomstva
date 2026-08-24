@@ -362,13 +362,7 @@ var galleryVisFallback = profile.posts_visibility || 'all';
 canSeeGalleryFlag = isOwn || (galleryVisFallback !== 'none' && (galleryVisFallback === 'all' || (galleryVisFallback === 'matches' && !!currentMatchId)));
 }
 
-if (!canSeeAbout && !canSeeGalleryFlag) {
-var lockMsg = pv === 'none' ? BlizkoTheme.getText('profile_locked').replace('🔒 ', '') : BlizkoTheme.getText('profile_match_only').replace('🔒 ', '');
-document.getElementById('content').innerHTML = '<div class="locked-state" style="padding:60px 20px"><div class="icon">🔒</div><p>' + lockMsg + '</p></div>';
-return;
-}
-
-renderProfile(profile, canSeeAbout, canSeeGalleryFlag);
+renderProfile(profile, canSeeAbout, canSeeGalleryFlag, !!incomingGrant, pv);
 if (typeof BlizkoTheme !== 'undefined') {
 if (typeof BlizkoTheme.apply === 'function') BlizkoTheme.apply();
 if (typeof BlizkoTheme.applyLang === 'function') BlizkoTheme.applyLang();
@@ -379,9 +373,10 @@ document.getElementById('content').innerHTML = '<div class="loading" style="colo
 }
 }
 
-function renderProfile(profile, canSeeAbout, canSeeGallery) {
+function renderProfile(profile, canSeeAbout, canSeeGallery, hasGrant, pv) {
 currentTargetUsername = profile.username || null;
 var content = document.getElementById('content');
+var chatNote = currentMatchId ? (' ' + BlizkoTheme.getText('chat_available_note')) : '';
 var html =
 '<div class="avatar-block">' +
 '<div class="avatar-wrap">' +
@@ -406,15 +401,19 @@ var extraHtml = buildExtraFieldsHtml(profile);
 if (extraHtml) {
 html += '<div class="section"><div class="section-title">' + BlizkoTheme.getText('extra_label') + '</div><div class="about-text extra-fields">' + extraHtml + '</div></div>';
 }
+} else {
+var aboutLockMsg = hasGrant
+? BlizkoTheme.getText('about_hidden_by_grant')
+: (pv === 'none' ? BlizkoTheme.getText('profile_locked').replace('🔒 ', '') : BlizkoTheme.getText('profile_match_only').replace('🔒 ', ''));
+html += '<div class="section"><div class="section-title" data-i18n="about">О себе</div><div class="about-text" style="color:var(--muted);font-size:13px">🔒 ' + aboutLockMsg + chatNote + '</div></div>';
 }
 html += '<div class="section"><div class="section-title" data-i18n="gallery">Галерея</div></div>';
 
 if (!canSeeGallery) {
-html += '<div class="locked-state"><div class="icon">🔒</div><p>' +
-((profile.posts_visibility || 'all') === 'none'
-? BlizkoTheme.getText('gallery_locked_none')
-: BlizkoTheme.getText('gallery_locked_matches')) +
-'</p></div>';
+var galleryLockMsg = hasGrant
+? BlizkoTheme.getText('gallery_hidden_by_grant')
+: ((profile.posts_visibility || 'all') === 'none' ? BlizkoTheme.getText('gallery_locked_none') : BlizkoTheme.getText('gallery_locked_matches'));
+html += '<div class="locked-state"><div class="icon">🔒</div><p>' + galleryLockMsg + chatNote + '</p></div>';
 content.innerHTML = html;
 } else {
 html += '<div class="gallery-grid" id="gallery-grid"></div>';
