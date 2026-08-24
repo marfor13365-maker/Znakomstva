@@ -320,6 +320,22 @@ input[type="file"]{display:none}
 <option value="none" data-i18n="no_one">Никому</option>
 </select>
 </div>
+<div class="visibility-row">
+<div class="visibility-label" data-i18n="followers_visibility_label">Кто видит моих подписчиков</div>
+<select class="visibility-select" id="followers_visibility" onchange="saveFollowersVisibility()">
+<option value="all" data-i18n="everyone">Всем</option>
+<option value="matches" data-i18n="only_matches">Только мэтчам</option>
+<option value="none" data-i18n="no_one">Никому</option>
+</select>
+</div>
+<div class="visibility-row">
+<div class="visibility-label" data-i18n="following_visibility_label">Кто видит мои подписки</div>
+<select class="visibility-select" id="following_visibility" onchange="saveFollowingVisibility()">
+<option value="all" data-i18n="everyone">Всем</option>
+<option value="matches" data-i18n="only_matches">Только мэтчам</option>
+<option value="none" data-i18n="no_one">Никому</option>
+</select>
+</div>
 <div id="posts-grid-wrap">
 <div class="loading"><span data-i18n="loading">Загрузка...</span></div>
 </div>
@@ -636,6 +652,8 @@ document.getElementById('profile-name').textContent = profile.name || BlizkoThem
 document.getElementById('profile-meta').textContent = (profile.age ? profile.age + (BlizkoTheme.getLang() === 'en' ? ' y.o.' : ' лет') : '') + (profile.city ? ' · ' + profile.city : '');
 if (profile.photo_url) showAvatar(profile.photo_url);
 document.getElementById('posts_visibility').value = profile.posts_visibility || 'all';
+document.getElementById('followers_visibility').value = profile.followers_visibility || 'all';
+document.getElementById('following_visibility').value = profile.following_visibility || 'all';
 renderUsername(profile.username);
 myProfileComplete = profile.is_active === true;
 }
@@ -976,6 +994,16 @@ alert(BlizkoTheme.getText('upload_fail_alert') + '\n\n' + (e && e.message ? e.me
 async function savePostsVisibility() {
 var val = document.getElementById('posts_visibility').value;
 await db.from('profiles').update({ posts_visibility: val }).eq('id', currentUser.id);
+}
+
+async function saveFollowersVisibility() {
+var val = document.getElementById('followers_visibility').value;
+await db.from('profiles').update({ followers_visibility: val }).eq('id', currentUser.id);
+}
+
+async function saveFollowingVisibility() {
+var val = document.getElementById('following_visibility').value;
+await db.from('profiles').update({ following_visibility: val }).eq('id', currentUser.id);
 }
 
 async function loadMyPosts() {
