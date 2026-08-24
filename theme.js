@@ -251,6 +251,11 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     delete_match: '🗑 Удалить матч',
     extra_label: 'Дополнительно',
     field_match_tag: '✨ Совпадает с твоим',
+    about_hidden_by_grant: 'Анкета не открыта этим пользователем.',
+    gallery_hidden_by_grant: 'Галерея не открыта этим пользователем.',
+    chat_available_note: 'Но переписка доступна — можно написать.',
+    followers_visibility_label: 'Кто видит моих подписчиков',
+    following_visibility_label: 'Кто видит мои подписки'
     no_bio: 'Пользователь ничего не написал о себе',
     gallery_empty: 'Галерея пуста',
     gallery_locked_none: 'Пользователь закрыл галерею для всех.',
@@ -521,6 +526,11 @@ ym(110760396, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLa
     delete_match: '🗑 Delete match',
     extra_label: 'Additional',
     field_match_tag: '✨ Matches yours',
+    about_hidden_by_grant: "This user's profile isn't shared with you.",
+    gallery_hidden_by_grant: "This user's gallery isn't shared with you.",
+    chat_available_note: 'But chat is available — you can message them.',
+    followers_visibility_label: 'Who sees my followers',
+    following_visibility_label: 'Who sees who I follow'
     no_bio: "This user hasn't written anything about themselves",
     gallery_empty: 'Gallery is empty',
     gallery_locked_none: 'This user has closed their gallery to everyone.',
