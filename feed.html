@@ -646,13 +646,15 @@ captionHtml +
 }
 
 function attachFeedMediaViewers(container) {
-// Пинч-зум для одиночных фото (не карусель) — через общий photo-viewer.js
+// Зум одиночных фото — СВОЯ лёгкая реализация (не общий photo-viewer.js). Общий
+// photo-viewer.js ставит touch-action:none всегда, что нужно для модалок/полного
+// экрана, но в самой ленте (обычная вертикально прокручиваемая страница) это
+// полностью блокирует нативный скролл при касании фото — вместо прокрутки ленты
+// "тянулось" само фото. attachFeedSingleZoom разрешает pan-y (вертикальный скролл),
+// пока фото не увеличено, и включает панорамирование только после зума — как и
+// в карусели, только по вертикальной оси вместо горизонтальной.
 container.querySelectorAll('.feed-post-media:not(.fp-carousel) img.fp-media-el').forEach(function(img) {
-if (img.dataset.viewerAttached) return;
-img.dataset.viewerAttached = '1';
-if (typeof BlizkoPhotoViewer !== 'undefined' && BlizkoPhotoViewer.attach) {
-BlizkoPhotoViewer.attach(img, { onImmersiveChange: function() {} });
-}
+attachFeedSingleZoom(img);
 });
 // Зум для слайдов карусели — отдельная лёгкая реализация (не общий photo-viewer.js),
 // т.к. ей нужно динамически включать/выключать touch-action, чтобы не конфликтовать
@@ -676,6 +678,91 @@ if (counter) counter.textContent = (idx + 1) + '/' + total;
 dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
 });
 });
+}
+
+// Зум одиночного фото в ленте: пинч/двойной тап работают всегда; пока не увеличено —
+// touch-action:pan-y, поэтому обычный вертикальный скролл ленты проходит через фото
+// без помех. Как только scale > 1 — переключаемся на 'none' и один палец панорамирует
+// увеличенное фото; при возврате к scale = 1 скролл снова свободен.
+function attachFeedSingleZoom(img) {
+if (img.dataset.fzAttached) return;
+img.dataset.fzAttached = '1';
+img.style.transformOrigin = '0 0';
+img.style.touchAction = 'pan-y';
+
+var state = { scale: 1, tx: 0, ty: 0, pinching: false, startDist: 0, startScale: 1, panning: false, startX: 0, startY: 0, startTx: 0, startTy: 0, lastTapTime: 0, lastTapX: 0, lastTapY: 0 };
+var pointers = new Map();
+
+function apply() { img.style.transform = 'translate(' + state.tx + 'px,' + state.ty + 'px) scale(' + state.scale + ')'; }
+function resetZoom() { state.scale = 1; state.tx = 0; state.ty = 0; apply(); img.style.touchAction = 'pan-y'; }
+function dist(a, b) { var dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); }
+function mid(a, b) { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
+
+function zoomToward(cx, cy, target) {
+var newScale = Math.min(4, Math.max(1, target));
+if (newScale === state.scale) return;
+var rect = img.getBoundingClientRect();
+if (rect.width === 0) { state.scale = newScale; apply(); return; }
+var fracX = (cx - rect.left) / rect.width;
+var fracY = (cy - rect.top) / rect.height;
+var newW = rect.width * (newScale / state.scale);
+var newH = rect.height * (newScale / state.scale);
+state.tx += (cx - fracX * newW) - rect.left;
+state.ty += (cy - fracY * newH) - rect.top;
+state.scale = newScale;
+if (state.scale <= 1.001) { resetZoom(); } else { img.style.touchAction = 'none'; apply(); }
+}
+
+img.addEventListener('pointerdown', function(e) {
+pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+if (pointers.size === 1) {
+var now = Date.now();
+var isDbl = (now - state.lastTapTime) < 300 && Math.abs(e.clientX - state.lastTapX) < 30 && Math.abs(e.clientY - state.lastTapY) < 30;
+state.lastTapTime = now; state.lastTapX = e.clientX; state.lastTapY = e.clientY;
+if (isDbl) {
+state.lastTapTime = 0;
+if (state.scale > 1) { resetZoom(); } else { zoomToward(e.clientX, e.clientY, 2.5); }
+return;
+}
+if (state.scale > 1) {
+state.panning = true;
+state.startX = e.clientX; state.startY = e.clientY;
+state.startTx = state.tx; state.startTy = state.ty;
+try { img.setPointerCapture(e.pointerId); } catch (err) {}
+}
+} else if (pointers.size === 2) {
+state.pinching = true;
+state.panning = false;
+var pts = Array.from(pointers.values());
+state.startDist = dist(pts[0], pts[1]);
+state.startScale = state.scale;
+}
+});
+
+img.addEventListener('pointermove', function(e) {
+if (!pointers.has(e.pointerId)) return;
+pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+if (state.pinching && pointers.size >= 2) {
+var pts = Array.from(pointers.values());
+var newDist = dist(pts[0], pts[1]);
+var m = mid(pts[0], pts[1]);
+if (state.startDist > 0) zoomToward(m.x, m.y, state.startScale * (newDist / state.startDist));
+return;
+}
+if (state.panning && state.scale > 1) {
+state.tx = state.startTx + (e.clientX - state.startX);
+state.ty = state.startTy + (e.clientY - state.startY);
+apply();
+}
+});
+
+function endPointer(e) {
+pointers.delete(e.pointerId);
+if (pointers.size < 2) state.pinching = false;
+if (pointers.size === 0) state.panning = false;
+}
+img.addEventListener('pointerup', endPointer);
+img.addEventListener('pointercancel', endPointer);
 }
 
 // Зум внутри слайда карусели: пинч двумя пальцами и двойной тап работают всегда;
