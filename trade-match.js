@@ -78,13 +78,41 @@ return results;
 }
 
 // Ставит число на бейдж колокольчика (скрывает бейдж, если совпадений нет).
+// ============ ОТМЕТКИ "ПРОСМОТРЕНО" ДЛЯ БЕЙДЖА СОВПАДЕНИЙ ============
+// Хранится на устройстве (как и другие "просмотрено"-метки в приложении).
+// Список ID тех, чьё совпадение уже видели на странице trade-matches.html —
+// бейдж на колокольчике считает только НЕ просмотренные совпадения, чтобы
+// метка исчезала после захода в список и не копилась бессмысленно.
+var BLIZKO_TRADE_SEEN_KEY = 'blizko_trade_seen_ids';
+
+function blizkoGetTradeSeenSet() {
+try {
+return new Set(JSON.parse(localStorage.getItem(BLIZKO_TRADE_SEEN_KEY) || '[]'));
+} catch (e) {
+return new Set();
+}
+}
+
+// Вызывать при открытии списка совпадений (trade-matches.html) — помечает всех,
+// кто сейчас в списке, как просмотренных. Новые совпадения, появившиеся ПОСЛЕ
+// этого момента, снова покажутся на бейдже.
+function blizkoMarkTradeMatchesSeen(targetIds) {
+var seen = blizkoGetTradeSeenSet();
+(targetIds || []).forEach(function(id) { seen.add(id); });
+try {
+localStorage.setItem(BLIZKO_TRADE_SEEN_KEY, JSON.stringify(Array.from(seen)));
+} catch (e) {}
+}
+
 async function blizkoRenderTradeBell(db, myUserId, badgeElId) {
 try {
 var all = await blizkoGetAllTradeMatches(db, myUserId);
 var badge = document.getElementById(badgeElId);
 if (!badge) return;
-if (all.length > 0) {
-badge.textContent = all.length > 99 ? '99+' : String(all.length);
+var seen = blizkoGetTradeSeenSet();
+var unseenCount = all.filter(function(entry) { return !seen.has(entry.profile.id); }).length;
+if (unseenCount > 0) {
+badge.textContent = unseenCount > 99 ? '99+' : String(unseenCount);
 badge.style.display = 'flex';
 } else {
 badge.style.display = 'none';
