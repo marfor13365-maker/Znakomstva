@@ -198,7 +198,7 @@ input[type="file"]{display:none}
 .feed-photo-overlay.show{display:flex}
 .feed-photo-overlay img{max-width:100%;max-height:100%;object-fit:contain;touch-action:none;-webkit-user-drag:none;-webkit-user-select:none;user-select:none;will-change:transform;transform-origin:0 0}
 .feed-photo-overlay-logo{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
-.feed-photo-overlay-logo svg{width:22px;height:22px;display:block}
+.feed-photo-overlay-logo svg{width:30px;height:30px;display:block}
 </style>
 </head>
 <body>
@@ -246,26 +246,6 @@ input[type="file"]{display:none}
 <div id="feed-stream-list"></div>
 <div class="feed-sentinel" id="feed-sentinel"></div>
 </div>
-<div class="feed-photo-overlay" id="feed-photo-overlay">
-<div class="feed-photo-overlay-logo" id="feed-photo-overlay-close">
-<svg viewBox="0 0 100 100" aria-hidden="true">
-<defs>
-<linearGradient id="brandGreenOverlay" x1="0" y1="0" x2="1" y2="1">
-<stop offset="0" stop-color="#2fe37a"/>
-<stop offset="1" stop-color="#0fa958"/>
-</linearGradient>
-<clipPath id="brandLeftOverlay"><rect x="0" y="0" width="50" height="100"/></clipPath>
-<clipPath id="brandRightOverlay"><rect x="50" y="0" width="50" height="100"/></clipPath>
-</defs>
-<circle cx="50" cy="50" r="48" fill="url(#brandGreenOverlay)"/>
-<path id="brandHeartOverlay" d="M50 76 C 26 58, 18 42, 27 30 C 34 21, 46 22, 50 33 C 54 22, 66 21, 73 30 C 82 42, 74 58, 50 76 Z"/>
-<use href="#brandHeartOverlay" clip-path="url(#brandLeftOverlay)" fill="#3fb7ff"/>
-<use href="#brandHeartOverlay" clip-path="url(#brandRightOverlay)" fill="#ff4d9d"/>
-</svg>
-</div>
-<img id="feed-photo-overlay-img" src="" alt="">
-</div>
-<!-- Чистый полноэкранный просмотр фото (для скриншотов) -->
 <div class="feed-photo-overlay" id="feed-photo-overlay">
 <div class="feed-photo-overlay-logo" id="feed-photo-overlay-close">
 <svg viewBox="0 0 100 100" aria-hidden="true">
