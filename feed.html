@@ -193,6 +193,23 @@ input[type="file"]{display:none}
 .post-type-btn{flex:1;padding:9px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;cursor:pointer}
 .post-type-btn.active{border-color:var(--accent);background:rgba(255,77,109,0.15);color:var(--accent2);font-weight:600}
 
+/* ===== РЕДАКТОР ФОТО ПЕРЕД ПУБЛИКАЦИЕЙ (обрезка/поворот/пропорции) ===== */
+.photo-edit-modal{position:fixed;inset:0;background:#000;z-index:600;display:none;flex-direction:column}
+.photo-edit-modal.show{display:flex}
+.photo-edit-topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;flex-shrink:0}
+.photo-edit-topbar button{background:none;border:none;color:#fff;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:8px}
+.photo-edit-title{color:rgba(255,255,255,0.6);font-size:12px}
+.photo-edit-frame-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.photo-edit-frame{position:relative;overflow:hidden;background:#111;touch-action:none}
+.photo-edit-frame img{position:absolute;top:50%;left:50%;transform-origin:center center;user-select:none;-webkit-user-drag:none;max-width:none;pointer-events:none}
+.photo-edit-controls{padding:14px 20px calc(14px + env(safe-area-inset-bottom));flex-shrink:0;display:flex;flex-direction:column;gap:14px}
+.photo-edit-aspect-row{display:flex;gap:8px;justify-content:center}
+.photo-edit-aspect-btn{padding:8px 16px;border-radius:20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;font-family:'Inter',sans-serif;font-size:12px;cursor:pointer}
+.photo-edit-aspect-btn.active{background:var(--accent);border-color:var(--accent)}
+.photo-edit-tools-row{display:flex;align-items:center;gap:12px}
+.photo-edit-rotate-btn{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+#photo-edit-zoom{flex:1;accent-color:var(--accent);height:4px}
+
 /* ===== ЧИСТЫЙ ПОЛНОЭКРАННЫЙ ПРОСМОТР ФОТО (для скриншотов) ===== */
 .feed-photo-overlay{position:fixed;inset:0;background:#000;z-index:500;display:none;align-items:center;justify-content:center}
 .feed-photo-overlay.show{display:flex}
@@ -339,6 +356,31 @@ input[type="file"]{display:none}
 </div>
 </div>
 <input type="file" id="post-file" accept="image/*,video/*" multiple onchange="handlePostPhoto(this)">
+<div class="photo-edit-modal" id="photo-edit-modal">
+<div class="photo-edit-topbar">
+<button onclick="cancelPhotoEdit()" data-i18n="cancel">Отмена</button>
+<div class="photo-edit-title" id="photo-edit-title"></div>
+<button onclick="confirmPhotoEdit()" id="photo-edit-next-btn" data-i18n="edit_next">Далее</button>
+</div>
+<div class="photo-edit-frame-wrap">
+<div class="photo-edit-frame" id="photo-edit-frame">
+<img id="photo-edit-img" src="" alt="">
+</div>
+</div>
+<div class="photo-edit-controls">
+<div class="photo-edit-aspect-row">
+<button class="photo-edit-aspect-btn active" data-aspect="original" onclick="setEditAspect('original')" data-i18n="aspect_original">Оригинал</button>
+<button class="photo-edit-aspect-btn" data-aspect="1:1" onclick="setEditAspect('1:1')">1:1</button>
+<button class="photo-edit-aspect-btn" data-aspect="4:5" onclick="setEditAspect('4:5')">4:5</button>
+<button class="photo-edit-aspect-btn" data-aspect="16:9" onclick="setEditAspect('16:9')">16:9</button>
+</div>
+<div class="photo-edit-tools-row">
+<button class="photo-edit-rotate-btn" onclick="rotateEditImage()" title="Повернуть">⟳</button>
+<span style="color:rgba(255,255,255,0.6);font-size:14px">🔍</span>
+<input type="range" id="photo-edit-zoom" min="0" max="100" value="0" oninput="setEditZoom(this.value)">
+</div>
+</div>
+</div>
 <script src="theme.js"></script>
 <script src="photo-viewer.js"></script>
 <script src="config.js"></script>
@@ -366,6 +408,10 @@ var currentUser = null;
 var myProfileComplete = false;
 var pendingMediaFiles = []; // [{url, type}] — первый элемент станет photo_url поста, остальные — extra_media
 var MAX_CAROUSEL_ITEMS = 10;
+var editQueue = []; // File[] — фото, ожидающие обрезки перед загрузкой
+var editQueueIndex = 0;
+var editState = { iw: 0, ih: 0, scale: 1, minScale: 1, x: 0, y: 0, rotation: 0, aspect: 'original' };
+var editPointers = new Map();
 var posts = [];
 var myTradeFields = {};
 var lastSeenMap = {};
@@ -1641,6 +1687,8 @@ document.getElementById('upload-modal').classList.add('show');
 function closeUpload() {
 document.getElementById('upload-modal').classList.remove('show');
 pendingMediaFiles = [];
+editQueue = [];
+editQueueIndex = 0;
 document.getElementById('caption-input').value = '';
 document.getElementById('publish-btn').disabled = true;
 document.getElementById('upload-bar').style.width = '0%';
@@ -1688,20 +1736,24 @@ alert(BlizkoTheme.getLang() === 'en'
 : 'Максимум ' + MAX_CAROUSEL_ITEMS + ' файлов в одном посте');
 files = files.slice(0, MAX_CAROUSEL_ITEMS - pendingMediaFiles.length);
 }
+var videos = [];
+var photos = [];
+files.forEach(function(f) { if (f.type.startsWith('video')) videos.push(f); else photos.push(f); });
+
+// Видео загружаем как раньше, без редактора — обрезку видео на клиенте не делаем.
+if (videos.length > 0) {
 document.getElementById('upload-progress').style.display = 'block';
-for (var i = 0; i < files.length; i++) {
-var file = files[i];
-var isVideo = file.type.startsWith('video');
-if (isVideo && file.size > 30 * 1024 * 1024) { alert(BlizkoTheme.getLang() === 'en' ? 'Video must be under 30MB' : 'Видео не более 30MB'); continue; }
-if (!isVideo && file.size > 10 * 1024 * 1024) { alert(BlizkoTheme.getText('photo_size_limit')); continue; }
-document.getElementById('upload-bar').style.width = Math.round((i / files.length) * 90) + '%';
-var ext = file.name.split('.').pop();
-var fileName = 'posts/' + currentUser.id + '_' + Date.now() + '_' + i + '.' + ext;
+for (var i = 0; i < videos.length; i++) {
+var vfile = videos[i];
+if (vfile.size > 30 * 1024 * 1024) { alert(BlizkoTheme.getLang() === 'en' ? 'Video must be under 30MB' : 'Видео не более 30MB'); continue; }
+document.getElementById('upload-bar').style.width = Math.round((i / videos.length) * 90) + '%';
+var ext = vfile.name.split('.').pop();
+var fileName = 'posts/' + currentUser.id + '_' + Date.now() + '_v' + i + '.' + ext;
 try {
-var r = await db.storage.from('photos').upload(fileName, file, { upsert: true, contentType: file.type });
+var r = await db.storage.from('photos').upload(fileName, vfile, { upsert: true, contentType: vfile.type });
 if (r.error) { alert(BlizkoTheme.getText('upload_error_prefix') + r.error.message); continue; }
 var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
-pendingMediaFiles.push({ url: url, type: isVideo ? 'video' : 'photo' });
+pendingMediaFiles.push({ url: url, type: 'video' });
 } catch (e) {
 alert(BlizkoTheme.getText('upload_fail_alert') + '\n\n' + (e && e.message ? e.message : e));
 }
@@ -1712,7 +1764,194 @@ document.getElementById('upload-progress').style.display = 'none';
 document.getElementById('upload-bar').style.width = '0%';
 }, 500);
 renderMediaThumbs();
+}
+
+// Фото — по одному через редактор обрезки/поворота, затем загрузка.
+var validPhotos = photos.filter(function(f) {
+if (f.size > 10 * 1024 * 1024) { alert(BlizkoTheme.getText('photo_size_limit')); return false; }
+return true;
+});
+if (validPhotos.length > 0) startEditQueue(validPhotos);
+
 input.value = '';
+}
+
+// ===== РЕДАКТОР ФОТО: обрезка, пропорции, поворот =====
+function startEditQueue(files) {
+editQueue = files;
+editQueueIndex = 0;
+openPhotoEditorForIndex(0);
+}
+
+function openPhotoEditorForIndex(idx) {
+var file = editQueue[idx];
+var reader = new FileReader();
+reader.onload = function(e) {
+var img = document.getElementById('photo-edit-img');
+img.onload = function() {
+editState = { iw: img.naturalWidth, ih: img.naturalHeight, scale: 1, minScale: 1, x: 0, y: 0, rotation: 0, aspect: 'original' };
+document.querySelectorAll('.photo-edit-aspect-btn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-aspect') === 'original'); });
+layoutEditFrame();
+updateEditTitle();
+document.getElementById('photo-edit-modal').classList.add('show');
+};
+img.src = e.target.result;
+};
+reader.readAsDataURL(file);
+}
+
+function updateEditTitle() {
+var el = document.getElementById('photo-edit-title');
+el.textContent = (editQueueIndex + 1) + ' / ' + editQueue.length;
+var nextBtn = document.getElementById('photo-edit-next-btn');
+nextBtn.textContent = (editQueueIndex === editQueue.length - 1) ? BlizkoTheme.getText('edit_done') : BlizkoTheme.getText('edit_next');
+}
+
+function effDims() {
+var swapped = (editState.rotation % 180) !== 0;
+return swapped ? { w: editState.ih, h: editState.iw } : { w: editState.iw, h: editState.ih };
+}
+
+function computeEditAspectRatio(aspect) {
+var eff = effDims();
+if (aspect === '1:1') return 1;
+if (aspect === '4:5') return 4 / 5;
+if (aspect === '16:9') return 16 / 9;
+return eff.w / eff.h;
+}
+
+var editFrameSize = { w: 0, h: 0 };
+
+function layoutEditFrame() {
+var wrap = document.querySelector('.photo-edit-frame-wrap');
+var maxW = Math.min(360, window.innerWidth - 32);
+var maxH = wrap.clientHeight - 16;
+var ratio = computeEditAspectRatio(editState.aspect);
+var w = maxW, h = w / ratio;
+if (h > maxH) { h = maxH; w = h * ratio; }
+editFrameSize = { w: w, h: h };
+var frame = document.getElementById('photo-edit-frame');
+frame.style.width = w + 'px';
+frame.style.height = h + 'px';
+var eff = effDims();
+editState.minScale = Math.max(w / eff.w, h / eff.h);
+editState.scale = editState.minScale;
+editState.x = 0; editState.y = 0;
+document.getElementById('photo-edit-zoom').value = 0;
+applyEditTransform();
+}
+
+function setEditAspect(aspect) {
+editState.aspect = aspect;
+document.querySelectorAll('.photo-edit-aspect-btn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-aspect') === aspect); });
+layoutEditFrame();
+}
+
+function rotateEditImage() {
+editState.rotation = (editState.rotation + 90) % 360;
+layoutEditFrame();
+}
+
+function clampEditPan() {
+var eff = effDims();
+var scaledW = eff.w * editState.scale, scaledH = eff.h * editState.scale;
+var maxX = Math.max(0, (scaledW - editFrameSize.w) / 2);
+var maxY = Math.max(0, (scaledH - editFrameSize.h) / 2);
+editState.x = Math.max(-maxX, Math.min(maxX, editState.x));
+editState.y = Math.max(-maxY, Math.min(maxY, editState.y));
+}
+
+function applyEditTransform() {
+var img = document.getElementById('photo-edit-img');
+img.style.width = (editState.iw * editState.scale) + 'px';
+img.style.height = (editState.ih * editState.scale) + 'px';
+img.style.transform = 'translate(calc(-50% + ' + editState.x + 'px), calc(-50% + ' + editState.y + 'px)) rotate(' + editState.rotation + 'deg)';
+}
+
+function setEditZoom(sliderVal) {
+var t = sliderVal / 100;
+editState.scale = editState.minScale + t * (editState.minScale * 2);
+clampEditPan();
+applyEditTransform();
+}
+
+(function setupEditDrag() {
+var frame = document.getElementById('photo-edit-frame');
+if (!frame) return;
+frame.addEventListener('pointerdown', function(e) {
+editPointers.set(e.pointerId, { x: e.clientX, y: e.clientY, startX: editState.x, startY: editState.y });
+try { frame.setPointerCapture(e.pointerId); } catch (err) {}
+});
+frame.addEventListener('pointermove', function(e) {
+var p = editPointers.get(e.pointerId);
+if (!p) return;
+editState.x = p.startX + (e.clientX - p.x);
+editState.y = p.startY + (e.clientY - p.y);
+clampEditPan();
+applyEditTransform();
+});
+function endDrag(e) { editPointers.delete(e.pointerId); }
+frame.addEventListener('pointerup', endDrag);
+frame.addEventListener('pointercancel', endDrag);
+})();
+
+function cancelPhotoEdit() {
+document.getElementById('photo-edit-modal').classList.remove('show');
+editQueue = [];
+editQueueIndex = 0;
+}
+
+async function confirmPhotoEdit() {
+var nextBtn = document.getElementById('photo-edit-next-btn');
+nextBtn.disabled = true;
+var blob = await renderEditCanvas();
+nextBtn.disabled = false;
+if (!blob) return;
+await uploadEditedBlob(blob);
+editQueueIndex++;
+if (editQueueIndex < editQueue.length) {
+openPhotoEditorForIndex(editQueueIndex);
+} else {
+document.getElementById('photo-edit-modal').classList.remove('show');
+editQueue = [];
+editQueueIndex = 0;
+}
+}
+
+function renderEditCanvas() {
+return new Promise(function(resolve) {
+var img = document.getElementById('photo-edit-img');
+var ratio = editFrameSize.w / editFrameSize.h;
+var OUT_MAX = 1080;
+var outW, outH;
+if (ratio >= 1) { outW = OUT_MAX; outH = Math.round(OUT_MAX / ratio); } else { outH = OUT_MAX; outW = Math.round(OUT_MAX * ratio); }
+var outScale = outW / editFrameSize.w;
+var canvas = document.createElement('canvas');
+canvas.width = outW; canvas.height = outH;
+var ctx = canvas.getContext('2d');
+ctx.save();
+ctx.translate(outW / 2 + editState.x * outScale, outH / 2 + editState.y * outScale);
+ctx.rotate(editState.rotation * Math.PI / 180);
+var drawW = editState.iw * editState.scale * outScale;
+var drawH = editState.ih * editState.scale * outScale;
+ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+ctx.restore();
+canvas.toBlob(function(blob) { resolve(blob); }, 'image/jpeg', 0.9);
+});
+}
+
+async function uploadEditedBlob(blob) {
+var idx = pendingMediaFiles.length;
+var fileName = 'posts/' + currentUser.id + '_' + Date.now() + '_' + idx + '.jpg';
+try {
+var r = await db.storage.from('photos').upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
+if (r.error) { alert(BlizkoTheme.getText('upload_error_prefix') + r.error.message); return; }
+var url = db.storage.from('photos').getPublicUrl(fileName).data.publicUrl;
+pendingMediaFiles.push({ url: url, type: 'photo' });
+renderMediaThumbs();
+} catch (e) {
+alert(BlizkoTheme.getText('upload_fail_alert') + '\n\n' + (e && e.message ? e.message : e));
+}
 }
 
 async function checkModerationOrAlert(photoUrl, mediaType) {
