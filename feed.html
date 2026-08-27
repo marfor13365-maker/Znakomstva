@@ -1791,9 +1791,9 @@ var img = document.getElementById('photo-edit-img');
 img.onload = function() {
 editState = { iw: img.naturalWidth, ih: img.naturalHeight, scale: 1, minScale: 1, x: 0, y: 0, rotation: 0, aspect: 'original' };
 document.querySelectorAll('.photo-edit-aspect-btn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-aspect') === 'original'); });
+document.getElementById('photo-edit-modal').classList.add('show');
 layoutEditFrame();
 updateEditTitle();
-document.getElementById('photo-edit-modal').classList.add('show');
 };
 img.src = e.target.result;
 };
