@@ -907,7 +907,7 @@ document.getElementById('feed-stream-list').innerHTML = '';
 if (feedStreamDone) return;
 feedStreamLoading = true;
 var listEl = document.getElementById('feed-stream-list');
-if (reset) listEl.innerHTML = '<div class="loading">⏳ ' + BlizkoTheme.getText('loading') + '</div>';
+if (reset) listEl.innerHTML = '<div class="loading">' + BlizkoTheme.getText('loading') + '</div>';
 var { data, error } = await db.from('posts')
 .select('*, profiles(name, city, photo_url, product_buy, product_sell, service_seek, service_offer, job_seek, job_offer)')
 .eq('visible_in_feed', true)
